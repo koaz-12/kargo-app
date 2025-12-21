@@ -45,7 +45,7 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     </div>
 
                     {/* 2. Shipping */}
-                    <div className="w-1/3">
+                    <div className="w-28 shrink-0">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Envío (USA)</label>
                         <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
                             <span className="text-slate-400 text-sm mr-2">$</span>
