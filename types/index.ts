@@ -4,6 +4,7 @@ export type AdjustmentType = 'CREDIT_CLAIM' | 'REWARD_BACK' | 'PRICE_ADJUSTMENT'
 
 export interface Platform {
   id: string;
+  user_id?: string; // Multi-tenancy
   name: string;
   type: PlatformType;
   fee_structure_type: string; // Enables different fee calculation strategies per platform
