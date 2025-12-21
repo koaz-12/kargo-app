@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Product, FinancialAdjustment, PlatformType, Transaction, Platform } from '../types';
 import { calculateProfit } from '../utils/calculateProfit';
+import { supabase } from '../lib/supabaseClient'; // Fix lint error
 
 interface UseProfitCalculatorProps {
     initialProduct?: Partial<Product>;
@@ -44,8 +45,47 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     useEffect(() => {
         if (isRateLoaded && exchangeRate > 0) {
             localStorage.setItem('ecom_exchange_rate', exchangeRate.toString());
+
+            // AUTO-SAVE PREFERENCE only if adding new product (Learning Mode)
+            if (!initialProduct?.id && exchangeRate > 0) {
+                const saveRate = async () => {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        await supabase.from('user_preferences').upsert({
+                            user_id: user.id,
+                            default_exchange_rate: exchangeRate
+                        });
+                    }
+                };
+                // Debounce? For now direct save is okay as rate doesn't change 50 times/sec
+                saveRate();
+            }
         }
-    }, [exchangeRate, isRateLoaded]);
+    }, [exchangeRate, isRateLoaded, initialProduct?.id]);
+
+    // FEATURE: Load Default Settings (Platform)
+    useEffect(() => {
+        if (!initialProduct?.platform_id && !platformId) {
+            const defaultPlatform = localStorage.getItem('defaultPlatform');
+            if (defaultPlatform) {
+                setPlatformId(defaultPlatform);
+            }
+        }
+
+        // AUTO-SAVE Platform Preference (Learning Mode)
+        if (!initialProduct?.id && platformId) {
+            const savePlatform = async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    await supabase.from('user_preferences').upsert({
+                        user_id: user.id,
+                        default_platform_id: platformId
+                    });
+                }
+            };
+            savePlatform();
+        }
+    }, [initialProduct?.platform_id, platforms, platformId]);
 
     // Derived State: Selected Platform
     const selectedPlatform = useMemo(() =>
@@ -65,47 +105,81 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
         return calculateProfit(transaction, salePrice, localShipping);
     }, [buyPrice, shippingCost, taxCost, adjustments, salePrice, localShipping, exchangeRate]);
 
-    // Actions
-    const addAdjustment = (type: FinancialAdjustment['type'], amount: number) => {
-        let initialPercentage = 0;
-        let initialAmount = amount;
+    // State for Preferences
+    const [preferences, setPreferences] = useState<Record<string, number>>({});
 
-        // Default 50% for Credit Claim
-        if (type === 'CREDIT_CLAIM' && amount === 0 && buyPrice > 0) {
-            initialPercentage = 50;
-            initialAmount = Number((buyPrice * 0.50).toFixed(2));
+    // Auto-calculate 7% Sales Tax when Buy Price changes
+    useEffect(() => {
+        if (buyPrice > 0) {
+            setOriginTax(Number((buyPrice * 0.07).toFixed(2)));
+        } else {
+            setOriginTax(0);
         }
 
-        const newAdjustment: FinancialAdjustment = {
-            id: crypto.randomUUID(), // Temp ID for UI
-            product_id: '', // Not created yet
-            type,
-            amount: initialAmount,
-            percentage: initialPercentage,
-            date: new Date().toISOString(),
+        // REACTIVE ADJUSTMENTS: Recalculate amounts if Buy Price changes
+        if (adjustments.length > 0) {
+            setAdjustments(prev => prev.map(adj => {
+                if (adj.percentage && adj.percentage > 0) {
+                    const newAmount = Number((buyPrice * (adj.percentage / 100)).toFixed(2));
+                    if (newAmount !== adj.amount) {
+                        return { ...adj, amount: newAmount };
+                    }
+                }
+                return adj;
+            }));
+        }
+    }, [buyPrice]);
+
+    // Load Preferences & Auto-Add Defaults
+    useEffect(() => {
+        const loadPrefs = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data } = await supabase
+                .from('user_preferences')
+                .select('adjustment_defaults, default_platform_id, default_exchange_rate')
+                .eq('user_id', user.id)
+                .single();
+
+            let currentPrefs = {};
+            if (data) {
+                if (data.adjustment_defaults) {
+                    setPreferences(data.adjustment_defaults);
+                    currentPrefs = data.adjustment_defaults;
+                }
+
+                // Initialize Defaults if new product
+                if (!initialProduct?.id) {
+                    if (data.default_platform_id && !initialProduct?.platform_id) {
+                        setPlatformId(data.default_platform_id);
+                    }
+                    if (data.default_exchange_rate) {
+                        setExchangeRate(data.default_exchange_rate);
+                    }
+                }
+            }
+
+            // AUTO-ADD CREDIT CREDIT CLAIM (Phase 25)
+            // Only for new products and if no adjustments exist yet
+            if (!initialProduct?.id && adjustments.length === 0) {
+                const type = 'CREDIT_CLAIM';
+                // @ts-ignore
+                const prefPct = currentPrefs[type] || 50; // Default 50%
+
+                const newAdjustment: FinancialAdjustment = {
+                    id: crypto.randomUUID(),
+                    product_id: '',
+                    type,
+                    amount: 0, // Will be calculated reactively as soon as price is entered
+                    percentage: prefPct,
+                    date: new Date().toISOString(),
+                };
+                setAdjustments([newAdjustment]);
+            }
         };
-        setAdjustments(prev => [...prev, newAdjustment]);
-    };
-
-    const removeAdjustment = (id: string) => {
-        setAdjustments(prev => prev.filter(a => a.id !== id));
-    };
-
-    const updateAdjustment = (id: string, field: keyof FinancialAdjustment, value: any) => {
-        setAdjustments(prev => prev.map(a => {
-            if (a.id !== id) return a;
-            const updated = { ...a, [field]: value };
-
-            // Smart Calc: Percentage <-> Amount
-            if (field === 'percentage') {
-                updated.amount = Number((buyPrice * (Number(value) / 100)).toFixed(2));
-            }
-            if (field === 'amount' && buyPrice > 0) {
-                updated.percentage = Number(((Number(value) / buyPrice) * 100).toFixed(2));
-            }
-            return updated;
-        }));
-    };
+        loadPrefs();
+    }, [initialProduct]);
 
     const fetchMetadata = async (url: string) => {
         if (!url) return;
@@ -134,45 +208,6 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             setIsScraping(false);
         }
     };
-
-    const loadProduct = (p: Product) => {
-        setPlatformId(p.platform_id);
-        setName(p.name); // Load Name
-        setBuyPrice(p.buy_price);
-        setShippingCost(p.shipping_cost);
-        setOriginTax(p.origin_tax || 0); // Load Tax
-        setTaxCost(p.tax_cost);
-        setSalePrice(p.sale_price || 0);
-        setLocalShipping(p.local_shipping_cost ?? 0);
-        setExchangeRate(p.exchange_rate);
-        setProductUrl(p.product_url || '');
-        setImageUrl(p.image_url || '');
-        setAdjustments(p.adjustments || []);
-        setPurchaseAccountId((p as any).purchase_account_id || '');
-    };
-
-    const resetForm = () => {
-        setPlatformId('');
-        setBuyPrice(0);
-        setShippingCost(0);
-        setTaxCost(0);
-        setSalePrice(0);
-        setLocalShipping(0);
-        setAdjustments([]);
-        setProductUrl('');
-        setImageUrl('');
-        setPurchaseAccountId('');
-        // Exchange Rate stays as persisted/current
-    };
-
-    // Auto-calculate 7% Sales Tax when Buy Price changes
-    useEffect(() => {
-        if (buyPrice > 0) {
-            setOriginTax(Number((buyPrice * 0.07).toFixed(2)));
-        } else {
-            setOriginTax(0);
-        }
-    }, [buyPrice]);
 
     // Check for platform specific logic (Extensibility point)
     const isTemu = selectedPlatform?.name.toUpperCase() === 'TEMU';
@@ -241,6 +276,16 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setImages([]);
                 setName('');
             },
+            softReset: () => {
+                // Keep Platform, Account, Shipping, Tax, Local Shipping
+                setName('');
+                setBuyPrice(0);
+                setSalePrice(0);
+                setAdjustments([]); // Reset financial adjustments as they are per-item transaction
+                setProductUrl('');
+                setImageUrl('');
+                setImages([]);
+            },
             addAdjustment: (type: any, amount: number) => {
                 setAdjustments([...adjustments, { id: crypto.randomUUID(), product_id: '', type, amount, percentage: 0, date: new Date().toISOString() }]);
             },
@@ -248,7 +293,27 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setAdjustments(prev => prev.filter(a => a.id !== id));
             },
             updateAdjustment: (id: string, field: string, value: any) => {
-                setAdjustments(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a));
+                setAdjustments(prev => prev.map(a => {
+                    if (a.id !== id) return a;
+
+                    const updatedAdj = { ...a, [field]: value };
+
+                    // Bidirectional Logic
+                    const numValue = Number(value);
+                    const safeBuyPrice = Number(buyPrice) || 0;
+
+                    if (safeBuyPrice > 0) {
+                        if (field === 'percentage') {
+                            // If % changes, update Amount
+                            updatedAdj.amount = Number((safeBuyPrice * (numValue / 100)).toFixed(2));
+                        } else if (field === 'amount') {
+                            // If Amount changes, update %
+                            updatedAdj.percentage = Number(((numValue / safeBuyPrice) * 100).toFixed(2));
+                        }
+                    }
+
+                    return updatedAdj;
+                }));
             },
             fetchMetadata
         },

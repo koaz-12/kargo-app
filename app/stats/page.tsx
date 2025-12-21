@@ -250,85 +250,87 @@ export default function StatsPage() {
     return (
         <div className="min-h-screen bg-slate-50 pb-24 max-w-md mx-auto shadow-2xl shadow-slate-200">
             <header className="bg-white px-4 py-3 sticky top-0 z-20 border-b border-slate-100 flex items-center justify-between shadow-sm mb-6">
-                <div className="flex items-center gap-3">
-                    <Link href="/" className="text-slate-400 hover:text-slate-700 transition-colors">
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <h1 className="text-lg font-black text-slate-800 tracking-tight hidden sm:block">Estadísticas</h1>
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">
+                        <BarChart3 size={18} />
+                    </div>
+                    <h1 className="text-lg font-black text-slate-800 tracking-tight sm:block">Estadísticas</h1>
                 </div>
 
-                <div className="flex items-center gap-2 bg-slate-100 rounded-full p-1">
-                    <button onClick={() => changeMonth(-1)} className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-white rounded-full transition-all shadow-sm">
-                        <ChevronLeft size={18} />
+                <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
+                    <button onClick={() => changeMonth(-1)} className="p-0.5 text-slate-400 hover:text-slate-900 rounded hover:bg-white transition-all">
+                        <ChevronLeft size={14} />
                     </button>
-                    <span className="text-sm font-bold text-slate-800 capitalize w-32 text-center select-none pt-0.5">
-                        {monthNames[currentMonth]} {currentYear}
+                    <span className="text-[11px] font-bold text-slate-700 capitalize w-16 text-center select-none leading-none">
+                        {monthNames[currentMonth].substring(0, 3)}-{String(currentYear).slice(2)}
                     </span>
-                    <button onClick={() => changeMonth(1)} className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-white rounded-full transition-all shadow-sm">
-                        <ChevronRight size={18} />
+                    <button onClick={() => changeMonth(1)} className="p-0.5 text-slate-400 hover:text-slate-900 rounded hover:bg-white transition-all">
+                        <ChevronRight size={14} />
                     </button>
                 </div>
-
-                <div className="w-8"></div> {/* Spacer */}
             </header>
 
             <div className="p-4 space-y-6">
 
-                {/* 1. TIME BREAKDOWN (Recap) */}
-                {/* 1. MONTHLY GOAL (Gamification) */}
-                <section className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-end mb-2">
-                            <div>
-                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Meta del Mes</h3>
-                                <div className="flex items-center gap-2">
-                                    <div className="text-2xl font-black">
-                                        RD${Math.round(profitThisMonth).toLocaleString('en-US')}
-                                        <span className="text-slate-500 text-lg mx-1">/</span>
-                                    </div>
+                {/* 1. MONTHLY GOAL (Wrapped for Consistency) */}
+                <section className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4 flex items-center gap-2">
+                        <Trophy size={14} /> Meta Mensual
+                    </h3>
+                    <div className="bg-slate-900 text-white p-5 rounded-xl shadow-lg relative overflow-hidden">
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-end mb-2">
+                                <div>
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Progreso</h3>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-2xl font-black">
+                                            RD${Math.round(profitThisMonth).toLocaleString('en-US')}
+                                            <span className="text-slate-500 text-lg mx-1">/</span>
+                                        </div>
 
-                                    {isEditingGoal ? (
-                                        <div className="flex items-center gap-1">
-                                            <input
-                                                type="number"
-                                                value={tempGoal}
-                                                onChange={(e) => setTempGoal(e.target.value)}
-                                                className="w-24 bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-white text-lg font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
-                                            />
-                                            <button onClick={handleSaveGoal} className="p-1.5 bg-emerald-500 rounded hover:bg-emerald-600 transition-colors">
-                                                <Save size={14} />
-                                            </button>
-                                            <button onClick={() => setIsEditingGoal(false)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors">
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingGoal(true)}>
-                                            <span className="text-slate-500 text-lg font-bold border-b border-dashed border-slate-700 group-hover:border-slate-400 transition-colors">
-                                                RD${monthlyGoal.toLocaleString('en-US')}
-                                            </span>
-                                            <Edit2 size={12} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </div>
-                                    )}
+                                        {isEditingGoal ? (
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="number"
+                                                    value={tempGoal}
+                                                    onChange={(e) => setTempGoal(e.target.value)}
+                                                    className="w-24 bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-white text-lg font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
+                                                />
+                                                <button onClick={handleSaveGoal} className="p-1.5 bg-emerald-500 rounded hover:bg-emerald-600 transition-colors">
+                                                    <Save size={14} />
+                                                </button>
+                                                <button onClick={() => setIsEditingGoal(false)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingGoal(true)}>
+                                                <span className="text-slate-500 text-lg font-bold border-b border-dashed border-slate-700 group-hover:border-slate-400 transition-colors">
+                                                    RD${monthlyGoal.toLocaleString('en-US')}
+                                                </span>
+                                                <Edit2 size={12} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-3xl font-black text-emerald-400">{Math.round((profitThisMonth / monthlyGoal) * 100)}%</span>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <span className="text-3xl font-black text-emerald-400">{Math.round((profitThisMonth / monthlyGoal) * 100)}%</span>
+                            {/* Progress Bar */}
+                            <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                                <div
+                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full transition-all duration-1000 ease-out"
+                                    style={{ width: `${Math.min((profitThisMonth / monthlyGoal) * 100, 100)}%` }}
+                                ></div>
                             </div>
+                            <p className="text-[10px] text-slate-400 mt-2 text-center font-medium">
+                                {profitThisMonth >= monthlyGoal ? '¡Meta Cumplida! 🎉' : `Faltan RD$${(monthlyGoal - profitThisMonth).toLocaleString('en-US')} para la meta.`}
+                            </p>
                         </div>
-                        {/* Progress Bar */}
-                        <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                            <div
-                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full transition-all duration-1000 ease-out"
-                                style={{ width: `${Math.min((profitThisMonth / monthlyGoal) * 100, 100)}%` }}
-                            ></div>
+                        <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
+                            <Trophy size={120} />
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-2 text-center font-medium">
-                            {profitThisMonth >= monthlyGoal ? '¡Meta Cumplida! 🎉' : `Faltan RD$${(monthlyGoal - profitThisMonth).toLocaleString('en-US')} para la meta.`}
-                        </p>
-                    </div>
-                    <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
-                        <Trophy size={120} />
                     </div>
                 </section>
 

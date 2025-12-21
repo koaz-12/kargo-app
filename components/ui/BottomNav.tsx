@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Calculator, Package, LayoutDashboard, Settings, BarChart3, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, BarChart3, PlusCircle, Package, Settings } from 'lucide-react';
 
 export default function BottomNav() {
     const pathname = usePathname();
@@ -16,18 +16,27 @@ export default function BottomNav() {
         return (
             <Link
                 href={href}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                    }`}
+                className={`group flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 
+                    ${active ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                <Icon size={22} strokeWidth={active ? 2.5 : 2} />
-                <span className="text-[10px] font-medium">{label}</span>
+                {/* Clean Icon - No Pill Background */}
+                <div className="relative p-1">
+                    <Icon
+                        size={24}
+                        strokeWidth={active ? 2.5 : 2}
+                        className={`transition-transform duration-200 ${active ? 'scale-110 drop-shadow-sm' : 'scale-100'}`}
+                    />
+                </div>
+                <span className={`text-[10px] leading-none transition-all ${active ? 'font-bold' : 'font-medium'}`}>
+                    {label}
+                </span>
             </Link>
         );
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 safe-area-bottom pb-safe">
-            <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-x border-slate-100 z-50 safe-area-bottom pb-safe shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)]">
+            <div className="flex justify-around items-center h-16 w-full px-2">
                 <NavItem href="/" icon={LayoutDashboard} label="Inicio" />
                 <NavItem href="/stats" icon={BarChart3} label="Estadística" />
                 <NavItem href="/calculator" icon={PlusCircle} label="Producto" />

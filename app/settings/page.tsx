@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target } from 'lucide-react';
+import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target, Settings as SettingsIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Platform, PlatformType } from '../../types/index';
 
@@ -21,6 +21,8 @@ export default function SettingsPage() {
 
     const router = useRouter();
 
+    const [displayName, setDisplayName] = useState('');
+
     useEffect(() => {
         // Load stored rate
         const savedRate = localStorage.getItem('exchangeRate');
@@ -33,16 +35,35 @@ export default function SettingsPage() {
         const savedPlatform = localStorage.getItem('defaultPlatform');
         if (savedPlatform) setDefaultPlatform(savedPlatform);
 
-        // Load user email
+        // Load user email and preferences
         const getUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user?.email) setEmail(user.email);
+            if (user) {
+                if (user.email) setEmail(user.email);
+
+                // Fetch preferences
+                const { data } = await supabase.from('user_preferences').select('display_name').eq('user_id', user.id).single();
+                if (data && data.display_name) setDisplayName(data.display_name);
+            }
         };
         getUser();
 
         fetchAccounts();
         fetchPlatforms();
     }, []);
+
+    // ... (fetchPlatforms, handleAddPlatform, etc - kept same)
+
+    const handleDisplayNameChange = async (val: string) => {
+        setDisplayName(val);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('user_preferences').upsert({
+                user_id: user.id,
+                display_name: val
+            });
+        }
+    };
 
     const fetchPlatforms = async () => {
         const { data } = await supabase.from('platforms').select('*').order('created_at');
@@ -129,14 +150,32 @@ export default function SettingsPage() {
         if (!error) fetchAccounts();
     };
 
-    const handleRateChange = (val: string) => {
+    const handleRateChange = async (val: string) => {
         setExchangeRate(val);
         localStorage.setItem('exchangeRate', val);
+
+        // Save to DB
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('user_preferences').upsert({
+                user_id: user.id,
+                default_exchange_rate: Number(val)
+            });
+        }
     };
 
-    const handlePlatformChange = (val: string) => {
+    const handlePlatformChange = async (val: string) => {
         setDefaultPlatform(val);
         localStorage.setItem('defaultPlatform', val);
+
+        // Save to DB
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('user_preferences').upsert({
+                user_id: user.id,
+                default_platform_id: val
+            });
+        }
     };
 
     const handleDefaultGoalChange = (val: string) => {
@@ -152,9 +191,9 @@ export default function SettingsPage() {
     return (
         <div className="max-w-md mx-auto pb-24 bg-slate-50 min-h-screen">
             <header className="bg-white px-4 py-3 sticky top-0 z-20 border-b border-slate-100 flex items-center gap-3 shadow-sm mb-6">
-                <Link href="/" className="text-slate-400 hover:text-slate-700 transition-colors">
-                    <ArrowLeft size={20} />
-                </Link>
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">
+                    <SettingsIcon size={18} />
+                </div>
                 <h1 className="text-lg font-black text-slate-800 tracking-tight">Ajustes</h1>
             </header>
 
@@ -167,7 +206,14 @@ export default function SettingsPage() {
                     </div>
                     <div>
                         <p className="font-bold text-slate-800">Mi Cuenta</p>
-                        <p className="text-xs text-slate-400">{email}</p>
+                        <p className="text-xs text-slate-400 mb-1">{email}</p>
+                        <input
+                            type="text"
+                            placeholder="Tu Nombre (ej. Boss)"
+                            value={displayName}
+                            onChange={(e) => handleDisplayNameChange(e.target.value)}
+                            className="text-sm border border-slate-200 rounded px-2 py-1 w-full mt-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
                     </div>
                 </div>
 

@@ -29,6 +29,8 @@ export interface PurchaseAccount {
   created_at?: string;
 }
 
+export type ProductStatus = 'draft' | 'ordered' | 'received' | 'sold';
+
 export interface Product {
   id: string;
   platform_id: string;
@@ -45,7 +47,14 @@ export interface Product {
   currency: string;
   image_url?: string;
   product_url?: string;
-  status: 'ORDERED' | 'RECEIVED' | 'SOLD';
+
+  // Financials (Calculated)
+  net_cost?: number;
+  gross_profit?: number;
+  margin?: number;
+  roi?: number;
+
+  status: ProductStatus;
   images?: ProductImage[]; // New: Multi-image support
   created_at?: string;
   sold_at?: string; // Date when sold
@@ -81,6 +90,50 @@ export interface Transaction {
 export interface ProfitResult {
   net_cost: number;
   gross_profit: number; // Potential or realized
-  profit_margin: number;
+  margin: number; // Renamed from profit_margin or added
+  roi: number; // New
   total_adjustments: number;
+}
+
+export interface FormState {
+  platformId: string;
+  purchaseAccountId: string;
+  name: string;
+  buyPrice: number;
+  shippingCost: number;
+  originTax: number;
+  taxCost: number;
+  salePrice: number;
+  localShipping: number;
+  exchangeRate: number;
+  adjustments: FinancialAdjustment[];
+  productUrl: string;
+  imageUrl: string;
+  isScraping: boolean;
+  images?: any[];
+}
+
+export interface FormSetters {
+  setPlatformId: (val: string) => void;
+  setPurchaseAccountId: (val: string) => void;
+  setName: (val: string) => void;
+  setBuyPrice: (val: number) => void;
+  setShippingCost: (val: number) => void;
+  setOriginTax: (val: number) => void;
+  setTaxCost: (val: number) => void;
+  setExchangeRate: (val: number) => void;
+  setSalePrice: (val: number) => void;
+  setLocalShipping: (val: number) => void;
+  setAdjustments: (val: FinancialAdjustment[]) => void;
+  setProductUrl: (val: string) => void;
+  setImageUrl: (val: string) => void;
+  setImages: (val: any[]) => void;
+  setIsScraping: (val: boolean) => void;
+  loadProduct: (p: any) => void;
+  resetForm: () => void;
+  softReset: () => void;
+  addAdjustment: (type: any, amount: number) => void;
+  removeAdjustment: (id: string) => void;
+  updateAdjustment: (id: string, field: string, value: any) => void;
+  fetchMetadata: (url: string) => void;
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import DashboardStats from '../components/DashboardStats';
 import ProductList from '../components/products/ProductList';
-import { Plus, Package, ArrowRight, Wallet } from 'lucide-react';
+import { Plus, Package, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Product } from '../types';
 
@@ -14,9 +14,16 @@ export default function Home() {
 
     useEffect(() => {
         const fetch = async () => {
-            // Get User
+            // Get User & Name
             const { data: { user } } = await supabase.auth.getUser();
-            if (user?.email) setUserName(user.email.split('@')[0]);
+            if (user) {
+                const { data: prefs } = await supabase.from('user_preferences').select('display_name').eq('user_id', user.id).single();
+                if (prefs?.display_name) {
+                    setUserName(prefs.display_name);
+                } else if (user.email) {
+                    setUserName(user.email.split('@')[0]);
+                }
+            }
 
             // Get Data
             const { data } = await supabase.from('products').select('*');
@@ -33,9 +40,6 @@ export default function Home() {
                     <h1 className="text-lg font-black text-slate-800 capitalize leading-tight">Hola, {userName || 'Reseller'} 👋</h1>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Resumen</p>
                 </div>
-                <Link href="/stats" className="absolute right-4 top-3 w-8 h-8 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center shadow-sm cursor-pointer hover:bg-slate-100 transition-colors">
-                    <Wallet className="text-emerald-500" size={16} />
-                </Link>
             </header>
 
             <div className="px-4">
