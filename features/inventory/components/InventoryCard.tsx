@@ -222,7 +222,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
 
                     <div className="mb-4">
                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística / Rastreo (Opcional)</p>
-                        <div className="grid grid-cols-1 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">📦</span>
                                 <input
