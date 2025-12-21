@@ -28,7 +28,7 @@ export function useProductList() {
                 query = query.eq('status', statusFilter);
             }
             if (searchTerm) {
-                query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
+                query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,tracking_number.ilike.%${searchTerm}%,courier_tracking.ilike.%${searchTerm}%`);
             }
 
             // Sorting

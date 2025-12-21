@@ -48,6 +48,8 @@ export interface Product {
   currency: string;
   image_url?: string;
   product_url?: string;
+  tracking_number?: string; // Store Tracking (Amazon/Shein)
+  courier_tracking?: string; // Local Courier (EPS/BM)
 
   // Financials (Calculated)
   net_cost?: number;

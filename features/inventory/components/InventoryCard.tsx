@@ -19,6 +19,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         salePrice: initialProduct.sale_price || 0,
         localShipping: initialProduct.local_shipping_cost || 0,
         taxCost: initialProduct.tax_cost || 0,
+        trackingNumber: initialProduct.tracking_number || '',
+        courierTracking: initialProduct.courier_tracking || '',
         adjustments: initialProduct.financial_adjustments ? [...initialProduct.financial_adjustments] : []
     });
 
@@ -53,6 +55,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 salePrice: p.sale_price || 0,
                 localShipping: p.local_shipping_cost || 0,
                 taxCost: p.tax_cost || 0,
+                trackingNumber: p.tracking_number || '',
+                courierTracking: p.courier_tracking || '',
                 adjustments: p.financial_adjustments ? [...p.financial_adjustments] : []
             });
         }
@@ -79,6 +83,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     sale_price: editValues.salePrice,
                     local_shipping_cost: editValues.localShipping,
                     tax_cost: editValues.taxCost,
+                    tracking_number: editValues.trackingNumber,
+                    courier_tracking: editValues.courierTracking,
                     status: newStatus as any
                 })
                 .eq('id', p.id);
@@ -211,6 +217,32 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                                 onChange={(e) => setEditValues(prev => ({ ...prev, localShipping: Number(e.target.value) }))}
                                 className="w-full p-2 border border-slate-300 rounded-lg font-bold text-slate-600 outline-none focus:border-blue-500"
                             />
+                        </div>
+                    </div>
+
+                    <div className="mb-4">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística / Rastreo (Opcional)</p>
+                        <div className="grid grid-cols-1 gap-2">
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">📦</span>
+                                <input
+                                    type="text"
+                                    placeholder="Tracking Tienda (TBA...)"
+                                    value={editValues.trackingNumber || ''}
+                                    onChange={(e) => setEditValues(prev => ({ ...prev, trackingNumber: e.target.value }))}
+                                    className="w-full pl-8 p-2 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                                />
+                            </div>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🚚</span>
+                                <input
+                                    type="text"
+                                    placeholder="Tracking Courier (MIA...)"
+                                    value={editValues.courierTracking || ''}
+                                    onChange={(e) => setEditValues(prev => ({ ...prev, courierTracking: e.target.value }))}
+                                    className="w-full pl-8 p-2 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                                />
+                            </div>
                         </div>
                     </div>
 
