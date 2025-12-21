@@ -32,13 +32,13 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                 <div className="flex gap-3">
                     <div className="flex-1">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Precio Compra</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+                            <span className="text-slate-400 text-sm mr-2">$</span>
                             <input
                                 type="number"
                                 value={formState.buyPrice || ''}
                                 onChange={(e) => setters.setBuyPrice(Number(e.target.value))}
-                                className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none"
                                 placeholder="0.00"
                             />
                         </div>
@@ -47,20 +47,20 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     {/* 2. Shipping */}
                     <div className="w-1/3">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Envío (USA)</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+                            <span className="text-slate-400 text-sm mr-2">$</span>
                             <input
                                 type="number"
                                 value={formState.shippingCost || ''}
                                 onChange={(e) => setters.setShippingCost(Number(e.target.value))}
-                                className="w-full pl-6 pr-2 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none"
+                                className="w-full bg-transparent text-sm text-slate-700 outline-none"
                                 placeholder="0.00"
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* 3. Helper Row: Product Link & Shipping Markup */}
+                {/* 3. Helper Row... (Skipped in this chunk, doing contiguous block edits)*/}
                 <div className="grid grid-cols-[1fr_auto] gap-3">
                     {/* Product URL (Magic Paste) */}
                     <div className="relative">
@@ -81,13 +81,13 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     {/* Tax USA (7%) */}
                     <div className="flex-1">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Tax USA (7%)</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+                            <span className="text-slate-400 text-sm mr-2">$</span>
                             <input
                                 type="number"
                                 value={formState.originTax || ''}
                                 onChange={(e) => setters.setOriginTax(Number(e.target.value))}
-                                className="w-full pl-6 pr-2 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none"
+                                className="w-full bg-transparent text-sm text-slate-700 outline-none"
                                 placeholder="0.00"
                             />
                         </div>
@@ -106,13 +106,13 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                                 <Zap size={8} /> 0%
                             </button>
                         </div>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">RD$</span>
+                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus-within:border-blue-400 transition-colors">
+                            <span className="text-slate-400 text-sm font-bold mr-2">RD$</span>
                             <input
                                 type="number"
                                 value={formState.taxCost || ''}
                                 onChange={(e) => setters.setTaxCost(Number(e.target.value))}
-                                className="w-full pl-9 pr-2 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400"
+                                className="w-full bg-transparent text-sm text-slate-700 outline-none"
                                 placeholder="0.00"
                             />
                         </div>

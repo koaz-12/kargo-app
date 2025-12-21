@@ -43,22 +43,22 @@ export default function AdjustmentsSection({ formState, setters }: AdjustmentsSe
                             <option value="PRICE_ADJUSTMENT">Ajuste</option>
                             {/* Removed Invalid/Duplicate Options: PRICE_PROTECTION, REWARD_BACK (old label) */}
                         </select>
-                        <div className="relative w-16">
+                        <div className="w-16 flex items-center border border-slate-200 rounded px-1 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
                             <input
                                 type="number"
                                 placeholder="%"
-                                className="w-full px-1 py-1.5 text-xs border border-slate-200 rounded focus:border-blue-500 outline-none text-center bg-white"
+                                className="w-full text-xs outline-none text-center bg-transparent"
                                 value={adj.percentage || ''}
                                 onChange={(e) => setters.updateAdjustment(adj.id, 'percentage', Number(e.target.value))}
                             />
-                            <span className="absolute right-1 top-1.5 text-[9px] text-slate-400">%</span>
+                            <span className="text-[9px] text-slate-400 ml-0.5">%</span>
                         </div>
-                        <div className="relative flex-1">
-                            <span className="absolute left-1.5 top-1.5 text-[10px] text-slate-400">$</span>
+                        <div className="flex-1 flex items-center border border-slate-200 rounded px-2 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
+                            <span className="text-[10px] text-slate-400 mr-1">$</span>
                             <input
                                 type="number"
                                 placeholder="0.00"
-                                className="w-full pl-3 pr-2 py-1.5 text-xs border border-slate-200 rounded focus:border-blue-500 outline-none font-medium"
+                                className="w-full text-xs outline-none font-medium bg-transparent"
                                 value={adj.amount || ''}
                                 onChange={(e) => setters.updateAdjustment(adj.id, 'amount', Number(e.target.value))}
                             />
