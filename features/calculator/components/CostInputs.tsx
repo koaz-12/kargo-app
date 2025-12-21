@@ -33,7 +33,7 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     <div className="flex-1">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Precio Compra</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
                             <input
                                 type="number"
                                 value={formState.buyPrice || ''}
@@ -48,7 +48,7 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     <div className="w-1/3">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Envío (USA)</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
                             <input
                                 type="number"
                                 value={formState.shippingCost || ''}
@@ -82,7 +82,7 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     <div className="flex-1">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Tax USA (7%)</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
                             <input
                                 type="number"
                                 value={formState.originTax || ''}
@@ -107,7 +107,7 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                             </button>
                         </div>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">RD$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">RD$</span>
                             <input
                                 type="number"
                                 value={formState.taxCost || ''}
