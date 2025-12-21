@@ -58,7 +58,8 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Guard protected routes
-  if (!user && request.nextUrl.pathname === '/') {
+  // Protect ALL routes except login/signup
+  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/auth')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
