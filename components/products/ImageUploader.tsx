@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { Upload, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
+import { getPublicUrl } from '@/utils/imageUrl';
 
 
 interface ImageUploaderProps {
@@ -10,14 +11,6 @@ interface ImageUploaderProps {
     setImages: (images: string[]) => void;
     productId?: string; // If editing
 }
-
-// Helper to construct public URL
-const getPublicUrl = (path: string) => {
-    if (!path || typeof path !== 'string') return '';
-    if (path.startsWith('http')) return path;
-    const { data } = supabase.storage.from('product-images').getPublicUrl(path);
-    return data.publicUrl;
-};
 
 export default function ImageUploader({ images, setImages, productId }: ImageUploaderProps) {
     const [uploading, setUploading] = useState(false);

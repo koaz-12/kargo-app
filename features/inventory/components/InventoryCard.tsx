@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getPublicUrl } from '@/utils/imageUrl';
 import { Package, Trash2, Pencil } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { InventoryItem, AdjustmentType } from '../types';
@@ -186,13 +187,15 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         <div className={`bg-white border text-slate-900 rounded-xl overflow-hidden shadow-sm transition-all ${expanded ? 'border-slate-400 ring-1 ring-slate-400' : 'border-slate-100'}`}>
             <div onClick={toggleExpand} className="p-3 flex gap-3 items-center cursor-pointer">
                 <div className="w-12 h-12 bg-slate-50 rounded-lg shrink-0 overflow-hidden border border-slate-200">
-                    {p.image_url ? (
-                        <img src={p.image_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">
-                            <Package size={20} />
-                        </div>
-                    )}
+                    <div className="w-12 h-12 bg-slate-50 rounded-lg shrink-0 overflow-hidden border border-slate-200">
+                        {p.image_url ? (
+                            <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                <Package size={20} />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex-1 min-w-0">
