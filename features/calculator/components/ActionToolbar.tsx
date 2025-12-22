@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Copy, Save, Loader2 } from 'lucide-react';
 
 interface CalculationResults {
@@ -22,9 +24,20 @@ export default function ActionToolbar({
     onAddToQueue,
     onSave
 }: ActionToolbarProps) {
-    return (
-        <div className="fixed bottom-[65px] left-0 right-0 z-[9999]">
-            <div className="max-w-md mx-auto bg-white border-t border-slate-100 px-4 py-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
+
+    // Use Portal to escape any overflow/stacking context issues in Layout
+    return createPortal(
+        <div className="fixed bottom-[65px] left-0 right-0 z-[9999] pointer-events-none">
+            {/* pointer-events-none on wrapper to let clicks pass through on sides if needed, 
+                but visual bar needs pointer-events-auto */}
+            <div className="max-w-md mx-auto bg-white border-t border-slate-100 px-4 py-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pointer-events-auto">
                 <div className="flex items-center justify-between">
 
                     {/* 1. Stats (Compact Left) */}
@@ -78,6 +91,7 @@ export default function ActionToolbar({
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
