@@ -33,11 +33,9 @@ export const useProductForm = (editingId: string | null) => {
                         const productData = {
                             ...data,
                             adjustments: data.financial_adjustments || [],
-                            images: data.product_images?.map((img: any) => ({
-                                storage_path: img.storage_path,
-                                url: storageService.getPublicUrl(img.storage_path),
-                                display_order: img.display_order
-                            })) || []
+                            images: data.product_images && data.product_images.length > 0
+                                ? data.product_images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)).map((img: any) => img.storage_path) // Extract path string
+                                : (data.image_url ? [data.image_url] : [])
                         };
                         setters.loadProduct(productData);
                     }
@@ -77,7 +75,7 @@ export const useProductForm = (editingId: string | null) => {
                 margin: results.margin,
                 roi: results.roi,
 
-                status: 'ORDERED', // 'DRAFT' not valid in DB Enum, using 'ORDERED'
+                status: 'ORDERED' as ProductStatus,
             };
 
             let targetId = editingId;
