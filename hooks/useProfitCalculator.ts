@@ -186,7 +186,13 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                     percentage: prefPct,
                     date: new Date().toISOString(),
                 };
-                setAdjustments([newAdjustment]);
+                setAdjustments(prev => {
+                    // Safety check: specific race condition where loadProduct() populates adjustments
+                    // while this async loadPrefs() is still running. If populated, 'prev' will have data.
+                    // We shouldn't overwrite with default if data exists.
+                    if (prev.length > 0) return prev;
+                    return [newAdjustment];
+                });
             }
         };
         loadPrefs();
