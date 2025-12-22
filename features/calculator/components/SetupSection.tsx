@@ -61,9 +61,16 @@ export default function SetupSection({
                     value={formState.name}
                     onChange={setters.setName}
                     onSelectHistory={(product) => {
-                        // Smart Fill Logic (User Request: Only Name + Buy Price)
+                        // Smart Fill Logic (User Request: Name + Buy Price + Image)
                         setters.setName(product.name);
                         setters.setBuyPrice(product.buy_price);
+
+                        // Autofill Image if available
+                        if (product.image_url) {
+                            setters.setImages([product.image_url]);
+                        } else if (product.images && product.images.length > 0) {
+                            setters.setImages(product.images);
+                        }
 
                         // Explicitly NOT filling other variable costs as they change per shipment
                         // setters.setShippingCost(product.shipping_cost);
