@@ -109,19 +109,22 @@ export const useProductForm = (editingId: string | null) => {
 
             // Handle Images
             if (formState.images && formState.images.length > 0 && targetId) {
-                // If editing, ideally we sync (complex).
-                // Existing simple logic: Delete all references and re-insert is risky for Storage files?
-                // Actually `storage_path` persists. We just re-link the metadata.
                 if (editingId && !cloneMode) {
                     await supabase.from('product_images').delete().eq('product_id', editingId);
                 }
 
                 const imgs = formState.images.map((img: any, idx: number) => ({
                     product_id: targetId,
-                    storage_path: img.storage_path,
+                    storage_path: typeof img === 'string' ? img : img.storage_path,
                     display_order: idx
                 }));
                 await supabase.from('product_images').insert(imgs);
+
+                // Update primary image_url for fast access/legacy support
+                const primaryImage = imgs[0]?.storage_path;
+                if (primaryImage) {
+                    await supabase.from('products').update({ image_url: primaryImage }).eq('id', targetId);
+                }
             }
 
             // Reset or Redirect
