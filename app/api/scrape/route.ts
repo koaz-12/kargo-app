@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import * as cheerio from 'cheerio';
-
-// Initialize Supabase Client (Service Role not strictly needed here if we just verifying JWT, 
-// but using the standard client with headers is safer for context)
-// Actually, usually in API routes we construct client from cookies to get the user session.
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+
+// Puppeteer imports
+let chromium: any;
 
 export async function POST(req: NextRequest) {
     try {
@@ -14,96 +11,139 @@ export async function POST(req: NextRequest) {
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                cookies: {
-                    get(name: string) { return cookieStore.get(name)?.value; },
-                },
-            }
+            { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
         );
 
         const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { url } = await req.json();
+        if (!url) return NextResponse.json({ error: 'URL Missing' }, { status: 400 });
 
-        console.log('Scraping URL:', url);
+        // Clean URL to remove tracking params which might trigger anti-bot
+        // Exception: Keep 'top_gallery_url' if present, but usually we just want the base product page
+        // Let's try base URL first.
+        // Actually, user's URL has a lot of tracking.
+        const cleanUrl = url.split('?')[0];
+        console.log('Launching Puppeteer for Clean URL:', cleanUrl);
 
-        if (!url) {
-            return NextResponse.json({ error: 'URL Missing' }, { status: 400 });
+        let browser;
+        try {
+            if (process.env.NODE_ENV === 'production') {
+                // Production: Use sparticuz/chromium with puppeteer-core
+                if (!chromium) chromium = require('@sparticuz/chromium');
+                const puppeteerCore = require('puppeteer-core');
+                // Stealth doesn't work easily with pure core on Vercel without extra setup, 
+                // but usually Vercel IP + headless is enough or gets blocked anyway.
+                // For now, keep standard core for prod.
+                browser = await puppeteerCore.launch({
+                    args: chromium.args,
+                    defaultViewport: chromium.defaultViewport,
+                    executablePath: await chromium.executablePath(),
+                    headless: chromium.headless,
+                    ignoreHTTPSErrors: true,
+                });
+            } else {
+                // Local: Use puppeteer-extra + stealth
+                const puppeteer = require('puppeteer-extra');
+                const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+                puppeteer.use(StealthPlugin());
+
+                browser = await puppeteer.launch({
+                    headless: "new",
+                    args: ['--no-sandbox', '--disable-setuid-sandbox']
+                });
+            }
+
+            const page = await browser.newPage();
+
+            // Standard Viewport
+            await page.setViewport({ width: 1920, height: 1080 });
+
+            // Block resources
+            await page.setRequestInterception(true);
+            page.on('request', (req: any) => {
+                const resourceType = req.resourceType();
+                if (['stylesheet', 'font', 'image'].includes(resourceType)) {
+                    req.abort();
+                } else {
+                    req.continue();
+                }
+            });
+
+            // Navigate
+            await page.goto(cleanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+            // Extract Data
+            const data = await page.evaluate(() => {
+                const getPrice = (text: string | null) => {
+                    if (!text) return 0;
+                    const parsed = parseFloat(text.replace(/[^\d.]/g, ''));
+                    return isNaN(parsed) ? 0 : parsed;
+                };
+
+                const title = document.querySelector('h1')?.innerText ||
+                    document.querySelector('.product-name')?.textContent ||
+                    document.title;
+
+                let image = '';
+                const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
+                if (ogImage) image = ogImage;
+
+                if (!image) {
+                    const imgEl = document.querySelector('img.main-image') || document.querySelector('img[class*="product-image"]');
+                    if (imgEl) image = (imgEl as HTMLImageElement).src;
+                }
+
+                let price = 0;
+
+                // 1. Meta Tags
+                const metaPrice = document.querySelector('meta[property="og:price:amount"]')?.getAttribute('content');
+                if (metaPrice) price = getPrice(metaPrice);
+
+                // 2. DOM Selectors
+                if (price === 0) {
+                    const priceEl = document.querySelector('.g-price') ||
+                        document.querySelector('[data-test="pay-price"]') ||
+                        document.querySelector('[class*="product-price"]') ||
+                        document.querySelector('span[data-type="0"]');
+                    if (priceEl) price = getPrice(priceEl.textContent);
+                }
+
+                // 3. Regex Fallback
+                if (price === 0) {
+                    const match = document.body.innerText.match(/\$\s?(\d{1,4}\.\d{2})/);
+                    if (match) price = parseFloat(match[1]);
+                }
+
+                return {
+                    title: title?.trim(),
+                    image,
+                    price,
+                    debugTitle: document.title
+                };
+            });
+
+            await browser.close();
+
+            // Restore image from original URL if local failed (Temu specific)
+            // If the original URL had 'top_gallery_url', use it as fallback
+            const originalUrlObj = new URL(url);
+            const topGalleryUrl = originalUrlObj.searchParams.get('top_gallery_url');
+            if (topGalleryUrl && !data.image) {
+                data.image = decodeURIComponent(topGalleryUrl);
+            }
+
+            console.log('Puppeteer Result:', data);
+            return NextResponse.json(data);
+
+        } catch (error: any) {
+            console.error('Puppeteer Error:', error);
+            if (browser) await browser.close();
+            return NextResponse.json({ error: 'Scrape Failed: ' + error.message }, { status: 500 });
         }
-
-        // Fetch the HTML with robust headers
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache',
-                'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Upgrade-Insecure-Requests': '1'
-            },
-            redirect: 'follow'
-        });
-
-        if (!response.ok) {
-            console.error('Fetch failed:', response.status, response.statusText);
-            return NextResponse.json({ error: `Failed to fetch page: ${response.status}` }, { status: response.status });
-        }
-
-        // SPECIAL HANDLING: TEMU Query Params
-        // Temu often puts the image in 'top_gallery_url' or 'spec_gallery_id' mapped URL.
-        // We check the FINAL url after redirects (e.g. from share.temu.com)
-        const finalUrl = new URL(response.url);
-        const topGalleryUrl = finalUrl.searchParams.get('top_gallery_url');
-
-        if (topGalleryUrl) {
-            const decodedImg = decodeURIComponent(topGalleryUrl);
-            console.log('Found Temu Gallery URL:', decodedImg);
-            // We continue to parse HTML for title, but prioritize this image later
-        }
-
-        const html = await response.text();
-        const $ = cheerio.load(html);
-
-        // 1. Image Strategy
-        let image = '';
-        if (topGalleryUrl) {
-            image = decodeURIComponent(topGalleryUrl);
-        } else {
-            image = $('meta[property="og:image"]').attr('content') ||
-                $('meta[name="twitter:image"]').attr('content') ||
-                $('link[rel="image_src"]').attr('href') ||
-                // Temu specific fallback selectors
-                $('img[class*="main-image"]').attr('src') ||
-                $('img[class*="product-image"]').attr('src') ||
-                '';
-        }
-
-        // 2. Title Strategy
-        const title = $('meta[property="og:title"]').attr('content') ||
-            $('head title').text() ||
-            $('h1').first().text() ||
-            'Producto Temu';
-
-        return NextResponse.json({
-            image,
-            title: title.trim()
-        });
-
-
 
     } catch (error: any) {
-        console.error('Scrape error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
