@@ -27,6 +27,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     const [images, setImages] = useState<any[]>(initialProduct?.images || []); // New Images Array
     const [isScraping, setIsScraping] = useState(false);
 
+    const [courierDiscount, setCourierDiscount] = useState<number>(0);
     const [isRateLoaded, setIsRateLoaded] = useState(false);
 
     // Persistence: Load Exchange Rate
@@ -138,12 +139,19 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
 
             const { data } = await supabase
                 .from('user_preferences')
-                .select('adjustment_defaults, default_platform_id, default_exchange_rate')
+                .select('adjustment_defaults, default_platform_id, default_exchange_rate, display_name, default_courier_discount, default_local_shipping')
                 .eq('user_id', user.id)
                 .single();
 
             let currentPrefs = {};
             if (data) {
+                if (data.default_courier_discount) {
+                    setCourierDiscount(Number(data.default_courier_discount));
+                }
+                if (data.display_name) {
+                    // console.log('Loaded Display Name:', data.display_name);
+                }
+
                 if (data.adjustment_defaults) {
                     setPreferences(data.adjustment_defaults);
                     currentPrefs = data.adjustment_defaults;
@@ -156,6 +164,9 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                     }
                     if (data.default_exchange_rate) {
                         setExchangeRate(data.default_exchange_rate);
+                    }
+                    if (data.default_local_shipping) {
+                        setLocalShipping(Number(data.default_local_shipping));
                     }
                 }
             }
@@ -254,7 +265,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             productUrl,
             imageUrl,
             isScraping,
-            images // New
+            images, // New
+            courierDiscount, // New
         },
         setters: {
             setPlatformId,
@@ -347,6 +359,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
         meta: {
             selectedPlatform,
             isTemu
-        }
+        },
+        courierDiscount // Return State
     };
 };

@@ -19,6 +19,10 @@ export default function SettingsPage() {
     const [newPlatformName, setNewPlatformName] = useState('');
     const [newPlatformType, setNewPlatformType] = useState<PlatformType>('OTHER');
 
+    // Courier Config
+    const [courierDiscount, setCourierDiscount] = useState<string>('0');
+    const [localShippingDefault, setLocalShippingDefault] = useState<string>('0');
+
     const router = useRouter();
 
     const [displayName, setDisplayName] = useState('');
@@ -42,8 +46,16 @@ export default function SettingsPage() {
                 if (user.email) setEmail(user.email);
 
                 // Fetch preferences
-                const { data } = await supabase.from('user_preferences').select('display_name').eq('user_id', user.id).single();
-                if (data && data.display_name) setDisplayName(data.display_name);
+                const { data } = await supabase.from('user_preferences')
+                    .select('display_name, default_courier_discount, default_local_shipping')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (data) {
+                    if (data.display_name) setDisplayName(data.display_name);
+                    if (data.default_courier_discount) setCourierDiscount(data.default_courier_discount.toString());
+                    if (data.default_local_shipping) setLocalShippingDefault(data.default_local_shipping.toString());
+                }
             }
         };
         getUser();
@@ -181,6 +193,28 @@ export default function SettingsPage() {
     const handleDefaultGoalChange = (val: string) => {
         setDefaultMonthlyGoal(val);
         localStorage.setItem('defaultMonthlyGoal', val);
+    };
+
+    const handleCourierDiscountChange = async (val: string) => {
+        setCourierDiscount(val);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('user_preferences').upsert({
+                user_id: user.id,
+                default_courier_discount: Number(val)
+            });
+        }
+    };
+
+    const handleLocalShippingDefaultChange = async (val: string) => {
+        setLocalShippingDefault(val);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('user_preferences').upsert({
+                user_id: user.id,
+                default_local_shipping: Number(val)
+            });
+        }
     };
 
     const handleLogout = async () => {
@@ -339,6 +373,42 @@ export default function SettingsPage() {
                             value={defaultMonthlyGoal}
                             onChange={(e) => handleDefaultGoalChange(e.target.value)}
                             className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 font-mono text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                </div>
+
+                <div className="p-4 border-b border-slate-100">
+                    <p className="font-semibold text-slate-700 mb-1 flex items-center gap-2">
+                        <DollarSign size={16} className="text-slate-400" />
+                        Descuento Courier (Predeterminado)
+                    </p>
+                    <p className="text-xs text-slate-400 mb-3">Se aplicará con el botón mágico en "Pago Courier".</p>
+                    <div className="relative">
+                        <span className="absolute left-3 top-2 text-slate-400 font-bold text-xs">%</span>
+                        <input
+                            type="number"
+                            value={courierDiscount}
+                            onChange={(e) => handleCourierDiscountChange(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 font-mono text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="0"
+                        />
+                    </div>
+                </div>
+
+                <div className="p-4 border-b border-slate-100">
+                    <p className="font-semibold text-slate-700 mb-1 flex items-center gap-2">
+                        <DollarSign size={16} className="text-slate-400" />
+                        Envío Local (Predeterminado)
+                    </p>
+                    <p className="text-xs text-slate-400 mb-3">Costo de envío local por defecto al crear productos.</p>
+                    <div className="relative">
+                        <span className="absolute left-3 top-2 text-slate-400 font-bold text-xs">RD$</span>
+                        <input
+                            type="number"
+                            value={localShippingDefault}
+                            onChange={(e) => handleLocalShippingDefaultChange(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 font-mono text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="0"
                         />
                     </div>
                 </div>

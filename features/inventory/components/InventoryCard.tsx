@@ -13,6 +13,8 @@ interface InventoryCardProps {
 export default function InventoryCard({ product: initialProduct, refreshList, onDelete }: InventoryCardProps) {
     const [p, setProduct] = useState(initialProduct);
     const [expanded, setExpanded] = useState(false);
+    const [courierDiscount, setCourierDiscount] = useState(0);
+    const [isDiscountApplied, setIsDiscountApplied] = useState(false); // New State
 
     // Quick Edit State
     const [editValues, setEditValues] = useState({
@@ -47,10 +49,12 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
 
     const profit = getEstProfit();
 
-    const toggleExpand = () => {
-        setExpanded(!expanded);
-        if (!expanded) {
-            // Reset edit values on open
+    const toggleExpand = async () => {
+        const willExpand = !expanded;
+        setExpanded(willExpand);
+
+        if (willExpand) {
+            // Load Edit Values
             setEditValues({
                 salePrice: p.sale_price || 0,
                 localShipping: p.local_shipping_cost || 0,
@@ -59,6 +63,25 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 courierTracking: p.courier_tracking || '',
                 adjustments: p.financial_adjustments ? [...p.financial_adjustments] : []
             });
+
+            // Load Preferences (Discount & Local Shipping)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data } = await supabase.from('user_preferences')
+                    .select('default_courier_discount, default_local_shipping')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (data) {
+                    if (data.default_courier_discount) {
+                        setCourierDiscount(Number(data.default_courier_discount));
+                    }
+                    // Auto-fill Local Shipping if 0
+                    if (data.default_local_shipping && (p.local_shipping_cost === 0 || !p.local_shipping_cost)) {
+                        setEditValues(prev => ({ ...prev, localShipping: Number(data.default_local_shipping) }));
+                    }
+                }
+            }
         }
     };
 
@@ -186,14 +209,45 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
             {expanded && (
                 <div className="bg-slate-50 p-3 border-t border-slate-200 animate-in slide-in-from-top-2">
                     <div className="mb-3">
-                        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Aduanas (RD$)</label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-[10px] uppercase font-bold text-slate-400 block">Pago Courier (RD$)</label>
+                            {courierDiscount > 0 && (
+                                <button
+                                    onClick={() => {
+                                        if (editValues.taxCost > 0 && !isDiscountApplied) {
+                                            const discounted = editValues.taxCost * (1 - (courierDiscount / 100));
+                                            setEditValues(prev => ({ ...prev, taxCost: Math.round(discounted) }));
+                                            setIsDiscountApplied(true);
+                                        }
+                                    }}
+                                    disabled={isDiscountApplied}
+                                    className={`text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1 transition-colors ${isDiscountApplied
+                                        ? 'bg-slate-100 text-slate-400 cursor-default'
+                                        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100'
+                                        }`}
+                                >
+                                    <span className="text-[8px]">{isDiscountApplied ? '✓' : '⚡'}</span>
+                                    {isDiscountApplied ? 'Aplicado' : `-${courierDiscount}%`}
+                                </button>
+                            )}
+                        </div>
                         <div className="relative">
                             <span className="absolute left-2 top-2 text-slate-400 text-xs">$</span>
                             <input
                                 type="number"
                                 value={editValues.taxCost || ''}
-                                onChange={(e) => setEditValues(prev => ({ ...prev, taxCost: Number(e.target.value) }))}
-                                className="w-full pl-5 p-2 bg-orange-50 border border-orange-100 rounded-lg font-bold text-slate-700 outline-none focus:border-orange-300"
+                                onChange={(e) => {
+                                    setEditValues(prev => ({ ...prev, taxCost: Number(e.target.value) }));
+                                    setIsDiscountApplied(false);
+                                }}
+                                onBlur={() => {
+                                    if (courierDiscount > 0 && editValues.taxCost > 0 && !isDiscountApplied) {
+                                        const discounted = editValues.taxCost * (1 - (courierDiscount / 100));
+                                        setEditValues(prev => ({ ...prev, taxCost: Math.round(discounted) }));
+                                        setIsDiscountApplied(true);
+                                    }
+                                }}
+                                className={`w-full pl-5 p-2 bg-orange-50 border rounded-lg font-bold text-slate-700 outline-none transition-all ${isDiscountApplied ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-orange-100 focus:border-orange-300'}`}
                                 placeholder="0.00"
                             />
                         </div>

@@ -26,7 +26,8 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
         saving,
         statusMsg,
         handleSave,
-        handleAddToQueue
+        handleAddToQueue,
+        courierDiscount
     } = useProductForm(editingId);
 
     const [showFullForm, setShowFullForm] = useState(false);
@@ -59,6 +60,7 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
                         formState={formState}
                         setters={setters}
                         selectedPlatformName={platforms.find(p => p.id === formState.platformId)?.name}
+                        courierDiscount={courierDiscount}
                     />
                 )}
 

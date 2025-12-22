@@ -7,7 +7,7 @@ import { supabase } from '../../../lib/supabaseClient';
 
 export const useProductForm = (editingId: string | null) => {
     const router = useRouter();
-    const { formState, setters, results, meta } = useProfitCalculator();
+    const { formState, setters, results, courierDiscount } = useProfitCalculator();
 
     const [platforms, setPlatforms] = useState<any[]>([]);
     const [accounts, setAccounts] = useState<any[]>([]);
@@ -168,7 +168,7 @@ export const useProductForm = (editingId: string | null) => {
         }
 
         // 2. Call original fetch logic
-        await setters.fetchMetadata(url);
+        return await setters.fetchMetadata(url);
     };
 
     return {
@@ -183,6 +183,7 @@ export const useProductForm = (editingId: string | null) => {
         saving,
         statusMsg,
         handleSave,
-        handleAddToQueue
+        handleAddToQueue,
+        courierDiscount // Pass through
     };
 }

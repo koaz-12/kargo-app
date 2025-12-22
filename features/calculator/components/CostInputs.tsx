@@ -7,10 +7,12 @@ interface CostInputsProps {
     setters: FormSetters;
     onApplyDiscount?: (percent: number) => void;
     selectedPlatformName?: string;
+    courierDiscount?: number;
 }
 
-export default function CostInputs({ formState, setters, onApplyDiscount, selectedPlatformName }: CostInputsProps) {
+export default function CostInputs({ formState, setters, onApplyDiscount, selectedPlatformName, courierDiscount = 0 }: CostInputsProps) {
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isDiscountApplied, setIsDiscountApplied] = useState(false);
 
     const extractUrl = (text: string) => {
         // More robust URL extraction: Find http/https and grab everything until whitespace
@@ -139,25 +141,49 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                         </div>
                     </div>
 
-                    {/* Import Tax (DOP) */}
+                    {/* Import Tax (DOP) -> Renamed to Pago Courier */}
                     <div className="flex-1">
                         <div className="flex justify-between items-center mb-0.5">
-                            <label className="text-[10px] text-slate-400">Aduanas (RD$)</label>
-                            {/* Zero Tax Helper */}
-                            <button
-                                onClick={() => setters.setTaxCost(0)}
-                                className="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 flex items-center gap-0.5 hover:bg-emerald-100"
-                                title="Exento (0%)"
-                            >
-                                <Zap size={8} /> 0%
-                            </button>
+                            <div className="flex font-mono text-[10px] items-center gap-1">
+                                <label className="text-slate-400 block mb-0.5">Pago Courier (RD$)</label>
+                                {courierDiscount > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            if (formState.taxCost > 0 && !isDiscountApplied) {
+                                                const discounted = formState.taxCost * (1 - (courierDiscount / 100));
+                                                setters.setTaxCost(Math.round(discounted));
+                                                setIsDiscountApplied(true);
+                                            }
+                                        }}
+                                        disabled={isDiscountApplied}
+                                        className={`text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-0.5 transition-colors ${isDiscountApplied
+                                            ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-default'
+                                            : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100'
+                                            }`}
+                                        title={isDiscountApplied ? 'Descuento aplicado' : `Descontar ${courierDiscount}% (o click fuera)`}
+                                    >
+                                        {isDiscountApplied ? <CheckCircle size={8} /> : <Zap size={8} />}
+                                        {isDiscountApplied ? 'Aplicado' : `-${courierDiscount}%`}
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus-within:border-blue-400 transition-colors">
+                        <div className={`flex items-center bg-slate-50 border rounded-lg px-3 py-2.5 transition-all ${isDiscountApplied ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200 focus-within:border-blue-400'}`}>
                             <span className="text-slate-400 text-sm font-bold mr-2">RD$</span>
                             <input
                                 type="number"
                                 value={formState.taxCost || ''}
-                                onChange={(e) => setters.setTaxCost(Number(e.target.value))}
+                                onChange={(e) => {
+                                    setters.setTaxCost(Number(e.target.value));
+                                    setIsDiscountApplied(false);
+                                }}
+                                onBlur={() => {
+                                    if (courierDiscount > 0 && formState.taxCost > 0 && !isDiscountApplied) {
+                                        const discounted = formState.taxCost * (1 - (courierDiscount / 100));
+                                        setters.setTaxCost(Math.round(discounted));
+                                        setIsDiscountApplied(true);
+                                    }
+                                }}
                                 className="w-full bg-transparent text-sm text-slate-700 outline-none"
                                 placeholder="0.00"
                             />
