@@ -26,9 +26,22 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
         if (p.status !== 'SOLD') return acc;
         const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
         const dopCost = (usdCost * p.exchange_rate) + p.tax_cost + (p.local_shipping_cost || 0);
-        // Add adjustments? Assuming adjustments are handled or negligible for high-level stats for now
-        // OR reuse logic if possible.
-        return acc + ((p.sale_price || 0) - dopCost);
+
+        // Calculate Adjustments (Credits increase profit)
+        let adjustmentsTotalUSD = 0;
+        if (p.adjustments) {
+            adjustmentsTotalUSD = p.adjustments.reduce((sum, adj) => {
+                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION') {
+                    return sum + (adj.amount || 0);
+                }
+                return sum;
+            }, 0);
+        }
+
+        // Convert adjustments to DOP
+        const adjustmentsTotalDOP = adjustmentsTotalUSD * (p.exchange_rate || 58);
+
+        return acc + ((p.sale_price || 0) - dopCost + adjustmentsTotalDOP);
     }, 0);
 
     // 3. Potential Profit (From Received/Ordered items)
