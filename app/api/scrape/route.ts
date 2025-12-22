@@ -90,50 +90,31 @@ export async function POST(req: NextRequest) {
 
             // Navigate
             try {
-                // Wait harder!
-                await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                // Navigate with reasonable timeout
+                await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
-                // Try to wait specifically for the price element the user saw
-                try {
-                    await page.waitForSelector('span[data-type="0"], .g-price', { timeout: 5000 });
-                } catch (e) {
-                    console.log('Timeout waiting for price selector, proceeding anyway...');
-                }
-
-                // Extra safety pause for hydration
-                await new Promise(r => setTimeout(r, 3000));
+                // Short wait for dynamic content
+                await new Promise(r => setTimeout(r, 2000));
 
             } catch (navError) {
-                console.warn('Navigation error:', navError);
+                console.warn('Navigation timeout, parsing available content:', navError);
             }
 
             // Grab full HTML content
             const html = await page.content();
             await browser.close();
 
-            // Debug: Dump HTML to check what we actually got
-            try {
-                const fs = require('fs');
-                fs.writeFileSync('scraped_dump.html', html);
-                console.log('Dumped HTML to scraped_dump.html');
-            } catch (e) { console.error('Failed to dump HTML', e); }
-
             // --- SERVER SIDE PARSING WITH CHEERIO ---
-            console.log('HTML Captured. Length:', html.length);
             const $ = cheerio.load(html);
 
-            // Debug: Check if we are on Login page
-            const pageTitle = $('title').text();
-            console.log('Page Title:', pageTitle);
-
-            // 1. Initial Logic: Title
+            // 1. Title Strategy
             let title = $('h1').first().text().trim() ||
                 $('.product-name').text().trim() ||
                 $('meta[property="og:title"]').attr('content') ||
-                pageTitle ||
+                $('title').text().trim() ||
                 'Producto Temu';
 
-            // 2. Logic: Image
+            // 2. Image Strategy
             let image = $('meta[property="og:image"]').attr('content') || '';
             if (!image) {
                 const imgEl = $('img.main-image').first() ||
@@ -141,63 +122,40 @@ export async function POST(req: NextRequest) {
                 if (imgEl && imgEl.length > 0) image = imgEl.attr('src') || '';
             }
 
-            // 3. Logic: Price (The main goal)
+            // 3. Price Strategy (Best Effort)
             let price = 0;
 
             const getPrice = (str: string | undefined | null) => {
                 if (!str) return 0;
-                // Look for standard price format X.XX or XX.XX
                 const matches = str.match(/(?:^|\D)(\d{1,5}\.\d{2})(?!\d)/);
                 if (matches) return parseFloat(matches[1]);
                 return 0;
             };
 
-            // Strategy A: Meta Tags
             const metaPrice = $('meta[property="og:price:amount"]').attr('content') ||
                 $('meta[property="product:price:amount"]').attr('content');
             if (metaPrice) price = getPrice(metaPrice);
 
-            // Strategy B: DOM Selectors (Loop through candidates)
+            // Attempt DOM selectors if meta failed
             if (price === 0) {
                 const candidates = [
-                    $('span[data-type="0"]'), // User finding
+                    $('span[data-type="0"]'),
                     $('.g-price'),
-                    $('[data-test="pay-price"]'),
-                    $('[class*="product-price"]'),
-                    $('.price'),
-                    $('.current-price'),
-                    // Try finding spans that contain "$" directly
-                    $('span:contains("$")')
+                    $('[data-test="pay-price"]')
                 ];
-
                 for (const el of candidates) {
                     if (el && el.length > 0) {
-                        const txt = el.first().text();
-                        const p = getPrice(txt);
-                        if (p > 0) {
-                            price = p;
-                            console.log('Found price via selector:', el.get(0)?.tagName, 'Text:', txt);
-                            break;
-                        }
+                        const p = getPrice(el.first().text());
+                        if (p > 0) { price = p; break; }
                     }
                 }
             }
 
-            // Strategy C: Regex Search on Body Text (Nuclear Option)
+            // Regex Fallback
             if (price === 0) {
                 const bodyText = $('body').text();
-                // Look for $101.33 pattern, not preceded by other digits (minimize version numbers)
                 const match = bodyText.match(/(?:^|\s)\$(\d{1,5}\.\d{2})(?!\d)/);
-                if (match) {
-                    price = parseFloat(match[1]);
-                    console.log('Found price via Regex on Body:', match[0]);
-                }
-            }
-
-            // Fallback for Title
-            if (title === 'Producto Temu' || title === 'Temu') {
-                const altTitle = $('meta[property="og:description"]').attr('content');
-                if (altTitle && altTitle.length > 5) title = altTitle;
+                if (match) price = parseFloat(match[1]);
             }
 
             // Restore image from original URL if local failed (Temu specific)
@@ -207,14 +165,11 @@ export async function POST(req: NextRequest) {
                 image = decodeURIComponent(topGalleryUrl);
             }
 
-            const result = {
+            return NextResponse.json({
                 title: title?.trim(),
                 image,
                 price
-            };
-
-            console.log('Final Scrape Result:', result);
-            return NextResponse.json(result);
+            });
 
         } catch (error: any) {
             console.error('Puppeteer Runtime Error:', error);

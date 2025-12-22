@@ -198,8 +198,52 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 return;
             }
 
-            if (data.image) setImageUrl(data.image);
-            else alert('No se encontró ninguna imagen en esa página.');
+            if (data.image) {
+                setImageUrl(data.image);
+                // Fix: Push to images array so it shows in UI
+                setImages(prev => {
+                    // Avoid duplicates
+                    const exists = prev.some(img => img.storage_path === data.image);
+                    if (exists) return prev;
+
+                    return [...prev, {
+                        id: crypto.randomUUID(),
+                        product_id: initialProduct?.id || '',
+                        storage_path: data.image, // Correct property for ImageUploader
+                        display_order: prev.length,
+                        created_at: new Date().toISOString()
+                    }];
+                });
+            } else {
+                alert('No se encontró ninguna imagen en esa página.');
+            }
+
+            // Auto-fill Title
+            if (data.title && !name) {
+                setName(data.title);
+            }
+
+            // Auto-fill Price
+            if (data.price > 0) {
+                if (buyPrice > 0) {
+                    const confirmReplace = window.confirm(`Found price $${data.price}. Replace current cost $${buyPrice}?`);
+                    if (confirmReplace) setBuyPrice(data.price);
+                } else {
+                    setBuyPrice(data.price);
+                }
+            } else {
+                // Price missing (Anti-bot protection)
+                // We successfully got title/image, but price was blocked.
+                // alert('Product found, but price is protected by security. Please enter manually.');
+                // Better: Just let them know without blocking alert
+                console.log('Price protected/missing');
+                toast({
+                    title: 'Price Protected',
+                    description: 'Temu hid the price. Please enter it manually.',
+                    variant: 'warning',
+                    duration: 4000
+                });
+            }
 
         } catch (e) {
             console.error('Scrape failed', e);
