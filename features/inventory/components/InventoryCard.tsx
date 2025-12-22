@@ -31,11 +31,12 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
     // Profit Calc Helper
     const getEstProfit = () => {
         const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
-        const dopCost = (usdCost * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0);
+        // Use EditValues for reactive updates
+        const dopCost = (usdCost * (p.exchange_rate || 58)) + (editValues.taxCost || 0) + (editValues.localShipping || 0);
 
         let adjustmentsTotal = 0;
-        if (p.financial_adjustments) {
-            adjustmentsTotal = p.financial_adjustments.reduce((sum, adj) => {
+        if (editValues.adjustments) {
+            adjustmentsTotal = editValues.adjustments.reduce((sum, adj) => {
                 if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION') {
                     return sum + (adj.amount || 0);
                 }
@@ -43,7 +44,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
             }, 0);
         }
 
-        const profit = (p.sale_price || 0) - dopCost + adjustmentsTotal;
+        const profit = (editValues.salePrice || 0) - dopCost + adjustmentsTotal;
         return Math.round(profit);
     };
 
