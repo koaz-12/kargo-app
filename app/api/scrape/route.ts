@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import * as cheerio from 'cheerio';
 
 // Puppeteer imports
+// We use a pattern to support both Local (puppeteer) and Production/Vercel (@sparticuz/chromium)
 let chromium: any;
 
 export async function POST(req: NextRequest) {
@@ -11,21 +13,28 @@ export async function POST(req: NextRequest) {
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
+            {
+                cookies: {
+                    get(name: string) { return cookieStore.get(name)?.value; },
+                },
+            }
         );
 
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         const { url } = await req.json();
-        if (!url) return NextResponse.json({ error: 'URL Missing' }, { status: 400 });
 
-        // Clean URL to remove tracking params which might trigger anti-bot
-        // Exception: Keep 'top_gallery_url' if present, but usually we just want the base product page
-        // Let's try base URL first.
-        // Actually, user's URL has a lot of tracking.
+        if (!url) {
+            return NextResponse.json({ error: 'URL Missing' }, { status: 400 });
+        }
+
+        // Clean URL to increase success rate
         const cleanUrl = url.split('?')[0];
-        console.log('Launching Puppeteer for Clean URL:', cleanUrl);
+        console.log('Hybrid Scraper: Launching Puppeteer for:', cleanUrl);
 
         let browser;
         try {
@@ -33,9 +42,6 @@ export async function POST(req: NextRequest) {
                 // Production: Use sparticuz/chromium with puppeteer-core
                 if (!chromium) chromium = require('@sparticuz/chromium');
                 const puppeteerCore = require('puppeteer-core');
-                // Stealth doesn't work easily with pure core on Vercel without extra setup, 
-                // but usually Vercel IP + headless is enough or gets blocked anyway.
-                // For now, keep standard core for prod.
                 browser = await puppeteerCore.launch({
                     args: chromium.args,
                     defaultViewport: chromium.defaultViewport,
@@ -51,20 +57,31 @@ export async function POST(req: NextRequest) {
 
                 browser = await puppeteer.launch({
                     headless: "new",
-                    args: ['--no-sandbox', '--disable-setuid-sandbox']
+                    args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-blink-features=AutomationControlled',
+                        '--window-size=1920,1080'
+                    ]
                 });
             }
 
             const page = await browser.newPage();
 
-            // Standard Viewport
+            // Set Standard Viewport
             await page.setViewport({ width: 1920, height: 1080 });
 
-            // Block resources
+            // Set Headers to look like real Chrome
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://www.google.com/'
+            });
+
+            // Optimizations: Block images/fonts/stylesheets to speed up load
             await page.setRequestInterception(true);
             page.on('request', (req: any) => {
                 const resourceType = req.resourceType();
-                if (['stylesheet', 'font', 'image'].includes(resourceType)) {
+                if (['image', 'font'].includes(resourceType)) {
                     req.abort();
                 } else {
                     req.continue();
@@ -72,78 +89,126 @@ export async function POST(req: NextRequest) {
             });
 
             // Navigate
-            await page.goto(cleanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-
-            // Extract Data
-            const data = await page.evaluate(() => {
-                const getPrice = (text: string | null) => {
-                    if (!text) return 0;
-                    const parsed = parseFloat(text.replace(/[^\d.]/g, ''));
-                    return isNaN(parsed) ? 0 : parsed;
-                };
-
-                const title = document.querySelector('h1')?.innerText ||
-                    document.querySelector('.product-name')?.textContent ||
-                    document.title;
-
-                let image = '';
-                const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
-                if (ogImage) image = ogImage;
-
-                if (!image) {
-                    const imgEl = document.querySelector('img.main-image') || document.querySelector('img[class*="product-image"]');
-                    if (imgEl) image = (imgEl as HTMLImageElement).src;
-                }
-
-                let price = 0;
-
-                // 1. Meta Tags
-                const metaPrice = document.querySelector('meta[property="og:price:amount"]')?.getAttribute('content');
-                if (metaPrice) price = getPrice(metaPrice);
-
-                // 2. DOM Selectors
-                if (price === 0) {
-                    const priceEl = document.querySelector('.g-price') ||
-                        document.querySelector('[data-test="pay-price"]') ||
-                        document.querySelector('[class*="product-price"]') ||
-                        document.querySelector('span[data-type="0"]');
-                    if (priceEl) price = getPrice(priceEl.textContent);
-                }
-
-                // 3. Regex Fallback
-                if (price === 0) {
-                    const match = document.body.innerText.match(/\$\s?(\d{1,4}\.\d{2})/);
-                    if (match) price = parseFloat(match[1]);
-                }
-
-                return {
-                    title: title?.trim(),
-                    image,
-                    price,
-                    debugTitle: document.title
-                };
-            });
-
-            await browser.close();
-
-            // Restore image from original URL if local failed (Temu specific)
-            // If the original URL had 'top_gallery_url', use it as fallback
-            const originalUrlObj = new URL(url);
-            const topGalleryUrl = originalUrlObj.searchParams.get('top_gallery_url');
-            if (topGalleryUrl && !data.image) {
-                data.image = decodeURIComponent(topGalleryUrl);
+            // Using networkidle2 to ensure sufficient load
+            try {
+                await page.goto(cleanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+            } catch (navError) {
+                console.warn('Navigation timeout/error, trying to parse what we have:', navError);
             }
 
-            console.log('Puppeteer Result:', data);
-            return NextResponse.json(data);
+            // Wait a sec for dynamic content?
+            // await new Promise(r => setTimeout(r, 2000));
+
+            // Grab full HTML content
+            const html = await page.content();
+            await browser.close();
+
+            // --- SERVER SIDE PARSING WITH CHEERIO ---
+            console.log('HTML Captured. Length:', html.length);
+            const $ = cheerio.load(html);
+
+            // Debug: Check if we are on Login page
+            const pageTitle = $('title').text();
+            console.log('Page Title:', pageTitle);
+
+            // 1. Initial Logic: Title
+            let title = $('h1').first().text().trim() ||
+                $('.product-name').text().trim() ||
+                $('meta[property="og:title"]').attr('content') ||
+                pageTitle ||
+                'Producto Temu';
+
+            // 2. Logic: Image
+            let image = $('meta[property="og:image"]').attr('content') || '';
+            if (!image) {
+                const imgEl = $('img.main-image').first() ||
+                    $('img[class*="product-image"]').first();
+                if (imgEl && imgEl.length > 0) image = imgEl.attr('src') || '';
+            }
+
+            // 3. Logic: Price (The main goal)
+            let price = 0;
+
+            const getPrice = (str: string | undefined | null) => {
+                if (!str) return 0;
+                // Look for standard price format X.XX or XX.XX
+                const matches = str.match(/(?:^|\D)(\d{1,5}\.\d{2})(?!\d)/);
+                if (matches) return parseFloat(matches[1]);
+                return 0;
+            };
+
+            // Strategy A: Meta Tags
+            const metaPrice = $('meta[property="og:price:amount"]').attr('content') ||
+                $('meta[property="product:price:amount"]').attr('content');
+            if (metaPrice) price = getPrice(metaPrice);
+
+            // Strategy B: DOM Selectors (Loop through candidates)
+            if (price === 0) {
+                const candidates = [
+                    $('span[data-type="0"]'), // User finding
+                    $('.g-price'),
+                    $('[data-test="pay-price"]'),
+                    $('[class*="product-price"]'),
+                    $('.price'),
+                    $('.current-price'),
+                    // Try finding spans that contain "$" directly
+                    $('span:contains("$")')
+                ];
+
+                for (const el of candidates) {
+                    if (el && el.length > 0) {
+                        const txt = el.first().text();
+                        const p = getPrice(txt);
+                        if (p > 0) {
+                            price = p;
+                            console.log('Found price via selector:', el.get(0)?.tagName, 'Text:', txt);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Strategy C: Regex Search on Body Text (Nuclear Option)
+            if (price === 0) {
+                const bodyText = $('body').text();
+                // Look for $101.33 pattern, not preceded by other digits (minimize version numbers)
+                const match = bodyText.match(/(?:^|\s)\$(\d{1,5}\.\d{2})(?!\d)/);
+                if (match) {
+                    price = parseFloat(match[1]);
+                    console.log('Found price via Regex on Body:', match[0]);
+                }
+            }
+
+            // Fallback for Title
+            if (title === 'Producto Temu' || title === 'Temu') {
+                const altTitle = $('meta[property="og:description"]').attr('content');
+                if (altTitle && altTitle.length > 5) title = altTitle;
+            }
+
+            // Restore image from original URL if local failed (Temu specific)
+            const originalUrlObj = new URL(url);
+            const topGalleryUrl = originalUrlObj.searchParams.get('top_gallery_url');
+            if (topGalleryUrl && !image) {
+                image = decodeURIComponent(topGalleryUrl);
+            }
+
+            const result = {
+                title: title?.trim(),
+                image,
+                price
+            };
+
+            console.log('Final Scrape Result:', result);
+            return NextResponse.json(result);
 
         } catch (error: any) {
-            console.error('Puppeteer Error:', error);
+            console.error('Puppeteer Runtime Error:', error);
             if (browser) await browser.close();
-            return NextResponse.json({ error: 'Scrape Failed: ' + error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Browser Automation Failed: ' + error.message }, { status: 500 });
         }
 
     } catch (error: any) {
+        console.error('API Route Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
