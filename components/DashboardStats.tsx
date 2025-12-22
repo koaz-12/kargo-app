@@ -16,9 +16,23 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
     // 1. Active Investment (Money tied up in Ordered + Received)
     const activeInvestment = products.reduce((acc, p) => {
         if (p.status === 'SOLD') return acc; // Sold items are not active investment
+
         const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
         const dopCost = (usdCost * p.exchange_rate) + p.tax_cost + (p.local_shipping_cost || 0);
-        return acc + dopCost;
+
+        // Subtract Adjustments (Credits reduce risk/capital tied up)
+        let adjustmentsTotalUSD = 0;
+        if (p.adjustments) {
+            adjustmentsTotalUSD = p.adjustments.reduce((sum, adj) => {
+                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION') {
+                    return sum + (adj.amount || 0);
+                }
+                return sum;
+            }, 0);
+        }
+        const adjustmentsTotalDOP = adjustmentsTotalUSD * (p.exchange_rate || 58);
+
+        return acc + (dopCost - adjustmentsTotalDOP);
     }, 0);
 
     // 2. Realized Profit (From Sold items)
