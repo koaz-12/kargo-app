@@ -39,7 +39,7 @@ export default function ProductNameInput({ value, onChange, onSelectHistory }: P
             try {
                 const { data, error } = await supabase
                     .from('products')
-                    .select('*') // Simplified query
+                    .select('*, product_images(*)') // Include images for autocomplete
                     .ilike('name', `%${value}%`)
                     .order('created_at', { ascending: false })
                     .limit(5);

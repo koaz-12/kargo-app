@@ -69,7 +69,9 @@ export default function SetupSection({
                         if (product.image_url) {
                             setters.setImages([product.image_url]);
                         } else if (product.images && product.images.length > 0) {
-                            setters.setImages(product.images);
+                            // Map ProductImage[] ({ storage_path }) to string[]
+                            const paths = product.images.map(img => img.storage_path);
+                            setters.setImages(paths);
                         }
 
                         // Explicitly NOT filling other variable costs as they change per shipment
