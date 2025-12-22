@@ -3,11 +3,11 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { Upload, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
-import { ProductImage } from '../../types';
+
 
 interface ImageUploaderProps {
-    images: ProductImage[];
-    setImages: (images: ProductImage[]) => void;
+    images: string[];
+    setImages: (images: string[]) => void;
     productId?: string; // If editing
 }
 
@@ -28,7 +28,7 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
 
         setUploading(true);
         const files = Array.from(e.target.files);
-        const newImages: ProductImage[] = [];
+        const newPaths: string[] = [];
 
         try {
             for (const file of files) {
@@ -46,39 +46,29 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
                     continue;
                 }
 
-                // Create ProductImage object
-                // Note: We don't have ID yet if it's new, so we use temp ID
-                newImages.push({
-                    id: crypto.randomUUID(),
-                    product_id: productId || '',
-                    storage_path: filePath,
-                    display_order: images.length + newImages.length,
-                    created_at: new Date().toISOString()
-                });
+                newPaths.push(filePath);
             }
 
-            setImages([...images, ...newImages]);
-
+            setImages([...images, ...newPaths]);
         } catch (error) {
-            console.error('Upload process error:', error);
+            console.error('Error handling files:', error);
             alert('Error al subir imágenes');
         } finally {
             setUploading(false);
+            // Reset input
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
-    const handleDelete = async (id: string, path: string) => {
+    const handleDelete = async (path: string) => {
         if (!confirm('¿Eliminar imagen?')) return;
 
-        // Optimistic update
-        const newImages = images.filter(img => img.id !== id);
+        // Remove from local state immediately
+        const newImages = images.filter(img => img !== path);
         setImages(newImages);
 
-        // Delete from Storage
-        if (path && !path.startsWith('http')) {
-            await supabase.storage.from('product-images').remove([path]);
-        }
+        // If it's not a temp image (has productId), maybe delete from storage?
+        // For simplicity, we just remove reference. Storage cleanup is a separate task.
     };
 
     return (
@@ -91,14 +81,14 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
             {/* Grid */}
             <div className="grid grid-cols-4 gap-2">
                 {images.map((img, idx) => (
-                    <div key={img.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                    <div key={`${img}-${idx}`} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
                         <img
-                            src={getPublicUrl(img.storage_path)}
+                            src={getPublicUrl(img)}
                             alt="Product"
                             className="w-full h-full object-cover"
                         />
                         <button
-                            onClick={() => handleDelete(img.id, img.storage_path)}
+                            onClick={() => handleDelete(img)}
                             className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                         >
                             <X size={12} />
