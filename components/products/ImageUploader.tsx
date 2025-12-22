@@ -13,6 +13,7 @@ interface ImageUploaderProps {
 
 // Helper to construct public URL
 const getPublicUrl = (path: string) => {
+    if (!path) return '';
     if (path.startsWith('http')) return path;
     const { data } = supabase.storage.from('product-images').getPublicUrl(path);
     return data.publicUrl;
