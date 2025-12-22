@@ -23,7 +23,7 @@ export default function ActionToolbar({
     onSave
 }: ActionToolbarProps) {
     return (
-        <div className="fixed bottom-[68px] left-0 right-0 z-[90] safe-area-bottom">
+        <div className="fixed bottom-[65px] left-0 right-0 z-[100]">
             <div className="max-w-md mx-auto bg-white border-t border-slate-100 px-4 py-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center justify-between">
 
