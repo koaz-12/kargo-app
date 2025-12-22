@@ -69,13 +69,36 @@ export async function POST(req: NextRequest) {
         if (topGalleryUrl) {
             const decodedImg = decodeURIComponent(topGalleryUrl);
             console.log('Found Temu Gallery URL:', decodedImg);
-            return NextResponse.json({
-                image: decodedImg,
-                title: 'Temu Product' // We might skip parsing HTML if we just want image. But user wants title? Let's try parsing HTML for title too. 
-                // Better to just return image if that's the main pain point. Title is secondary.
-                // Let's parse HTML anyway for title, but use this image as priority.
-            });
+            // We continue to parse HTML for title, but prioritize this image later
         }
+
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        // 1. Image Strategy
+        let image = '';
+        if (topGalleryUrl) {
+            image = decodeURIComponent(topGalleryUrl);
+        } else {
+            image = $('meta[property="og:image"]').attr('content') ||
+                $('meta[name="twitter:image"]').attr('content') ||
+                $('link[rel="image_src"]').attr('href') ||
+                // Temu specific fallback selectors
+                $('img[class*="main-image"]').attr('src') ||
+                $('img[class*="product-image"]').attr('src') ||
+                '';
+        }
+
+        // 2. Title Strategy
+        const title = $('meta[property="og:title"]').attr('content') ||
+            $('head title').text() ||
+            $('h1').first().text() ||
+            'Producto Temu';
+
+        return NextResponse.json({
+            image,
+            title: title.trim()
+        });
 
         const html = await response.text();
         console.log('HTML Length:', html.length);

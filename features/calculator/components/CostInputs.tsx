@@ -9,11 +9,26 @@ interface CostInputsProps {
 }
 
 export default function CostInputs({ formState, setters, onApplyDiscount, selectedPlatformName }: CostInputsProps) {
+    const extractUrl = (text: string) => {
+        const match = text.match(/https?:\/\/[^\s]+/);
+        return match ? match[0] : null;
+    };
+
     const handlePaste = (e: React.ClipboardEvent) => {
         const text = e.clipboardData.getData('text');
-        if (text && text.startsWith('http')) {
-            setTimeout(() => setters.fetchMetadata(text), 100);
+        const url = extractUrl(text);
+        if (url) {
+            // Update input with CLEAN URL (optional, or keeping full text?) 
+            // Better to keep full text if user wants, but for fetch we use url.
+            // Actually, let's just trigger fetch.
+            setTimeout(() => setters.fetchMetadata(url), 100);
         }
+    };
+
+    const handleManualFetch = () => {
+        const url = extractUrl(formState.productUrl);
+        if (url) setters.fetchMetadata(url);
+        else alert('No se detectó un link válido.');
     };
 
     const placeholderText = selectedPlatformName
@@ -65,14 +80,23 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     {/* Product URL (Magic Paste) */}
                     <div className="relative">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Link del Producto (Magia 🪄)</label>
-                        <input
-                            type="text"
-                            value={formState.productUrl}
-                            onChange={(e) => setters.setProductUrl(e.target.value)}
-                            onPaste={handlePaste}
-                            className="w-full pl-3 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 outline-none focus:border-blue-400 placeholder:italic"
-                            placeholder={placeholderText}
-                        />
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={formState.productUrl}
+                                onChange={(e) => setters.setProductUrl(e.target.value)}
+                                onPaste={handlePaste}
+                                className="w-full pl-3 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 outline-none focus:border-blue-400 placeholder:italic"
+                                placeholder={placeholderText}
+                            />
+                            <button
+                                onClick={handleManualFetch}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 p-1 bg-transparent"
+                                title="Buscar imagen"
+                            >
+                                <Zap size={16} className={formState.isScraping ? "animate-spin text-blue-500" : ""} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
