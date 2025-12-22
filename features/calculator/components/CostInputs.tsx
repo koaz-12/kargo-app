@@ -29,8 +29,8 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
 
             <div className="space-y-3">
                 {/* 1. Purchase Price */}
-                <div className="grid grid-cols-[1fr_100px] gap-2">
-                    <div>
+                <div className="flex gap-3">
+                    <div className="flex-1">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Precio Compra</label>
                         <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
                             <span className="text-slate-400 text-sm mr-2">$</span>
@@ -45,10 +45,10 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     </div>
 
                     {/* 2. Shipping */}
-                    <div>
+                    <div className="flex-1">
                         <label className="text-[10px] text-slate-400 block mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">Envío (USA)</label>
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-2.5">
-                            <span className="text-slate-400 text-sm mr-1">$</span>
+                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+                            <span className="text-slate-400 text-sm mr-2">$</span>
                             <input
                                 type="number"
                                 value={formState.shippingCost || ''}
