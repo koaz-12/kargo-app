@@ -19,13 +19,13 @@ export default function PricingCard({ formState, setters, isVisible }: PricingCa
                 <div className="grid grid-cols-[1.5fr_1fr] gap-3 items-end">
                     <div>
                         <label className="text-[10px] text-slate-400 block mb-0.5">Precio Venta</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-700 font-bold text-sm">RD$</span>
+                        <div className="flex items-center bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-purple-200 transition-all">
+                            <span className="text-purple-400 text-sm font-bold mr-2">RD$</span>
                             <input
                                 type="number"
                                 value={formState.salePrice || ''}
                                 onChange={(e) => setters.setSalePrice(Number(e.target.value))}
-                                className="w-full pl-12 pr-3 py-2 bg-purple-50/50 border border-purple-100 rounded-lg text-lg font-bold text-slate-800 outline-none focus:ring-2 focus:ring-purple-200"
+                                className="w-full bg-transparent text-lg font-bold text-slate-800 outline-none"
                                 placeholder="0.00"
                             />
                         </div>
