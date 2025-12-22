@@ -72,7 +72,7 @@ export function useProductList() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+        // Confirmation is now handled by the UI (Modal)
         try {
             const { error } = await supabase.from('products').delete().eq('id', id);
             if (error) throw error;

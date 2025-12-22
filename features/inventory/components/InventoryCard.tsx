@@ -292,8 +292,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     </button>
 
                     <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(p.id); }} className="text-red-500 text-xs font-bold flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors"><Trash2 size={14} /> Eliminar</button>
-                        <button onClick={() => router.push('/calculator?edit=' + p.id)} className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"><Pencil size={14} /> Editar Completo</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); console.log('Delete Requested', p.id); onDelete(p.id); }} className="text-red-500 text-xs font-bold flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors"><Trash2 size={14} /> Eliminar</button>
+                        <button type="button" onClick={() => router.push('/calculator?edit=' + p.id)} className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"><Pencil size={14} /> Editar Completo</button>
                     </div>
                 </div>
             )}

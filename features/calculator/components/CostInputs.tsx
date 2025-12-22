@@ -1,4 +1,5 @@
-import { Calculator, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { Calculator, Zap, CheckCircle, Loader2 } from 'lucide-react';
 import { FormState, FormSetters } from '../../../types';
 
 interface CostInputsProps {
@@ -9,29 +10,38 @@ interface CostInputsProps {
 }
 
 export default function CostInputs({ formState, setters, onApplyDiscount, selectedPlatformName }: CostInputsProps) {
+    const [showSuccess, setShowSuccess] = useState(false);
+
     const extractUrl = (text: string) => {
         // More robust URL extraction: Find http/https and grab everything until whitespace
         const match = text.match(/(https?:\/\/[^\s]+)/i);
         return match ? match[0] : null;
     };
 
-    const handlePaste = (e: React.ClipboardEvent) => {
+    const handlePaste = async (e: React.ClipboardEvent) => {
         const text = e.clipboardData.getData('text');
         const url = extractUrl(text);
         if (url) {
-            setTimeout(() => {
-                // Show tiny feedback if possible, or just rely on spinner
-                setters.fetchMetadata(url);
-            }, 100);
+            // Show loading immediately? handled by isScraping
+            const success = await setters.fetchMetadata(url);
+            if (success) {
+                if (window.navigator && window.navigator.vibrate) window.navigator.vibrate([50, 50]);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 2000);
+            }
         }
     };
 
-    const handleManualFetch = () => {
+    const handleManualFetch = async () => {
         const url = extractUrl(formState.productUrl);
         if (url) {
-            // Force feedback for mobile users
             if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-            setters.fetchMetadata(url);
+            const success = await setters.fetchMetadata(url);
+            if (success) {
+                if (window.navigator && window.navigator.vibrate) window.navigator.vibrate([50, 50, 50]);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 2000);
+            }
         } else {
             alert('No veo un link válido. Asegúrate que empiece con http...');
         }
@@ -85,22 +95,28 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                 <div className="grid grid-cols-[1fr_auto] gap-3">
                     {/* Product URL (Magic Paste) */}
                     <div className="relative">
-                        <label className="text-[10px] text-slate-400 block mb-0.5">Link del Producto (Magia 🪄)</label>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Link (Auto-Imagen) 📸</label>
                         <div className="relative">
                             <input
                                 type="text"
                                 value={formState.productUrl}
                                 onChange={(e) => setters.setProductUrl(e.target.value)}
                                 onPaste={handlePaste}
-                                className="w-full pl-3 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 outline-none focus:border-blue-400 placeholder:italic"
+                                className={`w-full pl-3 pr-9 py-2.5 bg-slate-50 border rounded-lg text-xs text-slate-600 outline-none focus:border-blue-400 placeholder:italic transition-colors ${showSuccess ? 'border-green-400 bg-green-50' : 'border-slate-200'}`}
                                 placeholder={placeholderText}
                             />
                             <button
                                 onClick={handleManualFetch}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 p-1 bg-transparent"
-                                title="Buscar imagen"
+                                disabled={formState.isScraping}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-transparent disabled:opacity-50"
                             >
-                                <Zap size={16} className={formState.isScraping ? "animate-spin text-blue-500" : ""} />
+                                {formState.isScraping ? (
+                                    <Loader2 size={16} className="text-blue-500 animate-spin" />
+                                ) : showSuccess ? (
+                                    <CheckCircle size={18} className="text-green-500 transition-all scale-110" />
+                                ) : (
+                                    <Zap size={16} className="text-slate-400 hover:text-blue-500 transition-colors" />
+                                )}
                             </button>
                         </div>
                     </div>

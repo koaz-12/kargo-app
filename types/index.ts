@@ -138,5 +138,5 @@ export interface FormSetters {
   addAdjustment: (type: any, amount: number) => void;
   removeAdjustment: (id: string) => void;
   updateAdjustment: (id: string, field: string, value: any) => void;
-  fetchMetadata: (url: string) => void;
+  fetchMetadata: (url: string) => Promise<boolean>;
 }

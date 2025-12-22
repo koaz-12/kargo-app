@@ -1,10 +1,54 @@
 'use client';
 
-import React from 'react';
-import { Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Package, AlertTriangle, X } from 'lucide-react';
 import { useProductList } from '../../features/inventory/hooks/useProductList';
 import InventoryFilterBar from '../../features/inventory/components/InventoryFilterBar';
 import InventoryCard from '../../features/inventory/components/InventoryCard';
+
+// Inline Modal for guaranteed visibility
+function DeleteModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: () => void }) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        if (isOpen) document.body.style.overflow = 'hidden';
+        else document.body.style.overflow = '';
+        return () => { document.body.style.overflow = ''; };
+    }, [isOpen]);
+
+    if (!mounted || !isOpen) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="bg-red-50 p-6 flex flex-col items-center text-center border-b border-red-100">
+                    <div className="w-12 h-12 bg-red-100/50 rounded-full flex items-center justify-center mb-3 text-red-600">
+                        <AlertTriangle size={24} strokeWidth={2.5} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800">¿Eliminar Producto?</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-[200px] leading-relaxed">
+                        Esta acción no se puede deshacer. Se perderán todos los datos asociados.
+                    </p>
+                </div>
+                <div className="p-4 grid grid-cols-2 gap-3 bg-white">
+                    <button onClick={onClose} className="py-2.5 px-4 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 border border-slate-200 transition-colors">
+                        Cancelar
+                    </button>
+                    <button onClick={() => { onConfirm(); onClose(); }} className="py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all active:scale-95">
+                        Sí, Eliminar
+                    </button>
+                </div>
+                <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                    <X size={18} />
+                </button>
+            </div>
+        </div>,
+        document.body
+    );
+}
 
 export default function ProductList() {
     const {
@@ -18,6 +62,16 @@ export default function ProductList() {
         handleDelete
     } = useProductList();
 
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    const executeDelete = () => {
+        if (deletingId) {
+            handleDelete(deletingId);
+            setDeletingId(null);
+        }
+    };
+
+    // CSV LOGIC OMITTED FOR BREVITY (Keep strictly what changes or use ... if possible? No, replace_file_content needs context)
     // Re-implement CSV download here or in utils, for now inline to save time as it was in original
     const handleDownloadCSV = () => {
         if (!products.length) return alert("No hay datos cargados para exportar.");
@@ -84,7 +138,7 @@ export default function ProductList() {
                         <InventoryCard
                             key={product.id}
                             product={product}
-                            onDelete={handleDelete}
+                            onDelete={setDeletingId}
                         />
                     ))
                 )}
@@ -101,6 +155,13 @@ export default function ProductList() {
                     </button>
                 </div>
             )}
+
+            {/* Inlined Modal */}
+            <DeleteModal
+                isOpen={!!deletingId}
+                onClose={() => setDeletingId(null)}
+                onConfirm={executeDelete}
+            />
         </div>
     );
 }

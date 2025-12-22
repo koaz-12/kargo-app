@@ -32,9 +32,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'URL Missing' }, { status: 400 });
         }
 
-        // Clean URL to increase success rate
-        const cleanUrl = url.split('?')[0];
-        console.log('Hybrid Scraper: Launching Puppeteer for:', cleanUrl);
+        console.log('Hybrid Scraper: Launching Puppeteer for:', url);
 
         let browser;
         try {
@@ -71,17 +69,11 @@ export async function POST(req: NextRequest) {
             // Set Standard Viewport
             await page.setViewport({ width: 1920, height: 1080 });
 
-            // Set Headers to look like real Chrome
-            await page.setExtraHTTPHeaders({
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://www.google.com/'
-            });
-
-            // Optimizations: Block images/fonts/stylesheets to speed up load
+            // Block images/fonts/stylesheets to speed up load
             await page.setRequestInterception(true);
             page.on('request', (req: any) => {
                 const resourceType = req.resourceType();
-                if (['image', 'font'].includes(resourceType)) {
+                if (['image', 'font', 'stylesheet'].includes(resourceType)) {
                     req.abort();
                 } else {
                     req.continue();
@@ -90,8 +82,8 @@ export async function POST(req: NextRequest) {
 
             // Navigate
             try {
-                // Navigate with reasonable timeout
-                await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+                // Navigate with reasonable timeout to the RAW url (params might be needed)
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
 
                 // Short wait for dynamic content
                 await new Promise(r => setTimeout(r, 2000));
@@ -102,17 +94,22 @@ export async function POST(req: NextRequest) {
 
             // Grab full HTML content
             const html = await page.content();
+            // Capture final URL after redirects (Crucial for extracting params)
+            const finalUrl = page.url();
             await browser.close();
 
             // --- SERVER SIDE PARSING WITH CHEERIO ---
             const $ = cheerio.load(html);
 
             // 1. Title Strategy
-            let title = $('h1').first().text().trim() ||
+            let rawTitle = $('h1').first().text().trim() ||
                 $('.product-name').text().trim() ||
                 $('meta[property="og:title"]').attr('content') ||
                 $('title').text().trim() ||
                 'Producto Temu';
+
+            // Clean " - Temu" or " | Temu" suffix
+            let title = rawTitle.replace(/\s*[-|]\s*Temu\s*$/i, '').trim();
 
             // 2. Image Strategy
             let image = $('meta[property="og:image"]').attr('content') || '';
@@ -158,11 +155,18 @@ export async function POST(req: NextRequest) {
                 if (match) price = parseFloat(match[1]);
             }
 
-            // Restore image from original URL if local failed (Temu specific)
-            const originalUrlObj = new URL(url);
-            const topGalleryUrl = originalUrlObj.searchParams.get('top_gallery_url');
-            if (topGalleryUrl && !image) {
-                image = decodeURIComponent(topGalleryUrl);
+            // Fallback for Image: Extract from Final URL Params (Reliable for Temu)
+            if (!image && finalUrl) {
+                try {
+                    const urlObj = new URL(finalUrl);
+                    const topGalleryUrl = urlObj.searchParams.get('top_gallery_url');
+                    if (topGalleryUrl) {
+                        image = decodeURIComponent(topGalleryUrl);
+                        console.log('Extracted image from URL params:', image);
+                    }
+                } catch (e) {
+                    console.error('Error parsing final URL for image:', e);
+                }
             }
 
             return NextResponse.json({

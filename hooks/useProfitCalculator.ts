@@ -181,8 +181,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
         loadPrefs();
     }, [initialProduct]);
 
-    const fetchMetadata = async (url: string) => {
-        if (!url) return;
+    const fetchMetadata = async (url: string): Promise<boolean> => {
+        if (!url) return false;
         setIsScraping(true);
         try {
             const res = await fetch('/api/scrape', {
@@ -195,59 +195,41 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             if (data.error) {
                 alert('No se pudo obtener la imagen (Bloqueo de sitio o URL inválida). Intenta otra URL.');
                 console.warn(data.error);
-                return;
+                return false;
             }
 
+            // 1. Set Image (Priority)
             if (data.image) {
-                setImageUrl(data.image);
-                // Fix: Push to images array so it shows in UI
+                // Add to gallery
+                const newImage = {
+                    id: crypto.randomUUID(),
+                    storage_path: data.image, // URL from scraper
+                    display_order: images.length,
+                    is_primary: images.length === 0, // Set as primary if it's the first image
+                    product_id: initialProduct?.id || '',
+                    created_at: new Date().toISOString()
+                };
                 setImages(prev => {
                     // Avoid duplicates
                     const exists = prev.some(img => img.storage_path === data.image);
                     if (exists) return prev;
-
-                    return [...prev, {
-                        id: crypto.randomUUID(),
-                        product_id: initialProduct?.id || '',
-                        storage_path: data.image, // Correct property for ImageUploader
-                        display_order: prev.length,
-                        created_at: new Date().toISOString()
-                    }];
+                    return [...prev, newImage];
                 });
+
+                // Set as main image if none exists
+                if (!imageUrl) setImageUrl(data.image);
+
+                // Success! (No alert, return true for UI feedback)
+                return true;
             } else {
                 alert('No se encontró ninguna imagen en esa página.');
-            }
-
-            // Auto-fill Title
-            if (data.title && !name) {
-                setName(data.title);
-            }
-
-            // Auto-fill Price
-            if (data.price > 0) {
-                if (buyPrice > 0) {
-                    const confirmReplace = window.confirm(`Found price $${data.price}. Replace current cost $${buyPrice}?`);
-                    if (confirmReplace) setBuyPrice(data.price);
-                } else {
-                    setBuyPrice(data.price);
-                }
-            } else {
-                // Price missing (Anti-bot protection)
-                // We successfully got title/image, but price was blocked.
-                // alert('Product found, but price is protected by security. Please enter manually.');
-                // Better: Just let them know without blocking alert
-                console.log('Price protected/missing');
-                toast({
-                    title: 'Price Protected',
-                    description: 'Temu hid the price. Please enter it manually.',
-                    variant: 'warning',
-                    duration: 4000
-                });
+                return false;
             }
 
         } catch (e) {
             console.error('Scrape failed', e);
             alert('Error de conexión al buscar la imagen.');
+            return false;
         } finally {
             setIsScraping(false);
         }
