@@ -23,7 +23,7 @@ export default function InventoryFilterBar({
     return (
         <div className="space-y-4 mb-4">
             {/* Status Tabs */}
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <FilterTab label="Todos" active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
                 <FilterTab label="Comprado" active={statusFilter === 'ORDERED'} onClick={() => setStatusFilter('ORDERED')} color="blue" />
                 <FilterTab label="Recibido" active={statusFilter === 'RECEIVED'} onClick={() => setStatusFilter('RECEIVED')} color="emerald" />
