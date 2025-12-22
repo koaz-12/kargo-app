@@ -340,13 +340,16 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                     const numValue = Number(value);
                     const safeBuyPrice = Number(buyPrice) || 0;
 
-                    if (safeBuyPrice > 0) {
-                        if (field === 'percentage') {
-                            // If % changes, update Amount
-                            updatedAdj.amount = Number((safeBuyPrice * (numValue / 100)).toFixed(2));
-                        } else if (field === 'amount') {
-                            // If Amount changes, update %
+                    if (field === 'percentage') {
+                        // If % changes, ALWAYS update Amount (even if price is 0 -> amount 0)
+                        updatedAdj.amount = Number((safeBuyPrice * (numValue / 100)).toFixed(2));
+                    } else if (field === 'amount') {
+                        // If Amount changes, update % ONLY if price > 0
+                        if (safeBuyPrice > 0) {
                             updatedAdj.percentage = Number(((numValue / safeBuyPrice) * 100).toFixed(2));
+                        } else {
+                            // If price is 0, we can't calculate %, so maybe set to 0 to avoid Infinity
+                            updatedAdj.percentage = 0;
                         }
                     }
 
