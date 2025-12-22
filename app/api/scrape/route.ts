@@ -69,6 +69,14 @@ export async function POST(req: NextRequest) {
             // Set Standard Viewport
             await page.setViewport({ width: 1920, height: 1080 });
 
+            // Set Real User Agent to bypass 403
+            const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            await page.setUserAgent(userAgent);
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            });
+
             // Block images/fonts/stylesheets to speed up load
             await page.setRequestInterception(true);
             page.on('request', (req: any) => {
