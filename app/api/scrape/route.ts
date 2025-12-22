@@ -89,19 +89,34 @@ export async function POST(req: NextRequest) {
             });
 
             // Navigate
-            // Using networkidle2 to ensure sufficient load
             try {
-                await page.goto(cleanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-            } catch (navError) {
-                console.warn('Navigation timeout/error, trying to parse what we have:', navError);
-            }
+                // Wait harder!
+                await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-            // Wait a sec for dynamic content?
-            // await new Promise(r => setTimeout(r, 2000));
+                // Try to wait specifically for the price element the user saw
+                try {
+                    await page.waitForSelector('span[data-type="0"], .g-price', { timeout: 5000 });
+                } catch (e) {
+                    console.log('Timeout waiting for price selector, proceeding anyway...');
+                }
+
+                // Extra safety pause for hydration
+                await new Promise(r => setTimeout(r, 3000));
+
+            } catch (navError) {
+                console.warn('Navigation error:', navError);
+            }
 
             // Grab full HTML content
             const html = await page.content();
             await browser.close();
+
+            // Debug: Dump HTML to check what we actually got
+            try {
+                const fs = require('fs');
+                fs.writeFileSync('scraped_dump.html', html);
+                console.log('Dumped HTML to scraped_dump.html');
+            } catch (e) { console.error('Failed to dump HTML', e); }
 
             // --- SERVER SIDE PARSING WITH CHEERIO ---
             console.log('HTML Captured. Length:', html.length);
