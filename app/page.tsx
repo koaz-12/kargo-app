@@ -35,7 +35,7 @@ export default function Home() {
 
     return (
         <main className="min-h-screen bg-slate-50 pb-24 max-w-md mx-auto shadow-2xl shadow-slate-200">
-            <header className="bg-white px-4 py-3 sticky top-0 z-20 border-b border-slate-100 shadow-sm mb-4 relative flex items-center justify-center">
+            <header className="bg-white px-4 py-3 sticky top-0 z-20 border-b border-slate-100 shadow-sm mb-4 flex items-center justify-center">
                 <div className="text-center">
                     <h1 className="text-lg font-black text-slate-800 capitalize leading-tight">Hola, {userName || 'Reseller'} 👋</h1>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Resumen</p>

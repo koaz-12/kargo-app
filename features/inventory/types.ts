@@ -1,3 +1,4 @@
+export type { AdjustmentType } from '../../types';
 import { Product, AdjustmentType } from '../../types';
 
 export interface InventoryItem extends Product {

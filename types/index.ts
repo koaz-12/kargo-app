@@ -30,7 +30,7 @@ export interface PurchaseAccount {
   created_at?: string;
 }
 
-export type ProductStatus = 'draft' | 'ordered' | 'received' | 'sold';
+export type ProductStatus = 'DRAFT' | 'ORDERED' | 'RECEIVED' | 'SOLD';
 
 export interface Product {
   id: string;
