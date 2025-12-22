@@ -32,10 +32,12 @@ export const calculateProfit = (
     let gross_profit = 0;
     let profit_margin = 0;
 
-    if (salePrice > 0) {
-        const total_expenses_dop = net_cost_dop + localShippingCost;
-        gross_profit = salePrice - total_expenses_dop;
+    // 3. Profit Calculation (in DOP)
+    const total_expenses_dop = net_cost_dop + localShippingCost;
+    const gross_profit = salePrice - total_expenses_dop;
 
+    let profit_margin = 0;
+    if (salePrice > 0) {
         // Margin = (Profit / Sale Price) * 100
         profit_margin = (gross_profit / salePrice) * 100;
     }
