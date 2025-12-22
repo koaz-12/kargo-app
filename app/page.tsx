@@ -25,9 +25,19 @@ export default function Home() {
                 }
             }
 
-            // Get Data
-            const { data } = await supabase.from('products').select('*');
-            if (data) setProducts(data);
+            // Get Data (Include Adjustments for Profit Stats)
+            const { data } = await supabase
+                .from('products')
+                .select('*, financial_adjustments(*)');
+
+            if (data) {
+                // Map relation to expected 'adjustments' property
+                const mappedProducts = data.map((p: any) => ({
+                    ...p,
+                    adjustments: p.financial_adjustments
+                }));
+                setProducts(mappedProducts);
+            }
             setLoading(false);
         };
         fetch();
