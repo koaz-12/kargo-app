@@ -100,75 +100,7 @@ export async function POST(req: NextRequest) {
             title: title.trim()
         });
 
-        const html = await response.text();
-        console.log('HTML Length:', html.length);
-        const $ = cheerio.load(html);
 
-        // Try to find OG Image
-        let image = $('meta[property="og:image"]').attr('content');
-
-        // Fallbacks
-        if (!image) image = $('meta[name="twitter:image"]').attr('content');
-        if (!image) image = $('link[rel="image_src"]').attr('href');
-        // Try data/json-ld for schema.org image
-        if (!image) {
-            try {
-                const script = $('script[type="application/ld+json"]').first().html();
-                if (script) {
-                    const json = JSON.parse(script);
-                    if (json.image) {
-                        image = Array.isArray(json.image) ? json.image[0] : json.image;
-                    }
-                }
-            } catch (e) { /* ignore json parse error */ }
-        }
-
-        // Specific Fallback for generic img tags if high res
-        if (!image) {
-            // Priority 1: Look for common e-commerce main image IDs/Classes
-            image = $('#landingImage').attr('src') // Amazon
-                || $('#imgTagWrapperId img').attr('src') // Amazon
-                || $('img[data-role="pdp-main-image"]').attr('src'); // Generic SPA
-
-            // Priority 2: Scan all images for best candidate
-            if (!image) {
-                $('img').each((i, el) => {
-                    const src = $(el).attr('src');
-                    const alt = $(el).attr('alt')?.toLowerCase() || '';
-
-                    // Filter out obvious bad images
-                    if (src && src.startsWith('http')
-                        && !src.endsWith('.svg')
-                        && !src.includes('logo')
-                        && !src.includes('icon')
-                        && !src.includes('banner')
-                        && !src.includes('rating')
-                        && !src.includes('avatar')
-                        && !src.includes('spacer')
-                        && src.length > 50 // Tiny URLs often tracking pixels or assets (heuristic)
-                    ) {
-                        // Heuristic: If alt text contains "product" or matches title words, it's likely the one.
-                        // For now, just take the first "good" high-res looking one.
-                        image = src;
-                        return false;
-                    }
-                });
-            }
-        }
-
-        // Title
-        const title = $('meta[property="og:title"]').attr('content') || $('title').text();
-        console.log('Found Image:', image);
-
-        // Fix relative URLs if any (basic handler)
-        if (image && image.startsWith('//')) {
-            image = 'https:' + image;
-        }
-
-        return NextResponse.json({
-            image: image || null,
-            title: title?.trim() || null
-        });
 
     } catch (error: any) {
         console.error('Scrape error:', error);
