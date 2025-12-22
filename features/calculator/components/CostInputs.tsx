@@ -10,7 +10,8 @@ interface CostInputsProps {
 
 export default function CostInputs({ formState, setters, onApplyDiscount, selectedPlatformName }: CostInputsProps) {
     const extractUrl = (text: string) => {
-        const match = text.match(/https?:\/\/[^\s]+/);
+        // More robust URL extraction: Find http/https and grab everything until whitespace
+        const match = text.match(/(https?:\/\/[^\s]+)/i);
         return match ? match[0] : null;
     };
 
@@ -18,17 +19,22 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
         const text = e.clipboardData.getData('text');
         const url = extractUrl(text);
         if (url) {
-            // Update input with CLEAN URL (optional, or keeping full text?) 
-            // Better to keep full text if user wants, but for fetch we use url.
-            // Actually, let's just trigger fetch.
-            setTimeout(() => setters.fetchMetadata(url), 100);
+            setTimeout(() => {
+                // Show tiny feedback if possible, or just rely on spinner
+                setters.fetchMetadata(url);
+            }, 100);
         }
     };
 
     const handleManualFetch = () => {
         const url = extractUrl(formState.productUrl);
-        if (url) setters.fetchMetadata(url);
-        else alert('No se detectó un link válido.');
+        if (url) {
+            // Force feedback for mobile users
+            if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+            setters.fetchMetadata(url);
+        } else {
+            alert('No veo un link válido. Asegúrate que empiece con http...');
+        }
     };
 
     const placeholderText = selectedPlatformName
