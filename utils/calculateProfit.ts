@@ -21,16 +21,13 @@ export const calculateProfit = (
     // 1. Calculate USD Net Cost (Excluding Tax/Courier which is now DOP)
     const total_adjustments_usd = adjustments.reduce((sum, adj) => sum + adj.amount, 0);
     const base_cost_usd = buy_price + shipping_cost; // Tax removed from here
-    const net_cost_usd = Math.max(0, base_cost_usd - total_adjustments_usd);
+    const net_cost_usd = base_cost_usd - total_adjustments_usd;
 
     // 2. Convert to Local Currency (DOP) and Add Local Landing Costs
     const rate = exchange_rate || 58.0;
     // Net Cost in DOP = (USD Component * Rate) + Courier (DOP)
     const net_cost_dop = (net_cost_usd * rate) + tax_cost;
 
-    // 3. Profit Calculation (in DOP)
-    let gross_profit = 0;
-    let profit_margin = 0;
 
     // 3. Profit Calculation (in DOP)
     const total_expenses_dop = net_cost_dop + localShippingCost;

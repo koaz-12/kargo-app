@@ -61,14 +61,16 @@ export default function SetupSection({
                     value={formState.name}
                     onChange={setters.setName}
                     onSelectHistory={(product) => {
-                        // Smart Fill Logic
+                        // Smart Fill Logic (User Request: Only Name + Buy Price)
                         setters.setName(product.name);
                         setters.setBuyPrice(product.buy_price);
-                        setters.setShippingCost(product.shipping_cost);
-                        setters.setTaxCost(product.tax_cost || 0);
-                        setters.setLocalShipping(product.local_shipping_cost || 0);
-                        setters.setSalePrice(product.sale_price || 0);
-                        setters.setOriginTax(product.origin_tax || 0);
+
+                        // Explicitly NOT filling other variable costs as they change per shipment
+                        // setters.setShippingCost(product.shipping_cost);
+                        // setters.setTaxCost(product.tax_cost || 0);
+                        // setters.setLocalShipping(product.local_shipping_cost || 0);
+                        // setters.setSalePrice(product.sale_price || 0);
+                        // setters.setOriginTax(product.origin_tax || 0);
                     }}
                 />
             </div>
