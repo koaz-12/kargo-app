@@ -44,7 +44,11 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
             }, 0);
         }
 
-        const profit = (editValues.salePrice || 0) - dopCost + adjustmentsTotal;
+        const exchangeRate = p.exchange_rate || 58;
+        // Convert USD Adjustments to DOP
+        const adjustmentsTotalDOP = adjustmentsTotal * exchangeRate;
+
+        const profit = (editValues.salePrice || 0) - dopCost + adjustmentsTotalDOP;
         return Math.round(profit);
     };
 
