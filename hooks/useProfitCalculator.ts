@@ -217,20 +217,11 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
 
             // 1. Set Image (Priority)
             if (data.image) {
-                // Add to gallery
-                const newImage = {
-                    id: crypto.randomUUID(),
-                    storage_path: data.image, // URL from scraper
-                    display_order: images.length,
-                    is_primary: images.length === 0, // Set as primary if it's the first image
-                    product_id: initialProduct?.id || '',
-                    created_at: new Date().toISOString()
-                };
+                // Add to gallery (Simple string path)
                 setImages(prev => {
                     // Avoid duplicates
-                    const exists = prev.some(img => img.storage_path === data.image);
-                    if (exists) return prev;
-                    return [...prev, newImage];
+                    if (prev.includes(data.image)) return prev;
+                    return [...prev, data.image];
                 });
 
                 // Set as main image if none exists
