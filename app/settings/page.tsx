@@ -47,7 +47,7 @@ export default function SettingsPage() {
 
                 // Fetch preferences
                 const { data } = await supabase.from('user_preferences')
-                    .select('display_name, default_courier_discount, default_local_shipping')
+                    .select('display_name, default_courier_discount, default_local_shipping, default_monthly_goal')
                     .eq('user_id', user.id)
                     .single();
 
@@ -55,6 +55,7 @@ export default function SettingsPage() {
                     if (data.display_name) setDisplayName(data.display_name);
                     if (data.default_courier_discount) setCourierDiscount(data.default_courier_discount.toString());
                     if (data.default_local_shipping) setLocalShippingDefault(data.default_local_shipping.toString());
+                    if (data.default_monthly_goal) setDefaultMonthlyGoal(data.default_monthly_goal.toString());
                 }
             }
         };
@@ -190,9 +191,16 @@ export default function SettingsPage() {
         }
     };
 
-    const handleDefaultGoalChange = (val: string) => {
+    const handleDefaultGoalChange = async (val: string) => {
         setDefaultMonthlyGoal(val);
-        localStorage.setItem('defaultMonthlyGoal', val);
+        // Save to DB
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('user_preferences').upsert({
+                user_id: user.id,
+                default_monthly_goal: Number(val)
+            });
+        }
     };
 
     const handleCourierDiscountChange = async (val: string) => {

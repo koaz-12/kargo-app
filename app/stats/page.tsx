@@ -53,11 +53,18 @@ export default function StatsPage() {
                 setMonthlyGoal(goalRes.data.target_amount);
                 setTempGoal(String(goalRes.data.target_amount));
             } else {
-                // Fallback to localStorage default
-                const savedDefault = localStorage.getItem('defaultMonthlyGoal');
-                if (savedDefault) {
-                    setMonthlyGoal(Number(savedDefault));
-                    setTempGoal(savedDefault);
+                // Fallback to DB preference
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: prefData } = await supabase.from('user_preferences')
+                        .select('default_monthly_goal')
+                        .eq('user_id', user.id)
+                        .single();
+
+                    if (prefData?.default_monthly_goal) {
+                        setMonthlyGoal(prefData.default_monthly_goal);
+                        setTempGoal(String(prefData.default_monthly_goal));
+                    }
                 }
             }
 

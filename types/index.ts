@@ -60,6 +60,7 @@ export interface Product {
   status: ProductStatus;
   images?: ProductImage[]; // New: Multi-image support
   created_at?: string;
+  updated_at?: string; // Last update
   sold_at?: string; // Date when sold
   // Relations
   platform?: Platform;
