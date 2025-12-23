@@ -306,6 +306,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setProductUrl(p.product_url || '');
                 setImageUrl(p.image_url || '');
                 setImages(p.images || []);
+                setTrackingNumber(p.tracking_number || '');
+                setCourierTracking(p.courier_tracking || '');
             },
             resetForm: () => {
                 setBuyPrice(0);

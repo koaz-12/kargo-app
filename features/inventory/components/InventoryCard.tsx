@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getPublicUrl } from '@/utils/imageUrl';
 import { Package, Trash2, Pencil } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -13,6 +13,11 @@ interface InventoryCardProps {
 
 export default function InventoryCard({ product: initialProduct, refreshList, onDelete }: InventoryCardProps) {
     const [p, setProduct] = useState(initialProduct);
+
+    // Sync state with props (Important for ensuring data persistence across re-fetches)
+    useEffect(() => {
+        setProduct(initialProduct);
+    }, [initialProduct]);
     const [expanded, setExpanded] = useState(false);
     const [courierDiscount, setCourierDiscount] = useState(0);
     const [isDiscountApplied, setIsDiscountApplied] = useState(false); // New State
