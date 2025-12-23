@@ -85,6 +85,7 @@ export interface MonthlyGoal {
 export interface Transaction {
   buy_price: number;
   shipping_cost: number;
+  origin_tax?: number; // New: US Sales Tax
   tax_cost: number;
   adjustments: FinancialAdjustment[];
   exchange_rate: number; // Important for conversion

@@ -102,6 +102,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
         const transaction: Transaction = {
             buy_price: buyPrice,
             shipping_cost: shippingCost,
+            origin_tax: originTax, // Pass new state
             tax_cost: taxCost,
             adjustments: adjustments,
             exchange_rate: exchangeRate

@@ -16,11 +16,11 @@ export const calculateProfit = (
     salePrice: number = 0,
     localShippingCost: number = 0
 ): ProfitResult => {
-    const { buy_price, shipping_cost, tax_cost, adjustments, exchange_rate } = transaction;
+    const { buy_price, shipping_cost, origin_tax = 0, tax_cost, adjustments, exchange_rate } = transaction;
 
     // 1. Calculate USD Net Cost (Excluding Tax/Courier which is now DOP)
     const total_adjustments_usd = adjustments.reduce((sum, adj) => sum + adj.amount, 0);
-    const base_cost_usd = buy_price + shipping_cost; // Tax removed from here
+    const base_cost_usd = buy_price + shipping_cost + origin_tax; // Include US Tax (7%)
     const net_cost_usd = base_cost_usd - total_adjustments_usd;
 
     // 2. Convert to Local Currency (DOP) and Add Local Landing Costs
@@ -39,10 +39,13 @@ export const calculateProfit = (
         profit_margin = (gross_profit / salePrice) * 100;
     }
 
+    const roi = net_cost_dop > 0 ? (gross_profit / net_cost_dop) * 100 : 0;
+
     return {
         net_cost: Number(net_cost_dop.toFixed(2)),
         gross_profit: Number(gross_profit.toFixed(2)),
-        profit_margin: Number(profit_margin.toFixed(2)),
+        margin: Number(profit_margin.toFixed(2)),
+        roi: Number(roi.toFixed(2)),
         total_adjustments: Number(total_adjustments_usd.toFixed(2)),
     };
 };

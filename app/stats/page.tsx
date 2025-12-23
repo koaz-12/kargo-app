@@ -5,6 +5,7 @@ import { Product, PurchaseAccount, Platform, MonthlyGoal } from '../../types/ind
 import { BarChart3, PieChart, TrendingUp, DollarSign, Wallet, ArrowLeft, Layers, Trophy, Target, Calendar, Package, Activity, Timer, Edit2, Save, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { calculateProfit } from '../../utils/calculateProfit';
 
 export default function StatsPage() {
     const router = useRouter();
@@ -109,21 +110,33 @@ export default function StatsPage() {
     const productPerformance: Record<string, { name: string, count: number, revenue: number, cost: number, profit: number, image?: string }> = {};
 
     soldProducts.forEach(p => {
-        const r = (p.sale_price || 0);
-        const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
-        const dopCost = (usdCost * p.exchange_rate) + p.tax_cost + (p.local_shipping_cost || 0);
-        const profit = r - dopCost;
+        // Construct transaction object (Defensive)
+        const tx = {
+            buy_price: Number(p.buy_price) || 0,
+            shipping_cost: Number(p.shipping_cost) || 0,
+            origin_tax: Number(p.origin_tax) || 0,
+            tax_cost: Number(p.tax_cost) || 0,
+            adjustments: p.adjustments || [],
+            exchange_rate: Number(p.exchange_rate) || 58.5
+        };
+
+        const calc = calculateProfit(tx, Number(p.sale_price) || 0, Number(p.local_shipping_cost) || 0);
+
+        const r = (Number(p.sale_price) || 0);
+        const dopCost = calc.net_cost; // Net cost in DOP (includes everything)
+        // Profit is calc.gross_profit. However, logic uses r - dopCost manually below. Let's use calc.gross_profit for consistency.
+        const profit = calc.gross_profit;
 
         // Totals
         realizedRevenue += r;
         realizedCost += dopCost;
 
         // Time Analysis
-        // Logic: Use 'sold_at' if available, otherwise fallback to 'created_at' if it's a recent sale? 
-        // Or just map to "Unknown Date".
-        // Strict logic: If sold_at exists, use it.
-        if (p.sold_at) {
-            const saleDate = new Date(p.sold_at);
+        // Logic: Use 'sold_at' -> 'updated_at' -> 'created_at' as fallback
+        const effectiveDateStr = p.sold_at || p.updated_at || p.created_at;
+
+        if (effectiveDateStr) {
+            const saleDate = new Date(effectiveDateStr);
             const saleMonth = saleDate.getMonth();
             const saleYear = saleDate.getFullYear();
             const monthKey = `${saleYear}-${String(saleMonth + 1).padStart(2, '0')}`; // YYYY-MM
@@ -184,35 +197,47 @@ export default function StatsPage() {
     const unsoldProducts = products.filter(p => p.status !== 'SOLD');
     let activeInvestment = 0;
     let projectedRevenue = 0;
-
-    unsoldProducts.forEach(p => {
-        const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
-        const dopCost = (usdCost * p.exchange_rate) + p.tax_cost + (p.local_shipping_cost || 0);
-        activeInvestment += dopCost;
-        if (p.sale_price && p.sale_price > 0) {
-            projectedRevenue += p.sale_price;
-        }
-    });
-
     let activeCostPriced = 0;
+
     unsoldProducts.forEach(p => {
+        const tx = {
+            buy_price: Number(p.buy_price) || 0,
+            shipping_cost: Number(p.shipping_cost) || 0,
+            origin_tax: Number(p.origin_tax) || 0,
+            tax_cost: Number(p.tax_cost) || 0,
+            adjustments: p.adjustments || [],
+            exchange_rate: Number(p.exchange_rate) || 58.5
+        };
+        const calc = calculateProfit(tx, Number(p.sale_price) || 0, Number(p.local_shipping_cost) || 0);
+
+        // Active Investment (Net Cost of all unsold items)
+        activeInvestment += calc.net_cost;
+
         if (p.sale_price && p.sale_price > 0) {
-            const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
-            const dopCost = (usdCost * p.exchange_rate) + p.tax_cost + (p.local_shipping_cost || 0);
-            activeCostPriced += dopCost;
+            projectedRevenue += Number(p.sale_price);
+            activeCostPriced += calc.net_cost; // Cost of items that contribute to projected revenue
         }
     });
 
-    const projectedProfit = projectedRevenue > 0 ? (projectedRevenue - activeInvestment) : 0;
-    const trueProjectedProfit = projectedRevenue - activeCostPriced;
+    // Projected Profit: Only from items that have a sale price set.
+    const trueProjectedProfit = projectedRevenue > 0 ? (projectedRevenue - activeCostPriced) : 0;
 
     // Platform Aggregation
     const platformStats: Record<string, { count: number, invested: number }> = {};
     let totalInvested = 0;
 
     products.forEach(p => {
-        const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
-        const dopCost = (usdCost * p.exchange_rate) + p.tax_cost + (p.local_shipping_cost || 0);
+        const tx = {
+            buy_price: Number(p.buy_price) || 0,
+            shipping_cost: Number(p.shipping_cost) || 0,
+            origin_tax: Number(p.origin_tax) || 0,
+            tax_cost: Number(p.tax_cost) || 0,
+            adjustments: p.adjustments || [],
+            exchange_rate: Number(p.exchange_rate) || 58.5
+        };
+        const calc = calculateProfit(tx); // Sale price 0 just to get cost
+        const dopCost = calc.net_cost;
+
         totalInvested += dopCost;
 
         // Platform
@@ -386,21 +411,29 @@ export default function StatsPage() {
 
                         // Log adjustments for debugging
                         products.forEach(p => {
-                            const ex = p.exchange_rate;
-                            let productCost = p.buy_price * ex;
+                            const ex = p.exchange_rate || 58;
 
-                            // Subtract adjustments from Product Cost
+                            // 1. Base Product Cost (Price + US Tax) in DOP
+                            // Adjustments (Credits) usually reduce the product cost base.
+                            let productBaseUsd = p.buy_price + (p.origin_tax || 0);
+
                             if (p.adjustments) {
-                                p.adjustments.forEach(adj => {
-                                    if (['CREDIT_CLAIM', 'REWARD_BACK'].includes(adj.type)) {
-                                        productCost -= (adj.amount * ex); // Assuming amount is in USD if buy_price is USD. But double check if amount is USD or DOP.Usually adjustments match currency. Assuming conversion needed.
-                                    }
-                                });
+                                const totalAdjUsd = p.adjustments.reduce((acc, adj) => acc + adj.amount, 0);
+                                productBaseUsd -= totalAdjUsd;
                             }
 
-                            cProduct += productCost;
+                            cProduct += (productBaseUsd * ex);
+
+                            // 2. Shipping to Miami (USD)
                             cShipping += (p.shipping_cost * ex);
-                            cCourier += p.tax_cost + (p.local_shipping_cost || 0) + ((p.origin_tax || 0) * ex);
+
+                            // 3. Courier & Import (DOP)
+                            cCourier += p.tax_cost + (p.local_shipping_cost || 0);
+                            // Note: calculateProfit puts local_shipping in profit calculation, not net_cost. 
+                            // But usually "Inversion" means total cost to get it to customer? 
+                            // If unsold, local_shipping might be 0. 
+                            // Let's stick to Landing Cost (tax_cost) for Courier segment to be safe, 
+                            // or include local_shipping if it's considered part of the expense profile.
                         });
 
                         const total = cProduct + cShipping + cCourier;
