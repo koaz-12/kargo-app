@@ -67,7 +67,7 @@ export default function ProductNameInput({ value, onChange, onSelectHistory }: P
     };
 
     return (
-        <div ref={wrapperRef} className="relative w-full z-30">
+        <div ref={wrapperRef} className="relative w-full z-10">
             <div className="relative">
                 {/* Search / Spinner Icon */}
                 <div className="absolute left-3 top-3 text-slate-400">

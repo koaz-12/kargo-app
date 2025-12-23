@@ -8,7 +8,7 @@ interface ProductHeaderProps {
 
 export default function ProductHeader({ isEditing, exchangeRate, onRateChange }: ProductHeaderProps) {
     return (
-        <header className="bg-white px-4 py-3 sticky top-0 z-[1000] border-b border-slate-100 flex items-center justify-between shadow-sm mb-4 gap-4">
+        <header className="bg-white px-4 py-3 sticky top-0 z-50 border-b border-slate-100 flex items-center justify-between shadow-sm mb-4 gap-4">
             <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">
                     {isEditing ? <Edit2 size={18} /> : <PlusCircle size={18} />}
