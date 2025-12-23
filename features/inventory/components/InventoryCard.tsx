@@ -141,7 +141,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 local_shipping_cost: editValues.localShipping,
                 tax_cost: editValues.taxCost,
                 status: newStatus as any,
-                financial_adjustments: newAdjustments
+                financial_adjustments: newAdjustments,
+                tracking_number: editValues.trackingNumber,
+                courier_tracking: editValues.courierTracking
             }));
             setExpanded(false);
             if (refreshList) refreshList();
@@ -187,15 +189,13 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         <div className={`bg-white border text-slate-900 rounded-xl overflow-hidden shadow-sm transition-all ${expanded ? 'border-slate-400 ring-1 ring-slate-400' : 'border-slate-100'}`}>
             <div onClick={toggleExpand} className="p-3 flex gap-3 items-center cursor-pointer">
                 <div className="w-12 h-12 bg-slate-50 rounded-lg shrink-0 overflow-hidden border border-slate-200">
-                    <div className="w-12 h-12 bg-slate-50 rounded-lg shrink-0 overflow-hidden border border-slate-200">
-                        {p.image_url ? (
-                            <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                <Package size={20} />
-                            </div>
-                        )}
-                    </div>
+                    {p.image_url ? (
+                        <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                            <Package size={20} />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -261,8 +261,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                         </div>
                     </div>
 
-                    <div className="flex gap-3 items-end mb-3">
-                        <div className="flex-[1.5]">
+                    <div className="flex gap-3 items-end mb-3 flex-wrap">
+                        <div className="flex-1 min-w-[100px]">
                             <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Precio Venta (RD$)</label>
                             <input
                                 type="number"
@@ -271,7 +271,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                                 className="w-full p-2 border border-slate-300 rounded-lg font-bold text-slate-800 outline-none focus:border-blue-500"
                             />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-[100px]">
                             <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Envío Local</label>
                             <input
                                 type="number"
@@ -318,9 +318,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                         </div>
                         <div className="space-y-2">
                             {editValues.adjustments.map((adj, idx) => (
-                                <div key={idx} className="flex gap-1 items-center">
+                                <div key={idx} className="flex gap-0.5 items-center">
                                     <select
-                                        className="text-[10px] w-24 border border-slate-200 rounded px-1 py-1.5 bg-white text-slate-700 outline-none"
+                                        className="flex-1 w-0 min-w-[40px] text-[10px] border border-slate-200 rounded px-0.5 py-1.5 bg-white text-slate-700 outline-none truncate"
                                         value={adj.type}
                                         onChange={(e) => modifyAdjustment('UPDATE', { adjId: adj.id, field: 'type', value: e.target.value })}
                                     >
@@ -329,21 +329,21 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                                         <option value="COUPON">Cupón</option>
                                         <option value="PRICE_ADJUSTMENT">Ajuste</option>
                                     </select>
-                                    <div className="relative w-14">
+                                    <div className="relative w-10 shrink-0">
                                         <input type="number" placeholder="%" value={adj.percentage || ''}
                                             onChange={(e) => modifyAdjustment('UPDATE', { adjId: adj.id, field: 'percentage', value: e.target.value })}
-                                            className="w-full px-1 py-1.5 text-xs text-center border border-slate-200 rounded outline-none bg-white"
+                                            className="w-full px-0 py-1.5 text-xs text-center border border-slate-200 rounded outline-none bg-white p-0"
                                         />
-                                        <span className="absolute right-1 top-1.5 text-[9px] text-slate-400">%</span>
+                                        <span className="absolute right-0.5 top-1.5 text-[9px] text-slate-400 pointer-events-none">%</span>
                                     </div>
-                                    <div className="relative flex-1">
-                                        <span className="absolute left-1.5 top-1.5 text-[10px] text-slate-400">$</span>
+                                    <div className="relative flex-[1.5] w-0 min-w-[60px]">
+                                        <span className="absolute left-1 top-1.5 text-[10px] text-slate-400 pointer-events-none">$</span>
                                         <input type="number" placeholder="0.00" value={adj.amount || ''}
                                             onChange={(e) => modifyAdjustment('UPDATE', { adjId: adj.id, field: 'amount', value: e.target.value })}
-                                            className="w-full pl-3 pr-2 py-1.5 text-xs border border-slate-200 rounded outline-none font-medium"
+                                            className="w-full pl-3 pr-1 py-1.5 text-xs border border-slate-200 rounded outline-none font-medium p-0"
                                         />
                                     </div>
-                                    <button onClick={() => modifyAdjustment('REMOVE', { adjId: adj.id })} className="text-slate-400 hover:text-red-500 p-1 bg-white border border-slate-100 rounded"><Trash2 size={12} /></button>
+                                    <button onClick={() => modifyAdjustment('REMOVE', { adjId: adj.id })} className="text-slate-400 hover:text-red-500 p-1 bg-white border border-slate-100 rounded shrink-0"><Trash2 size={12} /></button>
                                 </div>
                             ))}
                         </div>

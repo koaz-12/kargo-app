@@ -24,8 +24,12 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     // New Metadata State
     const [productUrl, setProductUrl] = useState<string>(initialProduct?.product_url || '');
     const [imageUrl, setImageUrl] = useState<string>(initialProduct?.image_url || '');
-    const [images, setImages] = useState<any[]>(initialProduct?.images || []); // New Images Array
+    const [images, setImages] = useState<any[]>(initialProduct?.images || []);
     const [isScraping, setIsScraping] = useState(false);
+
+    // Logistics State
+    const [trackingNumber, setTrackingNumber] = useState<string>(initialProduct?.tracking_number || '');
+    const [courierTracking, setCourierTracking] = useState<string>(initialProduct?.courier_tracking || '');
 
     const [courierDiscount, setCourierDiscount] = useState<number>(0);
     const [isRateLoaded, setIsRateLoaded] = useState(false);
@@ -264,6 +268,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             isScraping,
             images, // New
             courierDiscount, // New
+            trackingNumber,
+            courierTracking
         },
         setters: {
             setPlatformId,
@@ -280,6 +286,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             setProductUrl,
             setImageUrl,
             setImages,
+            setTrackingNumber,
+            setCourierTracking,
             // Logic Helpers
             setIsScraping,
             loadProduct: (p: any) => {
@@ -323,6 +331,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setImageUrl('');
                 setImages([]);
                 setName('');
+                setTrackingNumber('');
+                setCourierTracking('');
             },
             softReset: () => {
                 // Keep Platform, Account, Shipping, Tax, Local Shipping
@@ -333,6 +343,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setProductUrl('');
                 setImageUrl('');
                 setImages([]);
+                setTrackingNumber('');
+                setCourierTracking('');
             },
             addAdjustment: (type: any, amount: number) => {
                 setAdjustments([...adjustments, { id: crypto.randomUUID(), product_id: '', type, amount, percentage: 0, date: new Date().toISOString() }]);

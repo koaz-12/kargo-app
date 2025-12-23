@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useProfitCalculator } from '../../../hooks/useProfitCalculator';
 import { productService } from '../../../services/productService';
-import { storageService } from '../../../services/storageService';
+import { FormState, FormSetters, ProductStatus } from '../../../types';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 
@@ -68,6 +68,8 @@ export const useProductForm = (editingId: string | null) => {
                 exchange_rate: formState.exchangeRate,
                 product_url: formState.productUrl,
                 image_url: formState.imageUrl,
+                tracking_number: formState.trackingNumber,
+                courier_tracking: formState.courierTracking,
 
                 // Calculated
                 net_cost: results.net_cost,

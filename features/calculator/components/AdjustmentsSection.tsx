@@ -31,9 +31,9 @@ export default function AdjustmentsSection({ formState, setters }: AdjustmentsSe
 
             <div className="space-y-2">
                 {formState.adjustments.map((adj) => (
-                    <div key={adj.id} className="flex gap-1 items-center animate-in fade-in slide-in-from-left-2">
+                    <div key={adj.id} className="flex gap-0.5 items-center animate-in fade-in slide-in-from-left-2">
                         <select
-                            className="text-[10px] w-24 border border-slate-200 rounded px-1 py-1.5 bg-slate-50 text-slate-700 outline-none"
+                            className="flex-1 w-0 min-w-[40px] text-[10px] border border-slate-200 rounded px-0.5 py-1.5 bg-slate-50 text-slate-700 outline-none truncate"
                             value={adj.type}
                             onChange={(e) => setters.updateAdjustment(adj.id, 'type', e.target.value)}
                         >
@@ -43,27 +43,27 @@ export default function AdjustmentsSection({ formState, setters }: AdjustmentsSe
                             <option value="PRICE_ADJUSTMENT">Ajuste</option>
                             {/* Removed Invalid/Duplicate Options: PRICE_PROTECTION, REWARD_BACK (old label) */}
                         </select>
-                        <div className="w-16 flex items-center border border-slate-200 rounded px-1 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
+                        <div className="w-10 shrink-0 flex items-center border border-slate-200 rounded px-0 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
                             <input
                                 type="number"
                                 placeholder="%"
-                                className="w-full text-xs outline-none text-center bg-transparent"
+                                className="w-full text-xs outline-none text-center bg-transparent p-0"
                                 value={adj.percentage || ''}
                                 onChange={(e) => setters.updateAdjustment(adj.id, 'percentage', Number(e.target.value))}
                             />
-                            <span className="text-[9px] text-slate-400 ml-0.5">%</span>
+                            <span className="text-[9px] text-slate-400">%</span>
                         </div>
-                        <div className="flex-1 flex items-center border border-slate-200 rounded px-2 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
-                            <span className="text-[10px] text-slate-400 mr-1">$</span>
+                        <div className="flex-[1.5] w-0 min-w-[60px] flex items-center border border-slate-200 rounded px-1.5 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
+                            <span className="text-[10px] text-slate-400 mr-0.5">$</span>
                             <input
                                 type="number"
                                 placeholder="0.00"
-                                className="w-full text-xs outline-none font-medium bg-transparent"
+                                className="w-full text-xs outline-none font-medium bg-transparent p-0"
                                 value={adj.amount || ''}
                                 onChange={(e) => setters.updateAdjustment(adj.id, 'amount', Number(e.target.value))}
                             />
                         </div>
-                        <button onClick={() => setters.removeAdjustment(adj.id)} className="text-slate-400 hover:text-red-500 p-1">
+                        <button onClick={() => setters.removeAdjustment(adj.id)} className="text-slate-400 hover:text-red-500 p-1 shrink-0">
                             <Trash2 size={14} />
                         </button>
                     </div>

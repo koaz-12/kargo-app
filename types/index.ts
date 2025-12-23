@@ -114,6 +114,8 @@ export interface FormState {
   imageUrl: string;
   isScraping: boolean;
   images?: any[];
+  trackingNumber?: string;
+  courierTracking?: string;
 }
 
 export interface FormSetters {
@@ -131,6 +133,8 @@ export interface FormSetters {
   setProductUrl: (val: string) => void;
   setImageUrl: (val: string) => void;
   setImages: (val: any[]) => void;
+  setTrackingNumber: (val: string) => void;
+  setCourierTracking: (val: string) => void;
   setIsScraping: (val: boolean) => void;
   loadProduct: (p: any) => void;
   resetForm: () => void;
