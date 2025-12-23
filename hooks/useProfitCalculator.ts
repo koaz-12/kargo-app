@@ -305,7 +305,20 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setTaxCost(0);
                 setSalePrice(0);
                 setLocalShipping(0);
-                setAdjustments([]);
+
+                // Re-apply Default Credit Claim
+                const type = 'CREDIT_CLAIM';
+                // @ts-ignore
+                const prefPct = preferences[type] || 50;
+                const defaultAdj: FinancialAdjustment = {
+                    id: crypto.randomUUID(),
+                    product_id: '',
+                    type: type as any,
+                    amount: 0,
+                    percentage: prefPct,
+                    date: new Date().toISOString(),
+                };
+                setAdjustments([defaultAdj]);
                 setProductUrl('');
                 setImageUrl('');
                 setImages([]);
