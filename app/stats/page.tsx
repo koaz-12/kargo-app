@@ -14,9 +14,9 @@ export default function StatsPage() {
     const [loading, setLoading] = useState(true);
 
     // Goal State
-    const [monthlyGoal, setMonthlyGoal] = useState<number>(50000);
+    const [monthlyGoal, setMonthlyGoal] = useState<number>(0); // Start at 0 to avoid flash of 50k
     const [isEditingGoal, setIsEditingGoal] = useState(false);
-    const [tempGoal, setTempGoal] = useState<string>('50000');
+    const [tempGoal, setTempGoal] = useState<string>('');
 
     // Date State
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -37,8 +37,8 @@ export default function StatsPage() {
     useEffect(() => {
         const loadData = async () => {
             // Reset goal when month changes
-            setMonthlyGoal(50000); // Default
-            setTempGoal('50000');
+            setMonthlyGoal(0);
+            setTempGoal('');
 
             const [prodRes, platRes, goalRes] = await Promise.all([
                 supabase.from('products').select('*, adjustments:financial_adjustments(*)'),
@@ -337,9 +337,13 @@ export default function StatsPage() {
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingGoal(true)}>
-                                                <span className="text-slate-500 text-lg font-bold border-b border-dashed border-slate-700 group-hover:border-slate-400 transition-colors">
-                                                    RD${monthlyGoal.toLocaleString('en-US')}
-                                                </span>
+                                                {monthlyGoal === 0 ? (
+                                                    <div className="h-6 w-24 bg-slate-700 animate-pulse rounded"></div>
+                                                ) : (
+                                                    <span className="text-slate-500 text-lg font-bold border-b border-dashed border-slate-700 group-hover:border-slate-400 transition-colors">
+                                                        RD${monthlyGoal.toLocaleString('en-US')}
+                                                    </span>
+                                                )}
                                                 <Edit2 size={12} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </div>
                                         )}
