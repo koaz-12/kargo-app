@@ -146,24 +146,24 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5">
                     <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística / Rastreo (Opcional)</p>
                     <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs text-[10px]">📦</span>
+                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                            <span className="text-slate-400 text-xs shrink-0">📦</span>
                             <input
                                 type="text"
                                 placeholder="Tracking Tienda / USA"
                                 value={formState.trackingNumber || ''}
                                 onChange={(e) => setters.setTrackingNumber(e.target.value)}
-                                className="w-full pl-8 p-2 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 font-medium"
+                                className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400 font-medium"
                             />
                         </div>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs text-[10px]">🚚</span>
+                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                            <span className="text-slate-400 text-xs shrink-0">🚚</span>
                             <input
                                 type="text"
                                 placeholder="Tracking Courier (RD)"
                                 value={formState.courierTracking || ''}
                                 onChange={(e) => setters.setCourierTracking(e.target.value)}
-                                className="w-full pl-8 p-2 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 font-medium"
+                                className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400 font-medium"
                             />
                         </div>
                     </div>
