@@ -20,11 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${inter.className} bg-slate-50 h-[100dvh] w-full overflow-hidden`}>
-        {/* Main Scroll Container - Fixes Sticky Headers & isolates BottomNav */}
-        <div className="h-full w-full overflow-y-auto overflow-x-hidden relative">
-          {children}
-        </div>
+      <body className={`${inter.className} bg-slate-50 min-h-[100dvh] w-full`}>
+        {/* Main Content */}
+        {children}
         <BottomNav />
       </body>
     </html>

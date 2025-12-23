@@ -35,7 +35,7 @@ export default function BottomNav() {
     };
 
     return (
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-x border-slate-100 z-50 safe-area-bottom pb-safe shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)]">
+        <nav className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white border-t border-x border-slate-100 z-50 safe-area-bottom pb-safe shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)]">
             <div className="flex justify-around items-center h-16 w-full px-2">
                 <NavItem href="/" icon={LayoutDashboard} label="Inicio" />
                 <NavItem href="/stats" icon={BarChart3} label="Estadística" />
