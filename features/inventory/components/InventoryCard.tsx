@@ -285,24 +285,24 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     <div className="mb-4">
                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística / Rastreo (Opcional)</p>
                         <div className="grid grid-cols-2 gap-2">
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">📦</span>
+                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                                <span className="text-slate-400 text-xs shrink-0">📦</span>
                                 <input
                                     type="text"
                                     placeholder="Tracking Tienda (TBA...)"
                                     value={editValues.trackingNumber || ''}
                                     onChange={(e) => setEditValues(prev => ({ ...prev, trackingNumber: e.target.value }))}
-                                    className="w-full pl-8 p-2 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                                    className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400"
                                 />
                             </div>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🚚</span>
+                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                                <span className="text-slate-400 text-xs shrink-0">🚚</span>
                                 <input
                                     type="text"
                                     placeholder="Tracking Courier (MIA...)"
                                     value={editValues.courierTracking || ''}
                                     onChange={(e) => setEditValues(prev => ({ ...prev, courierTracking: e.target.value }))}
-                                    className="w-full pl-8 p-2 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                                    className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400"
                                 />
                             </div>
                         </div>
@@ -336,11 +336,14 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                                         />
                                         <span className="absolute right-0.5 top-1.5 text-[9px] text-slate-400 pointer-events-none">%</span>
                                     </div>
-                                    <div className="relative flex-[1.5] w-0 min-w-[60px]">
-                                        <span className="absolute left-1 top-1.5 text-[10px] text-slate-400 pointer-events-none">$</span>
-                                        <input type="number" placeholder="0.00" value={adj.amount || ''}
+                                    <div className="flex-[1.5] w-0 min-w-[60px] flex items-center border border-slate-200 rounded px-1.5 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
+                                        <span className="text-[10px] text-slate-400 mr-0.5">$</span>
+                                        <input
+                                            type="number"
+                                            placeholder="0.00"
+                                            value={adj.amount || ''}
                                             onChange={(e) => modifyAdjustment('UPDATE', { adjId: adj.id, field: 'amount', value: e.target.value })}
-                                            className="w-full pl-3 pr-1 py-1.5 text-xs border border-slate-200 rounded outline-none font-medium p-0"
+                                            className="w-full text-xs outline-none font-medium bg-transparent p-0"
                                         />
                                     </div>
                                     <button onClick={() => modifyAdjustment('REMOVE', { adjId: adj.id })} className="text-slate-400 hover:text-red-500 p-1 bg-white border border-slate-100 rounded shrink-0"><Trash2 size={12} /></button>
