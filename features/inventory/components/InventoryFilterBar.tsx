@@ -1,4 +1,4 @@
-import { Search, FileDown } from 'lucide-react';
+import { Search, FileDown, Loader2 } from 'lucide-react';
 import { SortOption, StatusFilter } from '../types';
 
 interface InventoryFilterBarProps {
@@ -9,6 +9,7 @@ interface InventoryFilterBarProps {
     sortOption: SortOption;
     setSortOption: (sort: SortOption) => void;
     onExport: () => void;
+    loading?: boolean;
 }
 
 export default function InventoryFilterBar({
@@ -18,7 +19,8 @@ export default function InventoryFilterBar({
     setStatusFilter,
     sortOption,
     setSortOption,
-    onExport
+    onExport,
+    loading
 }: InventoryFilterBarProps) {
     return (
         <div className="space-y-4 mb-4">
@@ -33,7 +35,11 @@ export default function InventoryFilterBar({
             {/* Search & Sort */}
             <div className="flex gap-2">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                    {loading ? (
+                        <Loader2 className="absolute left-3 top-2.5 text-slate-400 animate-spin" size={18} />
+                    ) : (
+                        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                    )}
                     <input
                         type="text"
                         placeholder="Buscar por nombre, SKU..."

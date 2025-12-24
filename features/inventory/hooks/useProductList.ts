@@ -6,6 +6,7 @@ export function useProductList() {
     const [products, setProducts] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
     const [sortOption, setSortOption] = useState<SortOption>('DATE_DESC');
 
@@ -13,6 +14,21 @@ export function useProductList() {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const ITEMS_PER_PAGE = 20;
+
+    // Debounce Logic
+    useEffect(() => {
+        // Instant update if clearing search (improves responsiveness)
+        if (searchTerm === '') {
+            setDebouncedSearchTerm('');
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const fetchProducts = async (pageIndex: number, isReset = false) => {
         try {
@@ -27,8 +43,8 @@ export function useProductList() {
             if (statusFilter !== 'ALL') {
                 query = query.eq('status', statusFilter);
             }
-            if (searchTerm) {
-                query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,tracking_number.ilike.%${searchTerm}%,courier_tracking.ilike.%${searchTerm}%`);
+            if (debouncedSearchTerm) {
+                query = query.or(`name.ilike.%${debouncedSearchTerm}%,sku.ilike.%${debouncedSearchTerm}%,tracking_number.ilike.%${debouncedSearchTerm}%,courier_tracking.ilike.%${debouncedSearchTerm}%`);
             }
 
             // Sorting
@@ -58,12 +74,13 @@ export function useProductList() {
 
     // Reset when filters change
     useEffect(() => {
-        setProducts([]);
+        // Do NOT clear products here to avoid flash/layout shift
+        // setProducts([]); 
         setPage(0);
         setHasMore(true);
         setLoading(true);
         fetchProducts(0, true);
-    }, [searchTerm, statusFilter, sortOption]);
+    }, [debouncedSearchTerm, statusFilter, sortOption]);
 
     const loadMore = () => {
         const nextPage = page + 1;

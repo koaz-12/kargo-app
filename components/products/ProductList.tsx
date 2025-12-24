@@ -126,6 +126,7 @@ export default function ProductList() {
                 statusFilter={statusFilter} setStatusFilter={setStatusFilter}
                 sortOption={sortOption} setSortOption={setSortOption}
                 onExport={handleDownloadCSV}
+                loading={loading}
             />
 
             <div className="space-y-3">
