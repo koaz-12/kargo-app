@@ -55,7 +55,15 @@ export const useProductForm = (editingId: string | null) => {
         setStatusMsg('');
 
         try {
-            const productData = {
+            // Determine status based on fields
+            let productStatus: ProductStatus = 'ORDERED';
+            if (formState.salePrice > 0) {
+                productStatus = 'SOLD';
+            } else if (formState.shippingCost > 0 || formState.localShipping > 0 || formState.taxCost > 0) {
+                productStatus = 'RECEIVED';
+            }
+
+            const productData: any = {
                 platform_id: formState.platformId,
                 purchase_account_id: formState.purchaseAccountId || undefined,
                 name: formState.name,
@@ -77,8 +85,13 @@ export const useProductForm = (editingId: string | null) => {
                 margin: results.margin,
                 roi: results.roi,
 
-                status: 'ORDERED' as ProductStatus,
+                status: productStatus,
             };
+
+            // Set sold_at when marking as SOLD
+            if (productStatus === 'SOLD') {
+                productData.sold_at = new Date().toISOString();
+            }
 
             let targetId = editingId;
 

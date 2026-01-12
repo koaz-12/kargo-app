@@ -110,17 +110,25 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         }
 
         try {
+            // Prepare update payload
+            const updatePayload: any = {
+                sale_price: editValues.salePrice,
+                local_shipping_cost: editValues.localShipping,
+                tax_cost: editValues.taxCost,
+                tracking_number: editValues.trackingNumber,
+                courier_tracking: editValues.courierTracking,
+                status: newStatus as any
+            };
+
+            // Set sold_at timestamp when marking as SOLD
+            if (newStatus === 'SOLD' && p.status !== 'SOLD') {
+                updatePayload.sold_at = new Date().toISOString();
+            }
+
             // Update Product
             const { error: prodError } = await supabase
                 .from('products')
-                .update({
-                    sale_price: editValues.salePrice,
-                    local_shipping_cost: editValues.localShipping,
-                    tax_cost: editValues.taxCost,
-                    tracking_number: editValues.trackingNumber,
-                    courier_tracking: editValues.courierTracking,
-                    status: newStatus as any
-                })
+                .update(updatePayload)
                 .eq('id', p.id);
 
             if (prodError) throw prodError;
