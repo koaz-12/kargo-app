@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calculator, DollarSign, TrendingUp, Package, Gift, Target, Sparkles, Plus, Trash2, ChevronDown, ChevronUp, Weight } from 'lucide-react';
+import { X, Calculator, DollarSign, TrendingUp, Package, Gift, Target, Sparkles, Plus, Trash2, ChevronDown, ChevronUp, Weight, AlertTriangle } from 'lucide-react';
 
 interface PointsCalculatorProps {
     onClose: () => void;
@@ -10,121 +10,90 @@ interface PointsCalculatorProps {
 interface Articulo {
     id: string;
     nombre: string;
-    costo: number;
-    moneda: 'USD' | 'DOP';
-    porcentajeRetorno: number;
-    precioVentaDOP: number;
-    pesoLibras?: number; // Para cálculo de courier
+    costoBaseUS: number;
+    envioUS: number;
+    aplicarTaxUS: boolean;
+    pesoLibras: number;
+    precioVentaRD: number;
     collapsed?: boolean;
 }
 
 interface Regalo {
-    activo: boolean;
+    id: string;
     nombre: string;
-    precioVentaDOP: number;
-    costoCourierDOP: number;
-    pesoLibras?: number;
+    valorReferenciaUS: number;
+    pesoLibras: number;
+    precioVentaRD: number;
 }
 
 export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) => {
-    // A. Config Global
-    const [tasaDolar, setTasaDolar] = useState<string>('65');
-    const [metaPuntos, setMetaPuntos] = useState<string>('170');
-    const [puntosActuales, setPuntosActuales] = useState<string>('163.2');
-    const [tasaRellenoPorcentaje, setTasaRellenoPorcentaje] = useState<string>('0.20');
+    // --- ESTADO GLOBAL ---
 
-    // Courier config
-    const [modoCourier, setModoCourier] = useState<'fijo' | 'libra'>('fijo');
-    const [costoCourierFijo, setCostoCourierFijo] = useState<string>('250');
-    const [precioPorLibraBase, setPrecioPorLibraBase] = useState<string>('193');
-    const [precioPorLibraMejorado, setPrecioPorLibraMejorado] = useState<string>('140');
-    const [pesoMinimoMejorado, setPesoMinimoMejorado] = useState<string>('0.05');
+    // 1. Configuración General
+    const [tasaDolar, setTasaDolar] = useState<string>('60.50');
+    const [precioPorLibra, setPrecioPorLibra] = useState<string>('193');
+    const [taxUSA, setTaxUSA] = useState<string>('7'); // 7%
+    const [arancelRD, setArancelRD] = useState<string>('38'); // 38%
 
-    const [impuestosDOP, setImpuestosDOP] = useState<string>('0');
+    // 2. Reglas del Evento (Cut Price)
+    const [targetCut, setTargetCut] = useState<string>('30.57'); // Falta Recortar
+    const [rate1, setRate1] = useState<string>('150'); // Tasa 1er Pedido
+    const [limitFirst, setLimitFirst] = useState<string>('18.00'); // Límite 1er Pedido
+    const [rate2, setRate2] = useState<string>('5'); // Tasa 2do Pedido
 
-    // B. Artículos (múltiples pedidos)
+    // 3. Inventario y Regalos
     const [articulos, setArticulos] = useState<Articulo[]>([
-        { id: '1', nombre: 'Primer Artículo', costo: 30, moneda: 'USD', porcentajeRetorno: 120, precioVentaDOP: 2500, pesoLibras: 0.5 }
+        { id: '1', nombre: 'Artículo Principal', costoBaseUS: 0, envioUS: 0, aplicarTaxUS: false, pesoLibras: 0, precioVentaRD: 0 }
     ]);
 
-    // D. Regalos (siempre habilitados)
     const [regalos, setRegalos] = useState<Regalo[]>([
-        { activo: false, nombre: 'Regalo 1', precioVentaDOP: 500, costoCourierDOP: 50, pesoLibras: 0.1 },
-        { activo: false, nombre: 'Regalo 2', precioVentaDOP: 500, costoCourierDOP: 50, pesoLibras: 0.1 },
-        { activo: false, nombre: 'Regalo 3', precioVentaDOP: 500, costoCourierDOP: 50, pesoLibras: 0.1 },
+        { id: '1', nombre: 'Regalo 1', valorReferenciaUS: 0, pesoLibras: 0, precioVentaRD: 0 }
     ]);
 
-    // Load from localStorage
+    // 4. Configuración Extra
+    const [aplicarArancelSiExcede, setAplicarArancelSiExcede] = useState<boolean>(false);
+
+
+    // --- PERSISTENCIA (LocalStorage) ---
     useEffect(() => {
-        const saved = localStorage.getItem('pointsCalculator3x1State_v2');
+        const saved = localStorage.getItem('resellerCalcState_v1');
         if (saved) {
             try {
                 const state = JSON.parse(saved);
                 if (state.tasaDolar) setTasaDolar(state.tasaDolar);
-                if (state.metaPuntos) setMetaPuntos(state.metaPuntos);
-                if (state.puntosActuales) setPuntosActuales(state.puntosActuales);
-                if (state.tasaRellenoPorcentaje) setTasaRellenoPorcentaje(state.tasaRellenoPorcentaje);
-                if (state.modoCourier) setModoCourier(state.modoCourier);
-                if (state.costoCourierFijo) setCostoCourierFijo(state.costoCourierFijo);
-                if (state.precioPorLibraBase) setPrecioPorLibraBase(state.precioPorLibraBase);
-                if (state.precioPorLibraMejorado) setPrecioPorLibraMejorado(state.precioPorLibraMejorado);
-                if (state.pesoMinimoMejorado) setPesoMinimoMejorado(state.pesoMinimoMejorado);
-                if (state.impuestosDOP) setImpuestosDOP(state.impuestosDOP);
+                if (state.precioPorLibra) setPrecioPorLibra(state.precioPorLibra);
+                if (state.taxUSA) setTaxUSA(state.taxUSA);
+                if (state.arancelRD) setArancelRD(state.arancelRD);
+                if (state.targetCut) setTargetCut(state.targetCut);
+                if (state.rate1) setRate1(state.rate1);
+                if (state.limitFirst) setLimitFirst(state.limitFirst);
+                if (state.rate2) setRate2(state.rate2);
                 if (state.articulos) setArticulos(state.articulos);
                 if (state.regalos) setRegalos(state.regalos);
+                if (state.aplicarArancelSiExcede !== undefined) setAplicarArancelSiExcede(state.aplicarArancelSiExcede);
             } catch (e) {
                 console.error('Error loading calculator state:', e);
             }
         }
     }, []);
 
-    // Save to localStorage
     useEffect(() => {
-        const state = {
-            tasaDolar,
-            metaPuntos,
-            puntosActuales,
-            tasaRellenoPorcentaje,
-            modoCourier,
-            costoCourierFijo,
-            precioPorLibraBase,
-            precioPorLibraMejorado,
-            pesoMinimoMejorado,
-            impuestosDOP,
-            articulos,
-            regalos,
-        };
-        localStorage.setItem('pointsCalculator3x1State_v2', JSON.stringify(state));
-    }, [tasaDolar, metaPuntos, puntosActuales, tasaRellenoPorcentaje, modoCourier, costoCourierFijo, precioPorLibraBase, precioPorLibraMejorado, pesoMinimoMejorado, impuestosDOP, articulos, regalos]);
+        const state = { tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede };
+        localStorage.setItem('resellerCalcState_v1', JSON.stringify(state));
+    }, [tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede]);
 
+
+    // --- HELPERS LISTAS ---
     const agregarArticulo = () => {
-        const nuevoId = Date.now().toString();
-        const esPrimero = articulos.length === 0;
         setArticulos([...articulos, {
-            id: nuevoId,
-            nombre: esPrimero ? 'Primer Artículo' : `Artículo ${articulos.length + 1}`,
-            costo: 0,
-            moneda: 'USD',
-            porcentajeRetorno: esPrimero ? 120 : 5,
-            precioVentaDOP: 0,
-            pesoLibras: 0.5,
+            id: Date.now().toString(),
+            nombre: `Artículo ${articulos.length + 1}`,
+            costoBaseUS: 0, envioUS: 0, aplicarTaxUS: false, pesoLibras: 0, precioVentaRD: 0
         }]);
     };
 
     const eliminarArticulo = (id: string) => {
-        if (articulos.length > 1) {
-            const nuevosArticulos = articulos.filter(a => a.id !== id);
-
-            // Si solo queda 1 artículo, marcarlo como primer pedido con 120%
-            if (nuevosArticulos.length === 1) {
-                nuevosArticulos[0] = {
-                    ...nuevosArticulos[0],
-                    porcentajeRetorno: 120
-                };
-            }
-
-            setArticulos(nuevosArticulos);
-        }
+        if (articulos.length > 1) setArticulos(articulos.filter(a => a.id !== id));
     };
 
     const updateArticulo = (id: string, field: keyof Articulo, value: any) => {
@@ -135,574 +104,496 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         setArticulos(articulos.map(a => a.id === id ? { ...a, collapsed: !a.collapsed } : a));
     };
 
-    const updateRegalo = (index: number, field: keyof Regalo, value: any) => {
-        setRegalos(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+    const agregarRegalo = () => {
+        setRegalos([...regalos, {
+            id: Date.now().toString(),
+            nombre: `Regalo ${regalos.length + 1}`,
+            valorReferenciaUS: 0, pesoLibras: 0, precioVentaRD: 0
+        }]);
     };
 
-    // ALGORITMO
+    const eliminarRegalo = (id: string) => {
+        setRegalos(regalos.filter(r => r.id !== id));
+    };
+
+    const updateRegalo = (id: string, field: keyof Regalo, value: any) => {
+        setRegalos(regalos.map(r => r.id === id ? { ...r, [field]: value } : r));
+    };
+
+
+    // --- CORE LOGIC (CALCULAR) ---
     const calcular = () => {
-        const meta = parseFloat(metaPuntos) || 0;
-        const actual = parseFloat(puntosActuales) || 0;
-        const tasaRelleno = parseFloat(tasaRellenoPorcentaje) || 0;
-        const tasa = parseFloat(tasaDolar) || 60;
-        const impuestos = parseFloat(impuestosDOP) || 0;
+        // Conversión de strings a números
+        const rate = parseFloat(tasaDolar) || 60.50;
+        const priceLb = parseFloat(precioPorLibra) || 193;
+        const taxUSAPercent = parseFloat(taxUSA) || 7;
+        const taxRDPercent = parseFloat(arancelRD) || 38;
 
-        // 1. Calcular puntos y costos de artículos
-        let puntosDeArticulos = 0;
-        let costoTotalUSD = 0;
-        let pesoTotalLibras = 0;
+        // 1. Reglas del Juego (Presupuesto Requerido)
+        const target = parseFloat(targetCut) || 0;
+        const limit1 = parseFloat(limitFirst) || 0;
+        const r1 = (parseFloat(rate1) || 150) / 100;
+        const r2 = (parseFloat(rate2) || 5) / 100;
 
-        articulos.forEach(art => {
-            const costoEnUSD = art.moneda === 'USD' ? art.costo : art.costo / tasa;
-            costoTotalUSD += costoEnUSD;
-            puntosDeArticulos += costoEnUSD * (art.porcentajeRetorno / 100);
-            pesoTotalLibras += art.pesoLibras || 0;
-        });
+        const cost1 = limit1 / r1; // Costo para cubrir el primer tramo
+        const remainingTarget = target - limit1; // Cuánto falta después del tramo 1
+        const cost2 = remainingTarget > 0 ? remainingTarget / r2 : 0; // Costo para cubrir el resto
 
-        // Agregar peso de regalos activos
-        regalos.forEach(r => {
-            if (r.activo && modoCourier === 'libra') {
-                pesoTotalLibras += r.pesoLibras || 0;
+        const requiredBudgetBase = cost1 + cost2; // Presupuesto base necesario (Lo que cuenta para la app)
+
+        // Impuestos estimados sobre ese presupuesto requerido (solo referencia)
+        const estimatedTaxUS = requiredBudgetBase * (taxUSAPercent / 100);
+        const requiredBudgetWithTax = requiredBudgetBase + estimatedTaxUS;
+
+
+        // 2. Inventario (Realidad)
+        let totalBaseCostUS = 0; // Suma de costos base (sin tax, sin envío) -> Para progreso de juego
+        let totalSpendUS = 0;    // Gasto real (Base + Tax + Envío) -> Para finanzas
+        let totalWeightInv = 0;
+        let totalSaleInvRD = 0;
+
+        articulos.forEach(a => {
+            totalBaseCostUS += a.costoBaseUS;
+
+            let itemCost = a.costoBaseUS;
+            if (a.aplicarTaxUS) {
+                itemCost *= (1 + (taxUSAPercent / 100));
             }
+            itemCost += a.envioUS;
+
+            totalSpendUS += itemCost;
+            totalWeightInv += a.pesoLibras;
+            totalSaleInvRD += a.precioVentaRD;
         });
 
-        // 2. Calcular courier
-        let costoCourier = 0;
-        let costoCourierRegalos = 0;
+        // 3. Regalos
+        let totalWeightRewards = 0;
+        let totalSaleRewardsRD = 0;
+        let totalRefValueRewardsUS = 0;
 
-        if (modoCourier === 'fijo') {
-            costoCourier = parseFloat(costoCourierFijo) || 0;
-            // Sumar courier de regalos activos
-            costoCourierRegalos = regalos.reduce((sum, r) => r.activo ? sum + r.costoCourierDOP : sum, 0);
-        } else {
-            // Por libra - incluye artículos + regalos activos
-            const precioBase = parseFloat(precioPorLibraBase) || 193;
-            const precioMejorado = parseFloat(precioPorLibraMejorado) || 140;
-            const minimoMejorado = parseFloat(pesoMinimoMejorado) || 0.05;
+        regalos.forEach(r => {
+            totalWeightRewards += r.pesoLibras;
+            totalSaleRewardsRD += r.precioVentaRD;
+            totalRefValueRewardsUS += r.valorReferenciaUS;
+        });
 
-            const precioPorLibra = pesoTotalLibras > minimoMejorado ? precioMejorado : precioBase;
-            costoCourier = pesoTotalLibras * precioPorLibra;
-            costoCourierRegalos = 0; // Ya está incluido en el peso total
+        // 4. Aduanas RD
+        const exceeds200 = totalSpendUS > 200;
+        let taxAmountRD = 0;
+
+        if (exceeds200 && aplicarArancelSiExcede) {
+            // Se calcula sobre CIF (Costo + Seguro + Flete), pero simplificaremos: Gasto Total * Tasa
+            const taxableAmountRD = totalSpendUS * rate;
+            taxAmountRD = taxableAmountRD * (taxRDPercent / 100);
         }
 
-        // 3. Puntos
-        const faltanteInicial = meta - actual;
-        const nuevoFaltante = Math.max(0, faltanteInicial - puntosDeArticulos);
-        const gastoExtraUSD = nuevoFaltante > 0 && tasaRelleno > 0
-            ? nuevoFaltante / (tasaRelleno / 100)
-            : 0;
+        // 5. Totales Finales
+        const totalWeight = totalWeightInv + totalWeightRewards;
+        const totalCourierRD = totalWeight * priceLb;
+        const totalMercanciaRD = totalSpendUS * rate;
 
-        // 4. Financiero
-        const costoMercancia = (costoTotalUSD + gastoExtraUSD) * tasa;
-        const costosOperativos = costoCourier + impuestos + costoCourierRegalos;
-        const inversionTotal = costoMercancia + costosOperativos;
+        const inversionTotalRD = totalMercanciaRD + totalCourierRD + taxAmountRD;
+        const ventasTotalesRD = totalSaleInvRD + totalSaleRewardsRD;
+        const gananciaNetaRD = ventasTotalesRD - inversionTotalRD;
 
-        const ingresosArticulos = articulos.reduce((sum, art) => sum + art.precioVentaDOP, 0);
-        const ingresosRegalos = regalos.reduce((sum, r) => r.activo ? sum + r.precioVentaDOP : sum, 0);
-        const ingresosVentas = ingresosArticulos + ingresosRegalos;
+        // ROI
+        const roi = inversionTotalRD > 0 ? (gananciaNetaRD / inversionTotalRD) * 100 : 0;
 
-        const gananciaNeta = ingresosVentas - inversionTotal;
-        const margenPorcentaje = inversionTotal > 0 ? ((gananciaNeta / inversionTotal) * 100) : 0;
+        // Eficiencia de Regalos ("La Pesca") -> Valor Regalos / Gasto Total
+        const giftEfficiency = totalSpendUS > 0 ? totalRefValueRewardsUS / totalSpendUS : 0;
 
-        // 5. Cuánto necesito gastar
-        const totalGastoUSD = costoTotalUSD + gastoExtraUSD;
-        const totalGastoDOP = costoMercancia + costoCourier + costoCourierRegalos + impuestos;
+        // Progreso de Barra
+        const remainingToCut = requiredBudgetBase - totalBaseCostUS;
+        const progressPercent = requiredBudgetBase > 0 ? (totalBaseCostUS / requiredBudgetBase) * 100 : 0;
 
         return {
-            puntos: {
-                faltanteInicial: faltanteInicial.toFixed(2),
-                puntosDeArticulos: puntosDeArticulos.toFixed(2),
-                nuevoFaltante: nuevoFaltante.toFixed(2),
-                gastoExtraUSD: gastoExtraUSD.toFixed(2),
+            game: {
+                requiredBudgetBase: requiredBudgetBase.toFixed(2),
+                requiredBudgetWithTax: requiredBudgetWithTax.toFixed(2),
+                cost1: cost1.toFixed(2),
+                cost2: cost2.toFixed(2),
+                remainingToCut: remainingToCut.toFixed(2),
+                progressPercent: Math.min(progressPercent, 100),
+                isComplete: remainingToCut <= 0.01
             },
-            financiero: {
-                costoMercancia: costoMercancia.toFixed(2),
-                costoCourier: costoCourier.toFixed(2),
-                costoCourierRegalos: costoCourierRegalos.toFixed(2),
-                costosOperativos: costosOperativos.toFixed(2),
-                inversionTotal: inversionTotal.toFixed(2),
-                ingresosVentas: ingresosVentas.toFixed(2),
-                gananciaNeta: gananciaNeta.toFixed(2),
-                margenPorcentaje: margenPorcentaje.toFixed(1),
+            financial: {
+                totalSpendUS: totalSpendUS.toFixed(2),
+                totalMercanciaRD: totalMercanciaRD.toLocaleString(),
+                totalCourierRD: totalCourierRD.toLocaleString(),
+                taxAmountRD: taxAmountRD.toLocaleString(),
+                inversionTotalRD: inversionTotalRD.toLocaleString(),
+                ventasTotalesRD: ventasTotalesRD.toLocaleString(),
+                gananciaNetaRD: gananciaNetaRD.toLocaleString(),
+                roi: roi.toFixed(1),
+                exceeds200
             },
-            gasto: {
-                totalUSD: totalGastoUSD.toFixed(2),
-                totalDOP: totalGastoDOP.toFixed(2),
-                courier: (costoCourier + costoCourierRegalos).toFixed(2),
-            },
-            info: {
-                pesoTotalLibras: pesoTotalLibras.toFixed(2),
-                regalosActivos: regalos.filter(r => r.activo).length,
+            stats: {
+                totalWeight: totalWeight.toFixed(2),
+                giftEfficiency: giftEfficiency.toFixed(2),
+                totalRefValueRewardsUS: totalRefValueRewardsUS.toFixed(2)
             }
         };
     };
 
-    const resultado = calcular();
+    const result = calcular();
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-            <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="relative bg-slate-50 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+
                 {/* Header */}
-                <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+                <div className="bg-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-10 shrink-0">
                     <div className="flex items-center gap-2">
-                        <Calculator className="text-white" size={20} />
-                        <h2 className="text-base font-bold text-white">Calculadora de 3 por $1</h2>
+                        <Calculator className="text-orange-500" size={20} />
+                        <h2 className="text-base font-bold text-white">Calculadora Revendedor PRO <span className="text-xs bg-slate-700 text-white px-2 py-0.5 rounded ml-2">v3.2</span></h2>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 rounded-full hover:bg-white/20 transition-colors active:scale-95"
-                    >
+                    <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/20 transition-colors active:scale-95">
                         <X className="text-white" size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 py-4">
-                    {/* Config Global */}
-                    <details className="mb-4 bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                        <summary className="px-4 py-3 cursor-pointer font-bold text-sm text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-2">
-                            <Target size={16} className="text-slate-400" />
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+                    {/* 1. Configuración Rápida */}
+                    <details className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+                        <summary className="px-3 py-2 cursor-pointer font-bold text-xs text-slate-300 hover:bg-slate-700 transition-colors flex items-center gap-2 uppercase tracking-wide">
+                            <Target size={14} className="text-orange-500" />
                             Configuración Global
                         </summary>
-                        <div className="p-4 space-y-3 border-t border-slate-200">
-                            <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-600 block mb-1">Tasa Dólar</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={tasaDolar}
-                                        onChange={(e) => setTasaDolar(e.target.value)}
-                                        className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-600 block mb-1">Meta Puntos</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={metaPuntos}
-                                        onChange={(e) => setMetaPuntos(e.target.value)}
-                                        className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-600 block mb-1">Puntos Actuales</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={puntosActuales}
-                                        onChange={(e) => setPuntosActuales(e.target.value)}
-                                        className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                                    />
+                        <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900/50">
+                            <div>
+                                <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Tasa Dólar</label>
+                                <div className="flex items-center bg-slate-800 rounded border border-slate-600 px-2 h-8">
+                                    <span className="text-emerald-500 font-bold mr-1 text-xs">RD$</span>
+                                    <input type="number" step="0.1" value={tasaDolar} onChange={(e) => setTasaDolar(e.target.value)} className="w-full bg-transparent text-white font-bold text-sm outline-none" />
                                 </div>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-600 block mb-1">Retorno Relleno (%)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={tasaRellenoPorcentaje}
-                                    onChange={(e) => setTasaRellenoPorcentaje(e.target.value)}
-                                    className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                                    placeholder="20"
-                                    title="Qué porcentaje de puntos dan los artículos de relleno"
-                                />
-                            </div>
-
-                            {/* Courier Config */}
-                            <div className="border-t border-slate-300 pt-3 mt-3">
-                                <label className="text-xs font-bold text-slate-700 block mb-2 flex items-center gap-1">
-                                    <Weight size={14} />
-                                    Configuración de Courier
-                                </label>
-                                <div className="flex gap-2 mb-3">
-                                    <button
-                                        onClick={() => setModoCourier('fijo')}
-                                        className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg transition-all ${modoCourier === 'fijo'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                                            }`}
-                                    >
-                                        Precio Fijo
-                                    </button>
-                                    <button
-                                        onClick={() => setModoCourier('libra')}
-                                        className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg transition-all ${modoCourier === 'libra'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                                            }`}
-                                    >
-                                        Por Libra
-                                    </button>
+                                <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Courier (RD$/Lb)</label>
+                                <div className="flex items-center bg-slate-800 rounded border border-slate-600 px-2 h-8">
+                                    <span className="text-blue-400 font-bold mr-1 text-xs">Lb</span>
+                                    <input type="number" step="1" value={precioPorLibra} onChange={(e) => setPrecioPorLibra(e.target.value)} className="w-full bg-transparent text-white font-bold text-sm outline-none" />
                                 </div>
-
-                                {modoCourier === 'fijo' ? (
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-600 block mb-1">Costo Courier (DOP)</label>
-                                        <input
-                                            type="number"
-                                            step="1"
-                                            value={costoCourierFijo}
-                                            onChange={(e) => setCostoCourierFijo(e.target.value)}
-                                            className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-600 block mb-1">Precio/lb Base</label>
-                                            <input
-                                                type="number"
-                                                step="1"
-                                                value={precioPorLibraBase}
-                                                onChange={(e) => setPrecioPorLibraBase(e.target.value)}
-                                                className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                placeholder="193"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-600 block mb-1">Peso Mínimo (lb)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value={pesoMinimoMejorado}
-                                                onChange={(e) => setPesoMinimoMejorado(e.target.value)}
-                                                className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                placeholder="0.05"
-                                            />
-                                        </div>
-                                        <div className="col-span-2">
-                                            <label className="text-xs font-bold text-slate-600 block mb-1">Precio/lb Mejorado (&gt;{pesoMinimoMejorado}lb)</label>
-                                            <input
-                                                type="number"
-                                                step="1"
-                                                value={precioPorLibraMejorado}
-                                                onChange={(e) => setPrecioPorLibraMejorado(e.target.value)}
-                                                className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                placeholder="140"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-
                             <div>
-                                <label className="text-xs font-bold text-slate-600 block mb-1">Impuestos (DOP)</label>
-                                <input
-                                    type="number"
-                                    step="1"
-                                    value={impuestosDOP}
-                                    onChange={(e) => setImpuestosDOP(e.target.value)}
-                                    className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                                />
+                                <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Tax USA %</label>
+                                <div className="flex items-center bg-slate-800 rounded border border-slate-600 px-2 h-8">
+                                    <span className="text-slate-400 mr-1 text-xs">🇺🇸</span>
+                                    <input type="number" step="0.1" value={taxUSA} onChange={(e) => setTaxUSA(e.target.value)} className="w-full bg-transparent text-white font-bold text-sm outline-none" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Aduana RD %</label>
+                                <div className="flex items-center bg-slate-800 rounded border border-slate-600 px-2 h-8">
+                                    <span className="text-yellow-500 mr-1 text-xs">🇩🇴</span>
+                                    <input type="number" step="1" value={arancelRD} onChange={(e) => setArancelRD(e.target.value)} className="w-full bg-transparent text-white font-bold text-sm outline-none" />
+                                </div>
                             </div>
                         </div>
                     </details>
 
-                    {/* Artículos/Pedidos */}
-                    <div className="mb-4 bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-slate-200 flex items-center justify-between">
-                            <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                <Package size={16} className="text-blue-600" />
-                                Artículos a Comprar
+                    {/* 2. Reglas del JUEGO (Target) */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+                        <div className="absolute top-0 right-0 bg-emerald-100 text-emerald-800 text-[9px] font-bold px-2 py-0.5 rounded-bl uppercase">Auto Guardado</div>
+
+                        <div className="p-4 border-b border-slate-100">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-2 mb-3">
+                                <span className="bg-orange-100 text-orange-600 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">1</span>
+                                Meta del Evento (USD)
                             </h3>
-                            <button
-                                onClick={agregarArticulo}
-                                className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-1"
-                            >
-                                <Plus size={14} />
-                                Agregar
-                            </button>
-                        </div>
-                        <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-                            {articulos.length === 0 && (
-                                <p className="text-sm text-slate-400 italic text-center py-4">No hay artículos. Agrega uno para empezar.</p>
-                            )}
-                            {articulos.map((art, idx) => (
-                                <div key={art.id} className="bg-slate-50 rounded-lg border border-slate-200">
-                                    {/* Header - Always Visible */}
-                                    <div className="p-3 flex items-center justify-between">
-                                        <div className="flex items-center gap-2 flex-1">
-                                            <button
-                                                onClick={() => toggleCollapse(art.id)}
-                                                className="text-slate-600 hover:bg-slate-200 p-1 rounded transition-colors"
-                                            >
-                                                {art.collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                                            </button>
-                                            <span className={`text-xs font-black px-2 py-0.5 rounded ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-200 text-slate-600'}`}>
-                                                {idx === 0 ? '1ER PEDIDO' : `PEDIDO ${idx + 1}`}
-                                            </span>
 
-                                            {/* Compact info when collapsed */}
-                                            {art.collapsed && (
-                                                <div className="flex items-center gap-2 text-xs text-slate-600 flex-1">
-                                                    <span className="font-bold truncate max-w-[100px]">{art.nombre || 'Sin nombre'}</span>
-                                                    <span className="text-blue-600 font-bold">{art.costo} {art.moneda}</span>
-                                                    <span className="text-purple-600">→{art.porcentajeRetorno}%</span>
-                                                    <span className="text-emerald-600 font-bold">RD${art.precioVentaDOP.toLocaleString()}</span>
-                                                    {modoCourier === 'libra' && <span className="text-orange-600">{art.pesoLibras}lb</span>}
-                                                </div>
-                                            )}
-
-                                            {/* Expanded info header */}
-                                            {!art.collapsed && (
-                                                <span className="text-xs text-slate-500">{art.porcentajeRetorno}% Cashback</span>
-                                            )}
-                                        </div>
-                                        {articulos.length > 1 && (
-                                            <button
-                                                onClick={() => eliminarArticulo(art.id)}
-                                                className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        )}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div>
+                                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Falta Recortar</label>
+                                    <div className="relative">
+                                        <input type="number" step="0.01" value={targetCut} onChange={(e) => setTargetCut(e.target.value)} className="w-full border border-emerald-200 bg-emerald-50 rounded px-2 py-1.5 text-sm font-bold text-emerald-800 outline-none focus:ring-1 focus:ring-emerald-400" />
+                                        <span className="absolute right-2 top-1.5 text-[10px] font-bold text-emerald-600 pointer-events-none">USD</span>
                                     </div>
-
-                                    {/* Expanded Form */}
-                                    {!art.collapsed && (
-                                        <div className="px-3 pb-3 space-y-2 border-t border-slate-200 pt-2">
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className="col-span-2">
-                                                    <label className="text-xs font-bold text-slate-600 block mb-1">Nombre</label>
-                                                    <input
-                                                        type="text"
-                                                        value={art.nombre}
-                                                        onChange={(e) => updateArticulo(art.id, 'nombre', e.target.value)}
-                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                        placeholder="Ej. iPhone 15 Pro"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-bold text-slate-600 block mb-1">Costo</label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={art.costo}
-                                                        onChange={(e) => updateArticulo(art.id, 'costo', parseFloat(e.target.value) || 0)}
-                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-bold text-slate-600 block mb-1">Moneda</label>
-                                                    <select
-                                                        value={art.moneda}
-                                                        onChange={(e) => updateArticulo(art.id, 'moneda', e.target.value)}
-                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    >
-                                                        <option value="USD">USD</option>
-                                                        <option value="DOP">DOP</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-bold text-slate-600 block mb-1">% Cashback</label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        value={art.porcentajeRetorno}
-                                                        onChange={(e) => updateArticulo(art.id, 'porcentajeRetorno', parseFloat(e.target.value) || 0)}
-                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    />
-                                                </div>
-                                                {modoCourier === 'libra' && (
-                                                    <div>
-                                                        <label className="text-xs font-bold text-slate-600 block mb-1">Peso (lb)</label>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={art.pesoLibras || 0}
-                                                            onChange={(e) => updateArticulo(art.id, 'pesoLibras', parseFloat(e.target.value) || 0)}
-                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                        />
-                                                    </div>
-                                                )}
-                                                <div className="col-span-2">
-                                                    <label className="text-xs font-bold text-slate-600 block mb-1">Precio Venta (DOP)</label>
-                                                    <input
-                                                        type="number"
-                                                        step="1"
-                                                        value={art.precioVentaDOP}
-                                                        onChange={(e) => updateArticulo(art.id, 'precioVentaDOP', parseFloat(e.target.value) || 0)}
-                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
-                            ))}
+                                <div>
+                                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Tasa 1er Pedido</label>
+                                    <div className="relative">
+                                        <input type="number" value={rate1} onChange={(e) => setRate1(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-orange-400" />
+                                        <span className="absolute right-2 top-1.5 text-[10px] font-bold text-slate-400 pointer-events-none">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Límite 1er Pedido</label>
+                                    <div className="relative">
+                                        <input type="number" step="0.1" value={limitFirst} onChange={(e) => setLimitFirst(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-orange-400" />
+                                        <span className="absolute right-2 top-1.5 text-[10px] font-bold text-slate-400 pointer-events-none">USD</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Tasa 2do Pedido</label>
+                                    <div className="relative">
+                                        <input type="number" value={rate2} onChange={(e) => setRate2(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-orange-400" />
+                                        <span className="absolute right-2 top-1.5 text-[10px] font-bold text-slate-400 pointer-events-none">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Analysis Bar */}
+                            <div className="flex bg-slate-50 rounded-lg p-2 border border-slate-200 divide-x divide-slate-200">
+                                <div className="flex-1 text-center px-1">
+                                    <div className="text-[9px] text-slate-400 uppercase font-bold">1er Tramo</div>
+                                    <div className="text-sm font-bold text-slate-700">US${result.game.cost1}</div>
+                                </div>
+                                <div className="flex-1 text-center px-1">
+                                    <div className="text-[9px] text-slate-400 uppercase font-bold">2do Tramo</div>
+                                    <div className="text-sm font-bold text-rose-500">US${result.game.cost2}</div>
+                                </div>
+                                <div className="flex-1 text-center px-1 bg-orange-50 rounded text-orange-800">
+                                    <div className="text-[9px] uppercase font-bold text-orange-600">Requerido (Base)</div>
+                                    <div className="text-base font-black">US${result.game.requiredBudgetBase}</div>
+                                    <div className="text-[9px] opacity-70">~US${result.game.requiredBudgetWithTax} c/Tax</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="px-4 py-3 bg-slate-50 border-t border-slate-100">
+                            <div className="flex justify-between text-xs mb-1">
+                                <span className="font-bold text-slate-600">Llenado de Carrito (Costo Base)</span>
+                                <span className={`font-bold ${result.game.isComplete ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                    {result.game.isComplete ? '¡Meta Cumplida!' : `Falta: US$${result.game.remainingToCut}`}
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                                <div
+                                    className={`h-full transition-all duration-500 rounded-full ${result.game.isComplete ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                    style={{ width: `${result.game.progressPercent}%` }}
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Regalos */}
-                    <div className="mb-4 bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="px-4 py-3 bg-gradient-to-r from-pink-50 to-purple-50 border-b border-slate-200">
-                            <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                <Gift size={16} className="text-pink-600" />
-                                Regalos (3 por $1) - Opcionales
+                    {/* 3. Inventario */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-blue-50/50">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                <span className="bg-blue-100 text-blue-600 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">2</span>
+                                Inventario / Relleno
                             </h3>
+                            <button onClick={agregarArticulo} className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center gap-1">
+                                <Plus size={12} /> Agregar
+                            </button>
                         </div>
-                        <div className="p-4 space-y-2">
-                            {/* Headers */}
-                            <div className={`grid gap-2 px-2 ${modoCourier === 'libra' ? 'grid-cols-5' : 'grid-cols-4'}`}>
-                                <div className="text-[10px] font-black text-slate-500 uppercase">✓</div>
-                                <div className="text-[10px] font-black text-slate-500 uppercase">Nombre</div>
-                                <div className="text-[10px] font-black text-slate-500 uppercase">Venta (DOP)</div>
-                                {modoCourier === 'fijo' ? (
-                                    <div className="text-[10px] font-black text-slate-500 uppercase">Courier (DOP)</div>
-                                ) : (
-                                    <>
-                                        <div className="text-[10px] font-black text-slate-500 uppercase">Peso (lb)</div>
-                                        <div className="text-[10px] font-black text-slate-500 uppercase text-slate-400">Auto</div>
-                                    </>
-                                )}
-                            </div>
-                            {/* Regalos */}
-                            {regalos.map((regalo, idx) => (
-                                <div key={idx} className={`grid gap-2 p-2 rounded-lg border ${regalo.activo ? 'bg-pink-50 border-pink-200' : 'bg-slate-50 border-slate-200'}`}>
-                                    <div className={`${modoCourier === 'libra' ? 'grid-cols-5' : 'grid-cols-4'} grid gap-2 items-center`}>
-                                        <input
-                                            type="checkbox"
-                                            checked={regalo.activo}
-                                            onChange={(e) => updateRegalo(idx, 'activo', e.target.checked)}
-                                            className="w-4 h-4 text-pink-600 focus:ring-2 focus:ring-pink-500 rounded"
-                                        />
-                                        <input
-                                            type="text"
-                                            value={regalo.nombre}
-                                            onChange={(e) => updateRegalo(idx, 'nombre', e.target.value)}
-                                            disabled={!regalo.activo}
-                                            className={`px-2 py-1.5 border rounded text-xs focus:ring-2 focus:ring-pink-500 outline-none ${!regalo.activo ? 'bg-slate-100 text-slate-400' : 'border-slate-300'}`}
-                                            placeholder="Nombre"
-                                        />
-                                        <input
-                                            type="number"
-                                            value={regalo.precioVentaDOP}
-                                            onChange={(e) => updateRegalo(idx, 'precioVentaDOP', parseFloat(e.target.value) || 0)}
-                                            disabled={!regalo.activo}
-                                            className={`px-2 py-1.5 border rounded text-xs focus:ring-2 focus:ring-pink-500 outline-none ${!regalo.activo ? 'bg-slate-100 text-slate-400' : 'border-slate-300'}`}
-                                        />
-                                        {modoCourier === 'fijo' ? (
+
+                        <div className="p-3 space-y-2">
+                            {articulos.map((art, idx) => (
+                                <div key={art.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex-1 mr-2">
                                             <input
-                                                type="number"
-                                                value={regalo.costoCourierDOP}
-                                                onChange={(e) => updateRegalo(idx, 'costoCourierDOP', parseFloat(e.target.value) || 0)}
-                                                disabled={!regalo.activo}
-                                                className={`px-2 py-1.5 border rounded text-xs focus:ring-2 focus:ring-pink-500 outline-none ${!regalo.activo ? 'bg-slate-100 text-slate-400' : 'border-slate-300'}`}
+                                                type="text"
+                                                value={art.nombre}
+                                                onChange={(e) => updateArticulo(art.id, 'nombre', e.target.value)}
+                                                className="w-full bg-transparent font-bold text-slate-700 border-b border-transparent focus:border-blue-400 outline-none text-sm placeholder-slate-400"
+                                                placeholder="Nombre del Producto"
                                             />
-                                        ) : (
-                                            <>
+                                        </div>
+                                        <button onClick={() => eliminarArticulo(art.id)} className="text-slate-400 hover:text-rose-500">
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 mb-2">
+                                        <div>
+                                            <label className="text-[9px] font-bold text-emerald-700 uppercase block">Costo Temu</label>
+                                            <div className="flex items-center">
+                                                <DollarSign size={10} className="text-emerald-700 ml-0.5 absolute" />
                                                 <input
                                                     type="number"
                                                     step="0.01"
-                                                    value={regalo.pesoLibras || 0}
-                                                    onChange={(e) => updateRegalo(idx, 'pesoLibras', parseFloat(e.target.value) || 0)}
-                                                    disabled={!regalo.activo}
-                                                    className={`px-2 py-1.5 border rounded text-xs focus:ring-2 focus:ring-pink-500 outline-none ${!regalo.activo ? 'bg-slate-100 text-slate-400' : 'border-slate-300'}`}
+                                                    value={art.costoBaseUS}
+                                                    onChange={(e) => updateArticulo(art.id, 'costoBaseUS', parseFloat(e.target.value) || 0)}
+                                                    className="w-full pl-3 pr-1 py-1 bg-white border border-slate-200 rounded text-sm text-slate-800 focus:ring-1 focus:ring-emerald-400 outline-none"
                                                 />
-                                                <div className="text-[10px] text-slate-400 italic">por peso</div>
-                                            </>
-                                        )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-bold text-blue-700 uppercase block">Venta RD$</label>
+                                            <input
+                                                type="number"
+                                                value={art.precioVentaRD}
+                                                onChange={(e) => updateArticulo(art.id, 'precioVentaRD', parseFloat(e.target.value) || 0)}
+                                                className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-sm text-slate-800 focus:ring-1 focus:ring-blue-400 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Advanced Row */}
+                                    <div className="flex items-center gap-3 bg-slate-100 rounded p-1.5">
+                                        <div className="flex items-center gap-1.5 flex-1 border-r border-slate-200 pr-2">
+                                            <label className="flex items-center gap-1 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={art.aplicarTaxUS}
+                                                    onChange={(e) => updateArticulo(art.id, 'aplicarTaxUS', e.target.checked)}
+                                                    className="rounded text-orange-500 focus:ring-0 w-3 h-3"
+                                                />
+                                                <span className="text-[10px] text-slate-600 font-bold">+Tax</span>
+                                            </label>
+                                        </div>
+                                        <div className="flex items-center gap-1 flex-1 border-r border-slate-200 px-2">
+                                            <span className="text-[10px] text-slate-500">Envío:</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                value={art.envioUS || ''}
+                                                onChange={(e) => updateArticulo(art.id, 'envioUS', parseFloat(e.target.value) || 0)}
+                                                className="w-12 bg-transparent text-xs border-b border-slate-300 focus:border-blue-500 outline-none p-0 text-center"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-1 flex-1 pl-2">
+                                            <span className="text-[10px] text-slate-500">Peso:</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={art.pesoLibras || ''}
+                                                onChange={(e) => updateArticulo(art.id, 'pesoLibras', parseFloat(e.target.value) || 0)}
+                                                className="w-10 bg-transparent text-xs border-b border-slate-300 focus:border-blue-500 outline-none p-0 text-center"
+                                            />
+                                            <span className="text-[9px] text-slate-400">lb</span>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Cuánto Necesito Gastar */}
-                    <div className="mb-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border-2 border-orange-200 overflow-hidden">
-                        <div className="px-4 py-3 bg-gradient-to-r from-orange-100 to-yellow-100 border-b border-orange-200">
-                            <h3 className="font-bold text-sm text-orange-900 flex items-center gap-2">
-                                <Target size={16} className="text-orange-600" />
-                                💰 Cuánto Necesito Gastar
+                    {/* 4. Recompensas */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-green-50/50">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                <span className="bg-green-100 text-green-600 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">3</span>
+                                Recompensas (Regalos)
                             </h3>
+                            <button onClick={agregarRegalo} className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center gap-1">
+                                <Plus size={12} /> Agregar
+                            </button>
                         </div>
-                        <div className="p-4">
-                            <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center overflow-hidden">
-                                    <div className="text-[10px] font-bold text-orange-600 mb-1">TOTAL USD</div>
-                                    <div className="text-lg font-black text-orange-900 break-words">${resultado.gasto.totalUSD}</div>
-                                    <div className="text-[9px] text-orange-500 mt-1">Artículos + Relleno</div>
-                                </div>
-                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center overflow-hidden">
-                                    <div className="text-[10px] font-bold text-orange-600 mb-1">TOTAL DOP</div>
-                                    <div className="text-lg font-black text-orange-900 break-words">RD${parseFloat(resultado.gasto.totalDOP).toLocaleString()}</div>
-                                    <div className="text-[9px] text-orange-500 mt-1">Todo incluido</div>
-                                </div>
-                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center overflow-hidden">
-                                    <div className="text-[10px] font-bold text-orange-600 mb-1">COURIER</div>
-                                    <div className="text-lg font-black text-orange-900 break-words">RD${parseFloat(resultado.gasto.courier).toLocaleString()}</div>
-                                    <div className="text-[9px] text-orange-500 mt-1 truncate">
-                                        {modoCourier === 'libra' ? `${resultado.info.pesoTotalLibras}lb total` : 'Fijo'}
+
+                        <div className="p-3 space-y-2">
+                            {regalos.map((gift) => (
+                                <div key={gift.id} className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                                    <div className="flex-1 grid grid-cols-12 gap-2 items-center">
+                                        <div className="col-span-5">
+                                            <input
+                                                type="text"
+                                                value={gift.nombre}
+                                                onChange={(e) => updateRegalo(gift.id, 'nombre', e.target.value)}
+                                                placeholder="Nombre Regalo"
+                                                className="w-full bg-transparent text-xs font-bold text-slate-700 outline-none"
+                                            />
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <span className="text-[9px] text-slate-400">Ref US$:</span>
+                                                <input
+                                                    type="number"
+                                                    value={gift.valorReferenciaUS || ''}
+                                                    onChange={(e) => updateRegalo(gift.id, 'valorReferenciaUS', parseFloat(e.target.value) || 0)}
+                                                    className="w-12 text-[9px] bg-slate-100 rounded px-1"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="col-span-3 text-center">
+                                            <label className="text-[9px] text-slate-400 block">Peso</label>
+                                            <div className="text-xs font-medium">
+                                                <input
+                                                    type="number"
+                                                    value={gift.pesoLibras || ''}
+                                                    onChange={(e) => updateRegalo(gift.id, 'pesoLibras', parseFloat(e.target.value) || 0)}
+                                                    className="w-10 text-center bg-transparent border-b border-slate-300"
+                                                /> lb
+                                            </div>
+                                        </div>
+                                        <div className="col-span-4 text-center">
+                                            <label className="text-[9px] text-slate-400 block">Venta RD$</label>
+                                            <input
+                                                type="number"
+                                                value={gift.precioVentaRD || ''}
+                                                onChange={(e) => updateRegalo(gift.id, 'precioVentaRD', parseFloat(e.target.value) || 0)}
+                                                className="w-full text-center bg-transparent border-b border-blue-200 font-bold text-blue-600 text-xs"
+                                            />
+                                        </div>
                                     </div>
+                                    <button onClick={() => eliminarRegalo(gift.id)} className="text-slate-300 hover:text-rose-400 p-1">
+                                        <X size={14} />
+                                    </button>
                                 </div>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Resultados */}
-                    <div className="space-y-3">
-                        {/* Puntos */}
-                        <div className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-4 rounded-xl shadow-lg">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Sparkles size={18} />
-                                <h3 className="font-bold text-sm">Análisis de Puntos</h3>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div>
-                                    <div className="opacity-80 mb-0.5">Faltan (Inicial)</div>
-                                    <div className="text-xl font-black">{resultado.puntos.faltanteInicial}</div>
-                                </div>
-                                <div>
-                                    <div className="opacity-80 mb-0.5">Puntos de Artículos</div>
-                                    <div className="text-xl font-black">{resultado.puntos.puntosDeArticulos}</div>
-                                </div>
-                                <div>
-                                    <div className="opacity-80 mb-0.5">Nuevo Faltante</div>
-                                    <div className="text-lg font-bold">{resultado.puntos.nuevoFaltante}</div>
-                                </div>
-                                <div>
-                                    <div className="opacity-80 mb-0.5">Gasto Extra (USD)</div>
-                                    <div className="text-lg font-bold">${resultado.puntos.gastoExtraUSD}</div>
-                                </div>
+                    {/* 5. Análisis de Eficiencia (Pesca) */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-xs font-bold text-indigo-800 flex items-center gap-1.5 mb-1">
+                                <Sparkles size={12} />
+                                La Pesca (Eficiencia)
+                            </h3>
+                            <div className="text-[10px] text-indigo-600/80 max-w-[200px] leading-tight">
+                                Por cada $1 invertido, recibes <b>${result.stats.giftEfficiency}</b> en valor de regalos.
                             </div>
                         </div>
+                        <div className="text-right">
+                            <div className="text-2xl font-black text-indigo-600">{result.stats.giftEfficiency}x</div>
+                            <div className="text-[9px] font-bold text-indigo-400 uppercase">Ratio</div>
+                        </div>
+                    </div>
 
-                        {/* Financiero */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
-                                <div className="text-xs text-blue-600 font-bold mb-1 flex items-center gap-1">
-                                    <DollarSign size={14} />
-                                    Inversión Total
-                                </div>
-                                <div className="text-2xl font-black text-blue-900">RD${parseFloat(resultado.financiero.inversionTotal).toLocaleString()}</div>
-                                <div className="text-[10px] text-blue-600 mt-1">
-                                    Mercancía: {parseFloat(resultado.financiero.costoMercancia).toLocaleString()}
-                                </div>
-                                <div className="text-[10px] text-blue-600">
-                                    Courier: {parseFloat(resultado.financiero.costoCourier).toLocaleString()}
-                                    {modoCourier === 'libra' && ` (${resultado.info.pesoTotalLibras}lb)`}
-                                </div>
-                            </div>
-                            <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
-                                <div className="text-xs text-emerald-600 font-bold mb-1 flex items-center gap-1">
-                                    <TrendingUp size={14} />
-                                    Ingresos Ventas
-                                </div>
-                                <div className="text-2xl font-black text-emerald-900">RD${parseFloat(resultado.financiero.ingresosVentas).toLocaleString()}</div>
+                    {/* 6. Alerta Aduanas */}
+                    {result.financial.exceeds200 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-start gap-3">
+                            <AlertTriangle className="text-yellow-600 shrink-0 mt-0.5" size={16} />
+                            <div className="flex-1">
+                                <h4 className="text-xs font-bold text-yellow-800 mb-0.5">Alerta de Aduanas ($200+)</h4>
+                                <p className="text-[10px] text-yellow-700 leading-tight mb-2">
+                                    El valor total supera los US$200. ¿Deseas aplicar el {arancelRD}% de impuestos?
+                                </p>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            checked={aplicarArancelSiExcede}
+                                            onChange={(e) => setAplicarArancelSiExcede(e.target.checked)}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-600">Sí, aplicar impuestos</span>
+                                </label>
                             </div>
                         </div>
+                    )}
+                </div>
 
-                        <div className={`p-4 rounded-xl shadow-lg ${parseFloat(resultado.financiero.gananciaNeta) >= 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-gradient-to-br from-red-500 to-orange-500'} text-white`}>
-                            <div className="flex items-center gap-2 mb-2">
-                                <TrendingUp size={20} />
-                                <h3 className="font-bold">Ganancia Neta</h3>
+                {/* Footer Resumen */}
+                <div className="bg-white border-t-2 border-orange-500 p-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20 shrink-0">
+                    <div className="grid grid-cols-4 gap-2 mb-2">
+                        <div className="px-1 border-r border-slate-100 text-center">
+                            <div className="text-[9px] text-slate-400 font-bold uppercase">Inversión US</div>
+                            <div className="text-sm font-black text-slate-800">${result.financial.totalSpendUS}</div>
+                        </div>
+                        <div className="px-1 border-r border-slate-100 text-center">
+                            <div className="text-[9px] text-slate-400 font-bold uppercase">Gasto RD$</div>
+                            <div className="text-sm font-black text-rose-600 transition-all text-[0.8rem] sm:text-sm leading-tight">
+                                ${result.financial.inversionTotalRD}
                             </div>
-                            <div className="text-4xl font-black mb-1">
-                                {parseFloat(resultado.financiero.gananciaNeta) >= 0 ? '+' : ''}RD${parseFloat(resultado.financiero.gananciaNeta).toLocaleString()}
+                        </div>
+                        <div className="px-1 border-r border-slate-100 text-center">
+                            <div className="text-[9px] text-slate-400 font-bold uppercase">Ventas RD$</div>
+                            <div className="text-sm font-black text-blue-600 transition-all text-[0.8rem] sm:text-sm leading-tight">
+                                ${result.financial.ventasTotalesRD}
                             </div>
-                            <div className="text-sm opacity-90">
-                                Margen: {resultado.financiero.margenPorcentaje}%
+                        </div>
+                        <div className="px-1 text-center bg-slate-50 rounded">
+                            <div className="text-[9px] text-slate-400 font-bold uppercase">Ganancia</div>
+                            <div className={`text-sm font-black transition-all text-[0.8rem] sm:text-sm leading-tight ${parseFloat(result.financial.gananciaNetaRD.replace(/,/g, '')) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                ${result.financial.gananciaNetaRD}
                             </div>
                         </div>
                     </div>
