@@ -446,7 +446,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
 
                                             {/* Expanded info header */}
                                             {!art.collapsed && (
-                                                <span className="text-xs text-slate-500">{art.porcentajeRetorno}% retorno</span>
+                                                <span className="text-xs text-slate-500">{art.porcentajeRetorno}% Cashback</span>
                                             )}
                                         </div>
                                         {articulos.length > 1 && (
@@ -495,7 +495,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="text-xs font-bold text-slate-600 block mb-1">Retorno (%)</label>
+                                                    <label className="text-xs font-bold text-slate-600 block mb-1">% Cashback</label>
                                                     <input
                                                         type="number"
                                                         step="0.1"
