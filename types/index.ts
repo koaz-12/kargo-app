@@ -111,6 +111,8 @@ export interface FormState {
   salePrice: number;
   localShipping: number;
   exchangeRate: number;
+  currency: 'USD' | 'DOP'; // NEW: Currency selector
+  applyUSATax?: boolean; // NEW: Optional US tax checkbox
   adjustments: FinancialAdjustment[];
   productUrl: string;
   imageUrl: string;
@@ -131,6 +133,8 @@ export interface FormSetters {
   setExchangeRate: (val: number) => void;
   setSalePrice: (val: number) => void;
   setLocalShipping: (val: number) => void;
+  setCurrency: (val: 'USD' | 'DOP') => void; // NEW
+  setApplyUSATax: (val: boolean) => void; // NEW
   setAdjustments: (val: FinancialAdjustment[]) => void;
   setProductUrl: (val: string) => void;
   setImageUrl: (val: string) => void;

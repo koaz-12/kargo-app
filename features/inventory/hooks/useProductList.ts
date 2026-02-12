@@ -1,23 +1,29 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
-import { InventoryItem, SortOption, StatusFilter } from '../types';
+import { useState, useEffect, useMemo } from 'react';
+import { SortOption, StatusFilter } from '../types';
+import { useProducts, useDeleteProduct, usePlatforms } from '../../../hooks/useProducts';
+import { Product } from '../../../types';
 
 export function useProductList() {
-    const [products, setProducts] = useState<InventoryItem[]>([]);
-    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
     const [sortOption, setSortOption] = useState<SortOption>('DATE_DESC');
 
+    // Advanced filters
+    const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+    const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity });
+
     // Pagination
-    const [page, setPage] = useState(0);
-    const [hasMore, setHasMore] = useState(true);
-    const ITEMS_PER_PAGE = 20;
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
+    // Use React Query hooks
+    const { data: allProducts = [], isLoading: loading } = useProducts();
+    const { data: platforms = [] } = usePlatforms();
+    const deleteProductMutation = useDeleteProduct();
 
     // Debounce Logic
     useEffect(() => {
-        // Instant update if clearing search (improves responsiveness)
         if (searchTerm === '') {
             setDebouncedSearchTerm('');
             return;
@@ -30,85 +36,107 @@ export function useProductList() {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    const fetchProducts = async (pageIndex: number, isReset = false) => {
-        try {
-            const start = pageIndex * ITEMS_PER_PAGE;
-            const end = start + ITEMS_PER_PAGE - 1;
+    // Platform options for multi-select
+    const platformOptions = useMemo(() =>
+        platforms.map(p => ({
+            value: p.id,
+            label: p.name
+        }))
+        , [platforms]);
 
-            let query = supabase
-                .from('products')
-                .select('*, financial_adjustments(*)', { count: 'exact' });
+    // Client-side filtering and sorting
+    const products = useMemo(() => {
+        let filtered = [...allProducts];
 
-            // Apply Filters
-            if (statusFilter !== 'ALL') {
-                query = query.eq('status', statusFilter);
-            }
-            if (debouncedSearchTerm) {
-                query = query.or(`name.ilike.%${debouncedSearchTerm}%,sku.ilike.%${debouncedSearchTerm}%,tracking_number.ilike.%${debouncedSearchTerm}%,courier_tracking.ilike.%${debouncedSearchTerm}%`);
-            }
-
-            // Sorting
-            switch (sortOption) {
-                case 'DATE_ASC': query = query.order('created_at', { ascending: true }); break;
-                case 'PRICE_DESC': query = query.order('sale_price', { ascending: false }); break;
-                case 'PRICE_ASC': query = query.order('sale_price', { ascending: true }); break;
-                case 'NAME_ASC': query = query.order('name', { ascending: true }); break;
-                default: query = query.order('created_at', { ascending: false });
-            }
-
-            query = query.range(start, end);
-
-            const { data, error } = await query;
-            if (error) throw error;
-
-            if (data) {
-                setProducts(prev => isReset ? data : [...prev, ...data]);
-                setHasMore(data.length === ITEMS_PER_PAGE);
-            }
-        } catch (error) {
-            console.error('Error fetching inventory:', error);
-        } finally {
-            setLoading(false);
+        // Apply status filter
+        if (statusFilter !== 'ALL') {
+            filtered = filtered.filter(p => p.status === statusFilter);
         }
-    };
 
-    // Reset when filters change
-    useEffect(() => {
-        // Do NOT clear products here to avoid flash/layout shift
-        // setProducts([]); 
-        setPage(0);
-        setHasMore(true);
-        setLoading(true);
-        fetchProducts(0, true);
-    }, [debouncedSearchTerm, statusFilter, sortOption]);
+        // Apply platform filter
+        if (selectedPlatforms.length > 0) {
+            filtered = filtered.filter(p =>
+                p.platform_id && selectedPlatforms.includes(p.platform_id)
+            );
+        }
 
-    const loadMore = () => {
-        const nextPage = page + 1;
-        setPage(nextPage);
-        fetchProducts(nextPage);
-    };
+        // Apply price range filter
+        if (priceRange.min > 0 || priceRange.max < Infinity) {
+            filtered = filtered.filter(p => {
+                const price = p.sale_price || p.net_cost || 0;
+                return price >= priceRange.min && price <= priceRange.max;
+            });
+        }
+
+        // Apply search
+        if (debouncedSearchTerm) {
+            const searchLower = debouncedSearchTerm.toLowerCase();
+            filtered = filtered.filter(p =>
+                p.name?.toLowerCase().includes(searchLower) ||
+                p.sku?.toLowerCase().includes(searchLower) ||
+                p.tracking_number?.toLowerCase().includes(searchLower) ||
+                p.courier_tracking?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply sorting
+        filtered.sort((a, b) => {
+            switch (sortOption) {
+                case 'DATE_ASC':
+                    return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+                case 'DATE_DESC':
+                    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                case 'PRICE_DESC':
+                    return (b.sale_price || 0) - (a.sale_price || 0);
+                case 'PRICE_ASC':
+                    return (a.sale_price || 0) - (b.sale_price || 0);
+                case 'NAME_ASC':
+                    return (a.name || '').localeCompare(b.name || '');
+                default:
+                    return 0;
+            }
+        });
+
+        return filtered;
+    }, [allProducts, statusFilter, debouncedSearchTerm, sortOption, selectedPlatforms, priceRange]);
 
     const handleDelete = async (id: string) => {
-        // Confirmation is now handled by the UI (Modal)
-        try {
-            const { error } = await supabase.from('products').delete().eq('id', id);
-            if (error) throw error;
-            setProducts(prev => prev.filter(p => p.id !== id));
-        } catch (error) {
-            alert('Error al eliminar');
-            console.error(error);
-        }
+        deleteProductMutation.mutate(id);
     };
 
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter, debouncedSearchTerm, sortOption, selectedPlatforms, priceRange]);
+
+    // Paginated products
+    const paginatedProducts = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return products.slice(startIndex, endIndex);
+    }, [products, currentPage, ITEMS_PER_PAGE]);
+
+    const totalItems = products.length;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
     return {
-        products,
+        products: paginatedProducts,
         loading,
-        hasMore,
         searchTerm, setSearchTerm,
         statusFilter, setStatusFilter,
         sortOption, setSortOption,
-        loadMore,
         handleDelete,
-        setProducts // Exposed for optimistic updates from children
+        // Advanced filters
+        selectedPlatforms,
+        setSelectedPlatforms,
+        platformOptions,
+        priceRange,
+        setPriceRange,
+        // Pagination
+        currentPage,
+        setCurrentPage,
+        totalItems,
+        itemsPerPage: ITEMS_PER_PAGE,
+        totalPages,
     };
 }

@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import { useState } from 'react';
 import { TrendingUp, Copy, Save, Loader2 } from 'lucide-react';
 import { useProductForm } from '../../features/calculator/hooks/useProductForm';
@@ -10,7 +8,7 @@ import SetupSection from '../../features/calculator/components/SetupSection';
 import CostInputs from '../../features/calculator/components/CostInputs';
 import AdjustmentsSection from '../../features/calculator/components/AdjustmentsSection';
 import PricingCard from '../../features/calculator/components/PricingCard';
-// import ActionToolbar from '../../features/calculator/components/ActionToolbar'; // REMOVED
+import { ValidationErrors } from '../ui/ValidationErrors';
 
 interface ProductFormProps {
     editingId?: string | null;
@@ -25,6 +23,7 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
         accounts,
         saving,
         statusMsg,
+        validationErrors,
         handleSave,
         handleAddToQueue,
         courierDiscount
@@ -45,6 +44,11 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
             />
 
             <div className="px-4 space-y-3">
+                {/* Validation Errors */}
+                {Object.keys(validationErrors).length > 0 && (
+                    <ValidationErrors errors={validationErrors} />
+                )}
+
                 {/* 2. Setup (Logic & Images) */}
                 <SetupSection
                     formState={formState}

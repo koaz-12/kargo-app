@@ -21,6 +21,10 @@ export default function StatsPage() {
     // Date State
     const [selectedDate, setSelectedDate] = useState(new Date());
 
+    // Pagination for Rentability by Product
+    const [rentabilityPage, setRentabilityPage] = useState(1);
+    const RENTABILITY_ITEMS_PER_PAGE = 10;
+
     const currentMonth = selectedDate.getMonth();
     const currentYear = selectedDate.getFullYear();
     const currentMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
@@ -30,6 +34,7 @@ export default function StatsPage() {
         const newDate = new Date(selectedDate);
         newDate.setMonth(newDate.getMonth() + offset);
         setSelectedDate(newDate);
+        setRentabilityPage(1); // Reset pagination when changing month
     };
 
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -598,46 +603,83 @@ export default function StatsPage() {
 
                 {/* 4. PROFIT BY PRODUCT (Grouped) */}
                 <section>
-                    <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                        <Package size={16} className="text-blue-500" />
-                        Rentabilidad por Producto
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <Package size={16} className="text-blue-500" />
+                            Rentabilidad por Producto
+                        </h3>
+                        {sortedProducts.length > RENTABILITY_ITEMS_PER_PAGE && (
+                            <span className="text-xs text-slate-500">
+                                Pág. {rentabilityPage} de {Math.ceil(sortedProducts.length / RENTABILITY_ITEMS_PER_PAGE)}
+                            </span>
+                        )}
+                    </div>
                     {sortedProducts.length === 0 ? (
                         <div className="text-center p-8 text-slate-400 text-sm italic bg-white rounded-xl border border-slate-100">
                             No hay ventas registradas aún.
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            {sortedProducts.map((p, idx) => (
-                                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
-                                    {/* Rank */}
-                                    <div className="absolute top-0 right-0 bg-slate-100 text-slate-400 text-[10px] font-bold px-2 py-1 rounded-bl-xl">
-                                        #{idx + 1}
-                                    </div>
+                        <>
+                            <div className="space-y-3">
+                                {sortedProducts
+                                    .slice((rentabilityPage - 1) * RENTABILITY_ITEMS_PER_PAGE, rentabilityPage * RENTABILITY_ITEMS_PER_PAGE)
+                                    .map((p, idx) => {
+                                        const globalIdx = (rentabilityPage - 1) * RENTABILITY_ITEMS_PER_PAGE + idx;
+                                        return (
+                                            <div key={globalIdx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+                                                {/* Rank */}
+                                                <div className="absolute top-0 right-0 bg-slate-100 text-slate-400 text-[10px] font-bold px-2 py-1 rounded-bl-xl">
+                                                    #{globalIdx + 1}
+                                                </div>
 
-                                    <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-slate-200">
-                                        {p.image ? (
-                                            <img src={p.image} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-slate-300"><Layers size={16} /></div>
-                                        )}
-                                    </div>
+                                                <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-slate-200">
+                                                    {p.image ? (
+                                                        <img src={p.image} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-slate-300"><Layers size={16} /></div>
+                                                    )}
+                                                </div>
 
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-slate-800 text-sm truncate pr-6">{p.count > 1 ? `${p.count}x ` : ''}{p.name}</h4>
-                                        <div className="flex gap-3 text-[10px] font-medium text-slate-500 mt-1">
-                                            <span>Ingreso: <b className="text-slate-700">${Math.round(p.revenue).toLocaleString()}</b></span>
-                                            <span className="text-emerald-600 font-bold">Mg: {Math.round(p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0)}%</span>
-                                        </div>
-                                    </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-slate-800 text-sm truncate pr-6">{p.count > 1 ? `${p.count}x ` : ''}{p.name}</h4>
+                                                    <div className="flex gap-3 text-[10px] font-medium text-slate-500 mt-1">
+                                                        <span>Ingreso: <b className="text-slate-700">${Math.round(p.revenue).toLocaleString()}</b></span>
+                                                        <span className="text-emerald-600 font-bold">Mg: {Math.round(p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0)}%</span>
+                                                    </div>
+                                                </div>
 
-                                    <div className="text-right shrink-0">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase">Ganancia</span>
-                                        <span className="block text-lg font-black text-emerald-600">+${Math.round(p.profit).toLocaleString()}</span>
-                                    </div>
+                                                <div className="text-right shrink-0">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase">Ganancia</span>
+                                                    <span className="block text-lg font-black text-emerald-600">+${Math.round(p.profit).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            {sortedProducts.length > RENTABILITY_ITEMS_PER_PAGE && (
+                                <div className="flex items-center justify-center gap-2 mt-4">
+                                    <button
+                                        onClick={() => setRentabilityPage(p => Math.max(1, p - 1))}
+                                        disabled={rentabilityPage === 1}
+                                        className="p-2 rounded-lg border border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 transition-colors bg-white"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <span className="text-sm text-slate-600 font-medium min-w-[80px] text-center">
+                                        {rentabilityPage} / {Math.ceil(sortedProducts.length / RENTABILITY_ITEMS_PER_PAGE)}
+                                    </span>
+                                    <button
+                                        onClick={() => setRentabilityPage(p => Math.min(Math.ceil(sortedProducts.length / RENTABILITY_ITEMS_PER_PAGE), p + 1))}
+                                        disabled={rentabilityPage === Math.ceil(sortedProducts.length / RENTABILITY_ITEMS_PER_PAGE)}
+                                        className="p-2 rounded-lg border border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 transition-colors bg-white"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                        </>
                     )}
                 </section>
 

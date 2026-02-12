@@ -31,6 +31,10 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     const [trackingNumber, setTrackingNumber] = useState<string>(initialProduct?.tracking_number || '');
     const [courierTracking, setCourierTracking] = useState<string>(initialProduct?.courier_tracking || '');
 
+    // NEW: Currency and Tax State
+    const [currency, setCurrency] = useState<'USD' | 'DOP'>('USD'); // Default USD
+    const [applyUSATax, setApplyUSATax] = useState<boolean>(false);
+
     const [courierDiscount, setCourierDiscount] = useState<number>(0);
     const [isRateLoaded, setIsRateLoaded] = useState(false);
 
@@ -114,11 +118,11 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     // State for Preferences
     const [preferences, setPreferences] = useState<Record<string, number>>({});
 
-    // Auto-calculate 7% Sales Tax when Buy Price changes
+    // Auto-calculate 7% Sales Tax when Buy Price changes - ONLY if applyUSATax is true
     useEffect(() => {
-        if (buyPrice > 0) {
+        if (applyUSATax && buyPrice > 0) {
             setOriginTax(Number((buyPrice * 0.07).toFixed(2)));
-        } else {
+        } else if (!applyUSATax) {
             setOriginTax(0);
         }
 
@@ -134,7 +138,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 return adj;
             }));
         }
-    }, [buyPrice]);
+    }, [buyPrice, applyUSATax]);
 
     // Load Preferences & Auto-Add Defaults
     useEffect(() => {
@@ -263,6 +267,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             salePrice,
             localShipping,
             exchangeRate,
+            currency, // NEW
+            applyUSATax, // NEW
             adjustments,
             productUrl,
             imageUrl,
@@ -283,6 +289,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             setExchangeRate,
             setSalePrice,
             setLocalShipping,
+            setCurrency, // NEW
+            setApplyUSATax, // NEW
             setAdjustments,
             setProductUrl,
             setImageUrl,

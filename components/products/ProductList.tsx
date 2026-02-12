@@ -6,6 +6,7 @@ import { Package, AlertTriangle, X } from 'lucide-react';
 import { useProductList } from '../../features/inventory/hooks/useProductList';
 import InventoryFilterBar from '../../features/inventory/components/InventoryFilterBar';
 import InventoryCard from '../../features/inventory/components/InventoryCard';
+import { Pagination } from '../ui/Pagination';
 
 // Inline Modal for guaranteed visibility
 function DeleteModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: () => void }) {
@@ -54,12 +55,21 @@ export default function ProductList() {
     const {
         products,
         loading,
-        hasMore,
         searchTerm, setSearchTerm,
         statusFilter, setStatusFilter,
         sortOption, setSortOption,
-        loadMore,
-        handleDelete
+        handleDelete,
+        // Advanced filters
+        selectedPlatforms,
+        setSelectedPlatforms,
+        platformOptions,
+        priceRange,
+        setPriceRange,
+        // Pagination
+        currentPage,
+        setCurrentPage,
+        totalItems,
+        itemsPerPage,
     } = useProductList();
 
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -127,6 +137,12 @@ export default function ProductList() {
                 sortOption={sortOption} setSortOption={setSortOption}
                 onExport={handleDownloadCSV}
                 loading={loading}
+                // Advanced filters
+                selectedPlatforms={selectedPlatforms}
+                onPlatformsChange={setSelectedPlatforms}
+                platformOptions={platformOptions}
+                priceRange={priceRange}
+                onPriceRangeChange={setPriceRange}
             />
 
             <div className="space-y-3">
@@ -145,17 +161,14 @@ export default function ProductList() {
                 )}
             </div>
 
-            {hasMore && (
-                <div className="mt-6 text-center">
-                    <button
-                        onClick={loadMore}
-                        disabled={loading}
-                        className="bg-slate-900 text-white px-6 py-2 rounded-full text-xs font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                        {loading ? 'Cargando...' : 'Cargar más'}
-                    </button>
-                </div>
-            )}
+            {/* Pagination */}
+            <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                loading={loading}
+            />
 
             {/* Inlined Modal */}
             <DeleteModal

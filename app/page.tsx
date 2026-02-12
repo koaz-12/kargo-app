@@ -1,47 +1,17 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
 import DashboardStats from '../components/DashboardStats';
 import ProductList from '../components/products/ProductList';
-import { Plus, Package, ArrowRight } from 'lucide-react';
+import { Plus, Package } from 'lucide-react';
 import Link from 'next/link';
-import { Product } from '../types';
+import { useProducts } from '../hooks/useProducts';
+import { useUserPreferences } from '../hooks/useUserPreferences';
+import { DashboardStatsSkeleton } from '../components/ui/Skeleton';
+import { UtilitiesMenu } from '../components/UtilitiesMenu';
 
 export default function Home() {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [userName, setUserName] = useState('');
-
-    useEffect(() => {
-        const fetch = async () => {
-            // Get User & Name
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: prefs } = await supabase.from('user_preferences').select('display_name').eq('user_id', user.id).single();
-                if (prefs?.display_name) {
-                    setUserName(prefs.display_name);
-                } else if (user.email) {
-                    setUserName(user.email.split('@')[0]);
-                }
-            }
-
-            // Get Data (Include Adjustments for Profit Stats)
-            const { data } = await supabase
-                .from('products')
-                .select('*, financial_adjustments(*)');
-
-            if (data) {
-                // Map relation to expected 'adjustments' property
-                const mappedProducts = data.map((p: any) => ({
-                    ...p,
-                    adjustments: p.financial_adjustments
-                }));
-                setProducts(mappedProducts);
-            }
-            setLoading(false);
-        };
-        fetch();
-    }, []);
+    // Use React Query hook for products
+    const { data: products = [], isLoading: loading } = useProducts();
+    const { userName } = useUserPreferences();
 
     return (
         <main className="min-h-screen bg-slate-50 pb-24 max-w-md mx-auto shadow-2xl shadow-slate-200">
@@ -54,7 +24,7 @@ export default function Home() {
 
             <div className="px-4">
                 {/* 1. STATS SUMMARY (Top) */}
-                {!loading && <DashboardStats products={products} />}
+                {loading ? <DashboardStatsSkeleton /> : <DashboardStats products={products} />}
 
                 {/* 2. QUICK ACTIONS (Priority #2) */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
@@ -92,6 +62,9 @@ export default function Home() {
                     <ProductList />
                 </div>
             </div>
+
+            {/* Utilities Menu - Only on Home Page */}
+            <UtilitiesMenu />
         </main>
     );
 }

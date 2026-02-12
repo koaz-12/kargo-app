@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useProfitCalculator } from '../../../hooks/useProfitCalculator';
-import { productService } from '../../../services/productService';
 import { FormState, FormSetters, ProductStatus } from '../../../types';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
+import { createProductAction, updateProductAction } from '../../../app/actions/products';
+import { toast } from 'sonner';
 
 export const useProductForm = (editingId: string | null) => {
     const router = useRouter();
@@ -13,6 +14,7 @@ export const useProductForm = (editingId: string | null) => {
     const [accounts, setAccounts] = useState<any[]>([]);
     const [saving, setSaving] = useState(false);
     const [statusMsg, setStatusMsg] = useState('');
+    const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
 
     // Load Initial Data (Platforms, Accounts, Edit Product)
     useEffect(() => {
@@ -28,19 +30,27 @@ export const useProductForm = (editingId: string | null) => {
         if (editingId) {
             const loadProduct = async () => {
                 try {
-                    const data = await productService.getById(editingId);
+                    const { data, error } = await supabase
+                        .from('products')
+                        .select('*, financial_adjustments(*), product_images(*)')
+                        .eq('id', editingId)
+                        .single();
+
+                    if (error) throw error;
+
                     if (data) {
                         const productData = {
                             ...data,
                             adjustments: data.financial_adjustments || [],
                             images: data.product_images && data.product_images.length > 0
-                                ? data.product_images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)).map((img: any) => img.storage_path) // Extract path string
+                                ? data.product_images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)).map((img: any) => img.storage_path)
                                 : (data.image_url ? [data.image_url] : [])
                         };
                         setters.loadProduct(productData);
                     }
                 } catch (error) {
                     console.error("Error loading product:", error);
+                    toast.error('Error al cargar producto');
                 }
             };
             loadProduct();
@@ -48,8 +58,17 @@ export const useProductForm = (editingId: string | null) => {
     }, [editingId]);
 
     const handleSave = async (cloneMode = false) => {
-        if (!formState.name) return alert('Nombre requerido');
-        if (!formState.buyPrice) return alert('Precio requerido');
+        // Clear previous errors
+        setValidationErrors({});
+
+        if (!formState.name) {
+            toast.error('El nombre es requerido');
+            return;
+        }
+        if (!formState.buyPrice) {
+            toast.error('El precio de compra es requerido');
+            return;
+        }
 
         setSaving(true);
         setStatusMsg('');
@@ -63,49 +82,57 @@ export const useProductForm = (editingId: string | null) => {
                 productStatus = 'RECEIVED';
             }
 
-            const productData: any = {
-                platform_id: formState.platformId,
-                purchase_account_id: formState.purchaseAccountId || undefined,
-                name: formState.name,
-                buy_price: formState.buyPrice,
-                shipping_cost: formState.shippingCost,
-                origin_tax: formState.originTax || 0,
-                tax_cost: formState.taxCost,
-                sale_price: formState.salePrice,
-                local_shipping_cost: formState.localShipping,
-                exchange_rate: formState.exchangeRate,
-                product_url: formState.productUrl,
-                image_url: formState.imageUrl,
-                tracking_number: formState.trackingNumber,
-                courier_tracking: formState.courierTracking,
-
-                // Calculated
-                net_cost: results.net_cost,
-                gross_profit: results.gross_profit,
-                margin: results.margin,
-                roi: results.roi,
-
-                status: productStatus,
-            };
-
-            // Set sold_at when marking as SOLD
-            if (productStatus === 'SOLD') {
-                productData.sold_at = new Date().toISOString();
+            // Create FormData for Server Action
+            const formData = new FormData();
+            formData.append('platform_id', formState.platformId);
+            if (formState.purchaseAccountId) {
+                formData.append('purchase_account_id', formState.purchaseAccountId);
             }
+            formData.append('name', formState.name);
+            formData.append('buy_price', formState.buyPrice.toString());
+            formData.append('shipping_cost', formState.shippingCost.toString());
+            formData.append('origin_tax', (formState.originTax || 0).toString());
+            formData.append('tax_cost', formState.taxCost.toString());
+            if (formState.salePrice) {
+                formData.append('sale_price', formState.salePrice.toString());
+            }
+            formData.append('local_shipping_cost', formState.localShipping.toString());
+            formData.append('exchange_rate', formState.exchangeRate.toString());
+            formData.append('status', productStatus);
 
+            // Optional fields
+            if (formState.productUrl) formData.append('product_url', formState.productUrl);
+            if (formState.imageUrl) formData.append('image_url', formState.imageUrl);
+            if (formState.trackingNumber) formData.append('tracking_number', formState.trackingNumber);
+            if (formState.courierTracking) formData.append('courier_tracking', formState.courierTracking);
+            if (formState.sku) formData.append('sku', formState.sku);
+
+            let result;
             let targetId = editingId;
 
             if (editingId && !cloneMode) {
-                // UPDATE
-                await productService.update(editingId, productData);
+                // UPDATE with Server Action
+                result = await updateProductAction(editingId, formData);
             } else {
-                // CREATE (or Clone)
-                const newProduct = await productService.create(productData);
-                targetId = newProduct.id;
+                // CREATE (or Clone) with Server Action
+                result = await createProductAction(formData);
+                if (result.success && result.data) {
+                    targetId = result.data.id;
+                }
             }
 
-            // Handle Relations (Adjustments)
-            // 1. Delete old adjustments if editing (Simplest strategy: Replace all)
+            if (!result.success) {
+                if (result.errors) {
+                    // Zod validation errors
+                    setValidationErrors(result.errors);
+                    toast.error('Errores de validación');
+                    return;
+                }
+                toast.error(result.error || 'Error al guardar');
+                return;
+            }
+
+            // Handle Relations (Adjustments) - Still client-side for now
             if (editingId && !cloneMode) {
                 await supabase.from('financial_adjustments').delete().eq('product_id', editingId);
             }
@@ -120,7 +147,7 @@ export const useProductForm = (editingId: string | null) => {
                 await supabase.from('financial_adjustments').insert(adjs);
             }
 
-            // Handle Images
+            // Handle Images - Still client-side for now
             if (formState.images && formState.images.length > 0 && targetId) {
                 if (editingId && !cloneMode) {
                     await supabase.from('product_images').delete().eq('product_id', editingId);
@@ -133,21 +160,23 @@ export const useProductForm = (editingId: string | null) => {
                 }));
                 await supabase.from('product_images').insert(imgs);
 
-                // Update primary image_url for fast access/legacy support
                 const primaryImage = imgs[0]?.storage_path;
                 if (primaryImage) {
                     await supabase.from('products').update({ image_url: primaryImage }).eq('id', targetId);
                 }
             }
 
-            // Reset or Redirect
+            // Success feedback
             if (targetId && (editingId && !cloneMode)) {
+                toast.success('¡Producto actualizado!');
                 setTimeout(() => router.push('/inventory'), 1000);
                 setStatusMsg('¡Editado Exitosamente!');
             } else {
                 if (cloneMode) {
+                    toast.success('¡Producto clonado!');
                     setStatusMsg('¡Clonado! Listo para el siguiente 👯');
                 } else {
+                    toast.success('¡Producto guardado!');
                     setStatusMsg('¡Producto Guardado!');
                     setters.resetForm();
                     setTimeout(() => setStatusMsg(''), 3000);
@@ -156,6 +185,7 @@ export const useProductForm = (editingId: string | null) => {
 
         } catch (error) {
             console.error('Save failed:', error);
+            toast.error('Error al guardar producto');
             setStatusMsg('Error al guardar');
         } finally {
             setSaving(false);
@@ -163,9 +193,7 @@ export const useProductForm = (editingId: string | null) => {
     };
 
     const handleAddToQueue = () => {
-        // Queue logic typically just adds to local state or list, handled in parent or here?
-        // For now, minimal implementation as it wasn't fully developed in the monolith view
-        alert("Agregado a Cola (Simulado)");
+        toast.info('Agregado a cola (próximamente)');
     };
 
     const smartFetchMetadata = async (url: string) => {
@@ -198,8 +226,9 @@ export const useProductForm = (editingId: string | null) => {
         accounts,
         saving,
         statusMsg,
+        validationErrors, // NEW: expose validation errors
         handleSave,
         handleAddToQueue,
-        courierDiscount // Pass through
+        courierDiscount
     };
 }

@@ -57,16 +57,45 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
         <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center gap-2 mb-2">
                 <Calculator size={14} className="text-blue-500" />
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Estructura de Costos (USD)</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Estructura de Costos</p>
             </div>
 
             <div className="space-y-3">
+                {/* Currency Selector */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-2">
+                    <label className="text-[10px] text-slate-400 block mb-1">Moneda de Compra</label>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setters.setCurrency('USD')}
+                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${formState.currency === 'USD'
+                                    ? 'bg-blue-500 text-white shadow-md'
+                                    : 'bg-white text-slate-600 border border-slate-200'
+                                }`}
+                        >
+                            💵 USD
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setters.setCurrency('DOP')}
+                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${formState.currency === 'DOP'
+                                    ? 'bg-emerald-500 text-white shadow-md'
+                                    : 'bg-white text-slate-600 border border-slate-200'
+                                }`}
+                        >
+                            🇩🇴 DOP
+                        </button>
+                    </div>
+                </div>
+
                 {/* 1. Purchase Price */}
                 <div className="flex gap-3">
                     <div className="flex-1">
                         <label className="text-[10px] text-slate-400 block mb-0.5">Precio Compra</label>
                         <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-                            <span className="text-slate-400 text-sm mr-2">$</span>
+                            <span className="text-slate-400 text-sm mr-2">
+                                {formState.currency === 'DOP' ? 'RD$' : '$'}
+                            </span>
                             <input
                                 type="number"
                                 value={formState.buyPrice || ''}
@@ -79,9 +108,13 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
 
                     {/* 2. Shipping */}
                     <div className="flex-1">
-                        <label className="text-[10px] text-slate-400 block mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">Envío (USA)</label>
+                        <label className="text-[10px] text-slate-400 block mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                            Envío {formState.currency === 'USD' ? '(USA)' : ''}
+                        </label>
                         <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
-                            <span className="text-slate-400 text-sm mr-2">$</span>
+                            <span className="text-slate-400 text-sm mr-2">
+                                {formState.currency === 'DOP' ? 'RD$' : '$'}
+                            </span>
                             <input
                                 type="number"
                                 value={formState.shippingCost || ''}
@@ -124,23 +157,46 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     </div>
                 </div>
 
-                {/* 4. Tax (USA) & Import (Two Cols) */}
-                <div className="flex gap-3">
-                    {/* Tax USA (7%) */}
-                    <div className="flex-1">
-                        <label className="text-[10px] text-slate-400 block mb-0.5">Tax USA (7%)</label>
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
-                            <span className="text-slate-400 text-sm mr-2">$</span>
+                {/* 4. Tax USA (Optional Checkbox) - Solo si currency es USD */}
+                {formState.currency === 'USD' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5">
+                        <div className="flex items-center gap-2 mb-2">
                             <input
-                                type="number"
-                                value={formState.originTax || ''}
-                                onChange={(e) => setters.setOriginTax(Number(e.target.value))}
-                                className="w-full bg-transparent text-sm text-slate-700 outline-none"
-                                placeholder="0.00"
+                                type="checkbox"
+                                id="applyUSATax"
+                                checked={formState.applyUSATax || false}
+                                onChange={(e) => {
+                                    setters.setApplyUSATax(e.target.checked);
+                                    if (e.target.checked && formState.buyPrice > 0) {
+                                        setters.setOriginTax(formState.buyPrice * 0.07);
+                                    } else {
+                                        setters.setOriginTax(0);
+                                    }
+                                }}
+                                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
                             />
+                            <label htmlFor="applyUSATax" className="text-xs font-bold text-blue-700 cursor-pointer">
+                                Aplicar Tax USA (7%)
+                            </label>
                         </div>
+
+                        {formState.applyUSATax && (
+                            <div className="flex-1">
+                                <label className="text-[10px] text-slate-400 block mb-0.5">Tax USA</label>
+                                <div className="flex items-center bg-white border border-blue-200 rounded-lg px-3 py-2.5">
+                                    <span className="text-slate-400 text-sm mr-2">$</span>
+                                    <input
+                                        type="number"
+                                        value={formState.originTax || ''}
+                                        onChange={(e) => setters.setOriginTax(Number(e.target.value))}
+                                        className="w-full bg-transparent text-sm text-slate-700 outline-none"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
+                )}
 
                 {/* 5. Logistics (Optional) - Tracking */}
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5">

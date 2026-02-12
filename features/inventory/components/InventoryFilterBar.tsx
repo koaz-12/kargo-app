@@ -1,5 +1,7 @@
-import { Search, FileDown, Loader2 } from 'lucide-react';
+import { Search, FileDown, Loader2, Filter, X } from 'lucide-react';
 import { SortOption, StatusFilter } from '../types';
+import { MultiSelect } from '../../../components/ui/MultiSelect';
+import { useState } from 'react';
 
 interface InventoryFilterBarProps {
     searchTerm: string;
@@ -10,6 +12,12 @@ interface InventoryFilterBarProps {
     setSortOption: (sort: SortOption) => void;
     onExport: () => void;
     loading?: boolean;
+    // New advanced filters
+    selectedPlatforms?: string[];
+    onPlatformsChange?: (platforms: string[]) => void;
+    platformOptions?: { value: string; label: string }[];
+    priceRange?: { min: number; max: number };
+    onPriceRangeChange?: (range: { min: number; max: number }) => void;
 }
 
 export default function InventoryFilterBar({
@@ -20,8 +28,24 @@ export default function InventoryFilterBar({
     sortOption,
     setSortOption,
     onExport,
-    loading
+    loading,
+    selectedPlatforms = [],
+    onPlatformsChange,
+    platformOptions = [],
+    priceRange,
+    onPriceRangeChange,
 }: InventoryFilterBarProps) {
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const hasActiveFilters = selectedPlatforms.length > 0 ||
+        (priceRange && (priceRange.min > 0 || priceRange.max < Infinity));
+
+    const clearAllFilters = () => {
+        if (onPlatformsChange) onPlatformsChange([]);
+        if (onPriceRangeChange) onPriceRangeChange({ min: 0, max: Infinity });
+        setStatusFilter('ALL');
+        setSearchTerm('');
+    };
+
     return (
         <div className="space-y-4 mb-4">
             {/* Status Tabs */}
@@ -42,7 +66,7 @@ export default function InventoryFilterBar({
                     )}
                     <input
                         type="text"
-                        placeholder="Buscar por nombre, SKU..."
+                        placeholder="Buscar por nombre, SKU, tracking..."
                         className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none text-sm transition-all shadow-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -60,6 +84,16 @@ export default function InventoryFilterBar({
                     <option value="NAME_ASC">Nombre (A-Z)</option>
                 </select>
                 <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className={`relative bg-white border border-slate-200 p-2 rounded-xl shadow-sm hover:bg-slate-50 transition-colors ${hasActiveFilters ? 'border-slate-900 bg-slate-900 text-white' : 'text-slate-600'}`}
+                    title="Filtros avanzados"
+                >
+                    <Filter size={20} />
+                    {hasActiveFilters && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+                    )}
+                </button>
+                <button
                     onClick={onExport}
                     className="bg-white border border-slate-200 text-slate-600 p-2 rounded-xl shadow-sm hover:bg-slate-50 transition-colors"
                     title="Exportar a CSV"
@@ -67,6 +101,64 @@ export default function InventoryFilterBar({
                     <FileDown size={20} />
                 </button>
             </div>
+
+            {/* Advanced Filters Panel */}
+            {showAdvancedFilters && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-bold text-slate-800">Filtros Avanzados</h3>
+                        {hasActiveFilters && (
+                            <button
+                                onClick={clearAllFilters}
+                                className="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1"
+                            >
+                                <X size={14} />
+                                Limpiar todo
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Platform Filter */}
+                    {platformOptions.length > 0 && onPlatformsChange && (
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                                Plataformas
+                            </label>
+                            <MultiSelect
+                                options={platformOptions}
+                                selected={selectedPlatforms}
+                                onChange={onPlatformsChange}
+                                placeholder="Seleccionar plataformas..."
+                            />
+                        </div>
+                    )}
+
+                    {/* Price Range */}
+                    {onPriceRangeChange && priceRange && (
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                                Rango de Precio (DOP)
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="Mín"
+                                    value={priceRange.min || ''}
+                                    onChange={(e) => onPriceRangeChange({ ...priceRange, min: parseFloat(e.target.value) || 0 })}
+                                    className="w-1/2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-900 outline-none"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="Máx"
+                                    value={priceRange.max === Infinity ? '' : priceRange.max}
+                                    onChange={(e) => onPriceRangeChange({ ...priceRange, max: parseFloat(e.target.value) || Infinity })}
+                                    className="w-1/2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-900 outline-none"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
