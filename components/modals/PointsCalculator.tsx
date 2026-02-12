@@ -297,14 +297,15 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                 </div>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-600 block mb-1">Tasa Relleno (%)</label>
+                                <label className="text-xs font-bold text-slate-600 block mb-1">Retorno Relleno (%)</label>
                                 <input
                                     type="number"
                                     step="0.01"
                                     value={tasaRellenoPorcentaje}
                                     onChange={(e) => setTasaRellenoPorcentaje(e.target.value)}
                                     className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                                    placeholder="0.20"
+                                    placeholder="20"
+                                    title="Qué porcentaje de puntos dan los artículos de relleno"
                                 />
                             </div>
 
