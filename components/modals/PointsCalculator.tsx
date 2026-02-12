@@ -618,20 +618,20 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                         </div>
                         <div className="p-4">
                             <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center">
+                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center overflow-hidden">
                                     <div className="text-[10px] font-bold text-orange-600 mb-1">TOTAL USD</div>
-                                    <div className="text-xl font-black text-orange-900">${resultado.gasto.totalUSD}</div>
+                                    <div className="text-lg font-black text-orange-900 break-words">${resultado.gasto.totalUSD}</div>
                                     <div className="text-[9px] text-orange-500 mt-1">Artículos + Relleno</div>
                                 </div>
-                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center">
+                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center overflow-hidden">
                                     <div className="text-[10px] font-bold text-orange-600 mb-1">TOTAL DOP</div>
-                                    <div className="text-xl font-black text-orange-900">RD${parseFloat(resultado.gasto.totalDOP).toLocaleString()}</div>
+                                    <div className="text-lg font-black text-orange-900 break-words">RD${parseFloat(resultado.gasto.totalDOP).toLocaleString()}</div>
                                     <div className="text-[9px] text-orange-500 mt-1">Todo incluido</div>
                                 </div>
-                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center">
+                                <div className="bg-white p-3 rounded-lg border border-orange-200 text-center overflow-hidden">
                                     <div className="text-[10px] font-bold text-orange-600 mb-1">COURIER</div>
-                                    <div className="text-xl font-black text-orange-900">RD${parseFloat(resultado.gasto.courier).toLocaleString()}</div>
-                                    <div className="text-[9px] text-orange-500 mt-1">
+                                    <div className="text-lg font-black text-orange-900 break-words">RD${parseFloat(resultado.gasto.courier).toLocaleString()}</div>
+                                    <div className="text-[9px] text-orange-500 mt-1 truncate">
                                         {modoCourier === 'libra' ? `${resultado.info.pesoTotalLibras}lb total` : 'Fijo'}
                                     </div>
                                 </div>
