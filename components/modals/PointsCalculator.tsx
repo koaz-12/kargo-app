@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calculator, DollarSign, TrendingUp, Package, Gift, Target, Sparkles, Plus, Trash2, ChevronDown, ChevronUp, Weight, AlertTriangle, Coins } from 'lucide-react';
+import { X, Calculator, DollarSign, Target, Package, Gift, Plus, Trash2, ChevronDown, AlertTriangle } from 'lucide-react';
 
 interface PointsCalculatorProps {
     onClose: () => void;
@@ -28,7 +28,7 @@ interface Regalo {
     monedaValor: Moneda;
     pesoLibras: number;
     precioVentaRD: number;
-    activo: boolean; // Para marcar como opcional/inactivo
+    activo: boolean;
 }
 
 export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) => {
@@ -38,15 +38,13 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
     const [taxUSA, setTaxUSA] = useState<string>('7'); // 7%
     const [arancelRD, setArancelRD] = useState<string>('38'); // 38%
 
-    // Reglas del Evento (Cut Price)
     const [targetCut, setTargetCut] = useState<string>('30.57');
     const [rate1, setRate1] = useState<string>('150');
     const [limitFirst, setLimitFirst] = useState<string>('18.00');
     const [rate2, setRate2] = useState<string>('5');
 
-    // Inventario y Regalos
     const [articulos, setArticulos] = useState<Articulo[]>([
-        { id: '1', nombre: 'Artículo Principal', costo: 0, monedaCosto: 'USD', envioUS: 0, aplicarTaxUS: false, pesoLibras: 0, precioVentaRD: 0 }
+        { id: '1', nombre: 'Item 1', costo: 0, monedaCosto: 'USD', envioUS: 0, aplicarTaxUS: false, pesoLibras: 0, precioVentaRD: 0 }
     ]);
 
     const [regalos, setRegalos] = useState<Regalo[]>([
@@ -57,7 +55,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
 
     // --- PERSISTENCIA ---
     useEffect(() => {
-        const saved = localStorage.getItem('resellerCalcState_v3_mobile');
+        const saved = localStorage.getItem('resellerCalcState_v4_centered');
         if (saved) {
             try {
                 const state = JSON.parse(saved);
@@ -78,10 +76,10 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
 
     useEffect(() => {
         const state = { tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede };
-        localStorage.setItem('resellerCalcState_v3_mobile', JSON.stringify(state));
+        localStorage.setItem('resellerCalcState_v4_centered', JSON.stringify(state));
     }, [tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede]);
 
-    // --- HELPERS LISTAS ---
+    // --- HELPERS ---
     const agregarArticulo = () => {
         setArticulos([...articulos, {
             id: Date.now().toString(),
@@ -102,14 +100,13 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
     const eliminarRegalo = (id: string) => { setRegalos(regalos.filter(r => r.id !== id)); };
     const updateRegalo = (id: string, field: keyof Regalo, value: any) => { setRegalos(regalos.map(r => r.id === id ? { ...r, [field]: value } : r)); };
 
-    // --- CORE LOGIC ---
+    // --- CÁLCULO ---
     const calcular = () => {
         const rate = parseFloat(tasaDolar) || 60.50;
         const priceLb = parseFloat(precioPorLibra) || 193;
         const taxUSAPercent = parseFloat(taxUSA) || 7;
         const taxRDPercent = parseFloat(arancelRD) || 38;
 
-        // 1. Reglas
         const target = parseFloat(targetCut) || 0;
         const limit1 = parseFloat(limitFirst) || 0;
         const r1 = (parseFloat(rate1) || 150) / 100;
@@ -118,30 +115,26 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         const cost1 = r1 > 0 ? limit1 / r1 : 0;
         const remainingTarget = target - limit1;
         const cost2 = (remainingTarget > 0 && r2 > 0) ? remainingTarget / r2 : 0;
-        const requiredBudgetBase = cost1 + cost2; // USD
+        const requiredBudgetBase = cost1 + cost2;
 
-        // 2. Inventario
-        let totalBaseCostUS = 0; // Para el juego (USD)
-        let totalSpendConvertidoUS = 0; // Gasto real convertido a USD (Base + Tax + Envio)
+        let totalBaseCostUS = 0;
+        let totalSpendConvertidoUS = 0;
         let totalWeightInv = 0;
         let totalSaleInvRD = 0;
 
         articulos.forEach(a => {
-            // Conversión a USD para el costo base (lo que cuenta para el juego)
             let costoBaseEnUSD = a.monedaCosto === 'USD' ? a.costo : (a.costo / rate);
             totalBaseCostUS += costoBaseEnUSD;
 
-            // Cálculo Gasto Real Item (En USD siempre para estandarizar internalmente)
             let itemCostUS = costoBaseEnUSD;
-            if (a.aplicarTaxUS) itemCostUS *= (1 + (taxUSAPercent / 100)); // Tax se aplica al costo base
-            itemCostUS += a.envioUS; // El envío US ya está en US
+            if (a.aplicarTaxUS) itemCostUS *= (1 + (taxUSAPercent / 100));
+            itemCostUS += a.envioUS;
 
             totalSpendConvertidoUS += itemCostUS;
             totalWeightInv += a.pesoLibras;
             totalSaleInvRD += a.precioVentaRD;
         });
 
-        // 3. Regalos (Solo activos)
         let totalWeightRewards = 0;
         let totalSaleRewardsRD = 0;
         let totalRefValueRewardsUS = 0;
@@ -155,15 +148,12 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
             }
         });
 
-        // 4. Aduanas
         const exceeds200 = totalSpendConvertidoUS > 200;
         let taxAmountRD = 0;
         if (exceeds200 && aplicarArancelSiExcede) {
-            // Calculamos sobre el valor CIF estimado (Gasto Total US * Tasa)
             taxAmountRD = (totalSpendConvertidoUS * rate) * (taxRDPercent / 100);
         }
 
-        // 5. Totales
         const totalWeight = totalWeightInv + totalWeightRewards;
         const totalCourierRD = totalWeight * priceLb;
         const totalMercanciaRD = totalSpendConvertidoUS * rate;
@@ -175,22 +165,23 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         const roi = inversionTotalRD > 0 ? (gananciaNetaRD / inversionTotalRD) * 100 : 0;
         const giftEfficiency = totalSpendConvertidoUS > 0 ? totalRefValueRewardsUS / totalSpendConvertidoUS : 0;
 
-        // Progreso
         const remainingToCut = requiredBudgetBase - totalBaseCostUS;
         const progressPercent = requiredBudgetBase > 0 ? (totalBaseCostUS / requiredBudgetBase) * 100 : 0;
 
         return {
             game: {
-                requiredBudgetBase: requiredBudgetBase.toFixed(2),
                 remainingToCut: remainingToCut.toFixed(2),
                 progressPercent: Math.min(progressPercent, 100),
                 isComplete: remainingToCut <= 0.01
             },
             financial: {
                 totalSpendUS: totalSpendConvertidoUS.toFixed(2),
-                inversionTotalRD: inversionTotalRD.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-                ventasTotalesRD: ventasTotalesRD.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-                gananciaNetaRD: gananciaNetaRD.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+                totalMercanciaRD: totalMercanciaRD,
+                totalCourierRD: totalCourierRD,
+                taxAmountRD: taxAmountRD,
+                inversionTotalRD: inversionTotalRD,
+                ventasTotalesRD: ventasTotalesRD,
+                gananciaNetaRD: gananciaNetaRD,
                 roi: roi.toFixed(1),
                 exceeds200
             },
@@ -203,76 +194,77 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
 
     const result = calcular();
 
+    // CENTRADO REAL: alignItems center en overlay + margin-auto en modal content
+    // + max-height calculado para que no toque los bordes si no es necesario
     return (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/80 backdrop-blur-sm sm:p-4">
-            <div className="relative bg-slate-50 w-full sm:max-w-md md:max-w-xl lg:max-w-2xl max-h-[92vh] sm:max-h-[90vh] flex flex-col sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-slate-50 w-full sm:max-w-md md:max-w-xl max-h-[95vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
 
-                {/* Header Compacto Mobile */}
-                <div className="bg-slate-900 px-4 py-3 flex items-center justify-between shrink-0 shadow-md z-10">
+                {/* Header */}
+                <div className="bg-slate-900 px-4 py-3 flex items-center justify-between shrink-0 z-10">
                     <div className="flex items-center gap-2">
-                        <Calculator className="text-orange-500" size={18} />
+                        <Calculator className="text-orange-500" size={20} />
                         <div>
                             <h2 className="text-sm font-bold text-white leading-none">Calculadora PRO</h2>
-                            <span className="text-[10px] text-slate-400">Revendedor v3.5 Mobile</span>
+                            <span className="text-[10px] text-slate-400">Revendedor v4.0</span>
                         </div>
                     </div>
-                    <button onClick={onClose} className="bg-slate-800 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700">
+                    <button onClick={onClose} className="bg-slate-800 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
                         <X size={18} />
                     </button>
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-3 pb-24">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-3">
 
-                    {/* Configuración (Colapsable) */}
-                    <details className="group bg-white rounded-lg border border-slate-200 shadow-sm">
-                        <summary className="px-3 py-2.5 cursor-pointer font-bold text-xs text-slate-700 bg-slate-50 hover:bg-slate-100 flex items-center justify-between">
-                            <span className="flex items-center gap-2"><Target size={14} className="text-orange-500" /> Configuración & Tasas</span>
+                    {/* Configuración (Default Collapsed) */}
+                    <details className="group bg-white rounded-lg border border-slate-200 shadow-sm text-xs">
+                        <summary className="px-3 py-2 cursor-pointer font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 flex items-center justify-between select-none">
+                            <span className="flex items-center gap-2"><Target size={14} className="text-orange-500" /> Configuración Generales</span>
                             <ChevronDown size={14} className="group-open:rotate-180 transition-transform text-slate-400" />
                         </summary>
                         <div className="p-3 grid grid-cols-2 gap-3 bg-white border-t border-slate-100">
                             <div>
                                 <label className="text-[9px] text-slate-500 font-black uppercase mb-1 block">Dólar (RD$)</label>
-                                <input type="number" value={tasaDolar} onChange={(e) => setTasaDolar(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-bold text-slate-800 outline-none focus:ring-1 focus:ring-orange-500" />
+                                <input type="number" value={tasaDolar} onChange={(e) => setTasaDolar(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 font-bold text-slate-800 outline-none focus:ring-1 focus:ring-orange-500" />
                             </div>
                             <div>
                                 <label className="text-[9px] text-slate-500 font-black uppercase mb-1 block">Courier (RD$/Lb)</label>
-                                <input type="number" value={precioPorLibra} onChange={(e) => setPrecioPorLibra(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-bold text-slate-800 outline-none focus:ring-1 focus:ring-orange-500" />
+                                <input type="number" value={precioPorLibra} onChange={(e) => setPrecioPorLibra(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 font-bold text-slate-800 outline-none focus:ring-1 focus:ring-orange-500" />
                             </div>
                         </div>
                     </details>
 
                     {/* Meta (Juego) */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-3 py-2 border-b border-orange-200 flex justify-between items-center">
-                            <h3 className="font-bold text-orange-900 text-xs flex items-center gap-1.5">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+                        <div className="bg-orange-50/50 px-3 py-2 border-b border-orange-100 flex justify-between items-center">
+                            <h3 className="font-bold text-orange-900 flex items-center gap-1.5">
                                 <Target size={14} className="text-orange-600" /> Meta (Cut Price)
                             </h3>
-                            <div className="text-[10px] font-bold text-orange-700 bg-white/60 px-1.5 py-0.5 rounded">USD</div>
+                            <div className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded">USD</div>
                         </div>
                         <div className="p-3">
                             <div className="grid grid-cols-2 gap-3 mb-3">
                                 <div className="col-span-2">
                                     <label className="text-[9px] text-orange-800/70 font-black uppercase mb-1 block">Falta Recortar</label>
                                     <div className="relative">
-                                        <input type="number" value={targetCut} onChange={(e) => setTargetCut(e.target.value)} className="w-full border-2 border-orange-100 bg-orange-50/50 rounded-lg pl-8 pr-3 py-2 text-lg font-black text-orange-600 outline-none focus:border-orange-300" />
+                                        <input type="number" value={targetCut} onChange={(e) => setTargetCut(e.target.value)} className="w-full border-2 border-orange-100 bg-orange-50/30 rounded-lg pl-8 pr-3 py-2 text-lg font-black text-orange-600 outline-none focus:border-orange-300 transition-colors" />
                                         <DollarSign className="absolute left-2.5 top-3 text-orange-300" size={16} />
                                     </div>
                                 </div>
                                 <div>
                                     <label className="text-[9px] text-slate-400 font-black uppercase mb-1 block">Límite 1er Pedido</label>
-                                    <input type="number" value={limitFirst} onChange={(e) => setLimitFirst(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-700 outline-none focus:ring-1 focus:ring-orange-500" />
+                                    <input type="number" value={limitFirst} onChange={(e) => setLimitFirst(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 outline-none focus:ring-1 focus:ring-orange-500" />
                                 </div>
                                 <div>
                                     <label className="text-[9px] text-slate-400 font-black uppercase mb-1 block">Tasas (%)</label>
                                     <div className="flex gap-1">
-                                        <input type="number" value={rate1} onChange={(e) => setRate1(e.target.value)} className="w-1/2 bg-emerald-50 border border-emerald-100 rounded px-1 py-1.5 text-center text-xs font-bold text-emerald-700" title="Tasa 1" />
-                                        <input type="number" value={rate2} onChange={(e) => setRate2(e.target.value)} className="w-1/2 bg-rose-50 border border-rose-100 rounded px-1 py-1.5 text-center text-xs font-bold text-rose-700" title="Tasa 2" />
+                                        <input type="number" value={rate1} onChange={(e) => setRate1(e.target.value)} className="w-1/2 bg-emerald-50 border border-emerald-100 rounded px-1 py-1.5 text-center font-bold text-emerald-700" title="Tasa 1" />
+                                        <input type="number" value={rate2} onChange={(e) => setRate2(e.target.value)} className="w-1/2 bg-rose-50 border border-rose-100 rounded px-1 py-1.5 text-center font-bold text-rose-700" title="Tasa 2" />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Barra Progreso */}
                             <div className="">
                                 <div className="flex justify-between text-[10px] mb-1 font-bold">
                                     <span className="text-slate-500">Progreso Carrito Base</span>
@@ -288,29 +280,27 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                     </div>
 
                     {/* Inventario */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-xs">
                         <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-700 text-xs flex items-center gap-1.5">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-1.5">
                                 <Package size={14} className="text-blue-500" /> Inventario
                             </h3>
-                            <button onClick={agregarArticulo} className="bg-blue-600 text-white rounded-full p-1 hover:bg-blue-700 active:scale-95"><Plus size={14} /></button>
+                            <button onClick={agregarArticulo} className="bg-blue-600 text-white rounded-full p-1 hover:bg-blue-700 active:scale-95 transition-all"><Plus size={14} /></button>
                         </div>
                         <div className="divide-y divide-slate-50">
                             {articulos.map((art) => (
-                                <div key={art.id} className="p-3 bg-white">
-                                    {/* Fila 1: Nombre y Borrar */}
+                                <div key={art.id} className="p-3 bg-white hover:bg-slate-50 transition-colors">
                                     <div className="flex gap-2 mb-2">
                                         <input
                                             type="text"
                                             placeholder="Nombre Producto"
                                             value={art.nombre}
                                             onChange={(e) => updateArticulo(art.id, 'nombre', e.target.value)}
-                                            className="flex-1 text-sm font-bold text-slate-800 placeholder-slate-300 outline-none border-b border-transparent focus:border-blue-300"
+                                            className="flex-1 font-bold text-slate-800 placeholder-slate-300 outline-none border-b border-transparent focus:border-blue-300 bg-transparent"
                                         />
                                         <button onClick={() => eliminarArticulo(art.id)} className="text-slate-300 hover:text-rose-500"><Trash2 size={14} /></button>
                                     </div>
 
-                                    {/* Fila 2: Inputs Principales */}
                                     <div className="grid grid-cols-12 gap-2 mb-2">
                                         <div className="col-span-5 relative">
                                             <div className="flex">
@@ -319,11 +309,11 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                                     placeholder="0.00"
                                                     value={art.costo || ''}
                                                     onChange={(e) => updateArticulo(art.id, 'costo', parseFloat(e.target.value) || 0)}
-                                                    className="w-full bg-slate-50 border border-slate-200 rounded-l pl-2 pr-1 py-1.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-400"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-l pl-2 pr-1 py-1.5 font-bold text-slate-700 outline-none focus:border-blue-400 focus:bg-white transition-colors"
                                                 />
                                                 <button
                                                     onClick={() => updateArticulo(art.id, 'monedaCosto', art.monedaCosto === 'USD' ? 'DOP' : 'USD')}
-                                                    className={`px-1.5 text-[9px] font-black border-y border-r rounded-r flex items-center justify-center min-w-[32px] ${art.monedaCosto === 'USD' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}
+                                                    className={`px-1.5 text-[9px] font-black border-y border-r rounded-r flex items-center justify-center min-w-[32px] transition-colors ${art.monedaCosto === 'USD' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
                                                 >
                                                     {art.monedaCosto}
                                                 </button>
@@ -336,7 +326,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                                 placeholder="0.00"
                                                 value={art.precioVentaRD || ''}
                                                 onChange={(e) => updateArticulo(art.id, 'precioVentaRD', parseFloat(e.target.value) || 0)}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-400"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 outline-none focus:border-blue-400 focus:bg-white transition-colors"
                                             />
                                             <label className="text-[8px] text-slate-400 font-bold uppercase mt-0.5 block">Venta RD$</label>
                                         </div>
@@ -346,16 +336,15 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                                 placeholder="0.0"
                                                 value={art.pesoLibras || ''}
                                                 onChange={(e) => updateArticulo(art.id, 'pesoLibras', parseFloat(e.target.value) || 0)}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-center text-sm text-slate-700 outline-none focus:border-blue-400"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-center text-slate-700 outline-none focus:border-blue-400 focus:bg-white transition-colors"
                                             />
                                             <label className="text-[8px] text-slate-400 font-bold uppercase mt-0.5 block text-center">Libras</label>
                                         </div>
                                     </div>
 
-                                    {/* Fila 3: Opciones Extra (Tax/Envio) */}
-                                    <div className="flex gap-3 bg-slate-50/80 p-1.5 rounded-lg">
-                                        <label className="flex items-center gap-1.5 cursor-pointer">
-                                            <input type="checkbox" checked={art.aplicarTaxUS} onChange={(e) => updateArticulo(art.id, 'aplicarTaxUS', e.target.checked)} className="rounded text-orange-500 w-3.5 h-3.5" />
+                                    <div className="flex gap-3 bg-slate-100/50 p-1.5 rounded-lg border border-slate-100">
+                                        <label className="flex items-center gap-1.5 cursor-pointer select-none hover:opacity-80">
+                                            <input type="checkbox" checked={art.aplicarTaxUS} onChange={(e) => updateArticulo(art.id, 'aplicarTaxUS', e.target.checked)} className="rounded text-orange-500 w-3.5 h-3.5 focus:ring-offset-0 focus:ring-1 focus:ring-orange-500" />
                                             <span className="text-[10px] font-bold text-slate-600">+Tax ({taxUSA}%)</span>
                                         </label>
                                         <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
@@ -375,30 +364,29 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                     </div>
 
                     {/* Regalos */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-xs">
                         <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-700 text-xs flex items-center gap-1.5">
-                                <Gift size={14} className="text-purple-500" /> Regalos (Opcional)
+                            <h3 className="font-bold text-slate-700 flex items-center gap-1.5">
+                                <Gift size={14} className="text-purple-500" /> Regalos
                             </h3>
-                            <button onClick={agregarRegalo} className="bg-purple-600 text-white rounded-full p-1 hover:bg-purple-700 active:scale-95"><Plus size={14} /></button>
+                            <button onClick={agregarRegalo} className="bg-purple-600 text-white rounded-full p-1 hover:bg-purple-700 active:scale-95 transition-all"><Plus size={14} /></button>
                         </div>
                         <div className="divide-y divide-slate-50">
                             {regalos.map((r) => (
-                                <div key={r.id} className={`p-3 bg-white transition-opacity ${!r.activo ? 'opacity-50 grayscale' : ''}`}>
+                                <div key={r.id} className={`p-3 bg-white transition-all ${!r.activo ? 'opacity-60 grayscale-[0.8]' : 'hover:bg-slate-50'}`}>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <input type="checkbox" checked={r.activo} onChange={(e) => updateRegalo(r.id, 'activo', e.target.checked)} className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500" />
+                                        <input type="checkbox" checked={r.activo} onChange={(e) => updateRegalo(r.id, 'activo', e.target.checked)} className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer" />
                                         <input
                                             type="text"
                                             value={r.nombre}
                                             onChange={(e) => updateRegalo(r.id, 'nombre', e.target.value)}
                                             placeholder="Nombre Regalo"
-                                            className="flex-1 text-sm font-bold text-slate-800 placeholder-slate-300 outline-none border-b border-transparent focus:border-purple-300 disabled:bg-transparent"
+                                            className="flex-1 font-bold text-slate-800 placeholder-slate-300 outline-none border-b border-transparent focus:border-purple-300 disabled:bg-transparent bg-transparent"
                                             disabled={!r.activo}
                                         />
                                         <button onClick={() => eliminarRegalo(r.id)} className="text-slate-300 hover:text-rose-500"><Trash2 size={14} /></button>
                                     </div>
 
-                                    {/* Inputs Regalo */}
                                     <div className="grid grid-cols-12 gap-2">
                                         <div className="col-span-5 flex disabled:opacity-50">
                                             <input
@@ -406,21 +394,21 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                                 placeholder="0"
                                                 value={r.valorReferencia || ''}
                                                 onChange={(e) => updateRegalo(r.id, 'valorReferencia', parseFloat(e.target.value) || 0)}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-l pl-2 pr-1 py-1 text-xs outline-none"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-l pl-2 pr-1 py-1 outline-none focus:border-purple-300"
                                                 disabled={!r.activo}
                                             />
                                             <button
                                                 onClick={() => r.activo && updateRegalo(r.id, 'monedaValor', r.monedaValor === 'USD' ? 'DOP' : 'USD')}
-                                                className={`px-1 text-[8px] font-black border-y border-r rounded-r flex items-center justify-center min-w-[28px] ${r.monedaValor === 'USD' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}
+                                                className={`px-1 text-[8px] font-black border-y border-r rounded-r flex items-center justify-center min-w-[28px] transition-colors ${r.monedaValor === 'USD' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
                                             >
                                                 {r.monedaValor}
                                             </button>
                                         </div>
                                         <div className="col-span-4">
-                                            <input type="number" placeholder="Venta RD" value={r.precioVentaRD || ''} onChange={(e) => updateRegalo(r.id, 'precioVentaRD', parseFloat(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs outline-none text-center" disabled={!r.activo} />
+                                            <input type="number" placeholder="Venta RD" value={r.precioVentaRD || ''} onChange={(e) => updateRegalo(r.id, 'precioVentaRD', parseFloat(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 outline-none text-center focus:border-purple-300" disabled={!r.activo} />
                                         </div>
                                         <div className="col-span-3">
-                                            <input type="number" placeholder="Lb" value={r.pesoLibras || ''} onChange={(e) => updateRegalo(r.id, 'pesoLibras', parseFloat(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs outline-none text-center" disabled={!r.activo} />
+                                            <input type="number" placeholder="Lb" value={r.pesoLibras || ''} onChange={(e) => updateRegalo(r.id, 'pesoLibras', parseFloat(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 outline-none text-center focus:border-purple-300" disabled={!r.activo} />
                                         </div>
                                     </div>
                                 </div>
@@ -428,39 +416,61 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                         </div>
                     </div>
 
-                    {/* Alerta Aduanas */}
-                    {result.financial.exceeds200 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-3 shadow-sm animate-pulse">
-                            <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
-                            <div>
-                                <h4 className="text-xs font-bold text-yellow-800">¡Alerta Aduanas ($200+ USD)!</h4>
-                                <label className="flex items-center gap-2 mt-1 cursor-pointer">
-                                    <input type="checkbox" checked={aplicarArancelSiExcede} onChange={(e) => setAplicarArancelSiExcede(e.target.checked)} className="rounded text-yellow-600" />
-                                    <span className="text-xs text-yellow-700 font-medium">Aplicar {arancelRD}% Impuestos</span>
-                                </label>
-                            </div>
+                    {/* Resumen de Gastos (Detallado) */}
+                    <div className="bg-slate-100 rounded-xl border border-slate-200 p-3 space-y-2 text-xs">
+                        <div className="flex justify-between items-center text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 pb-1 mb-1">
+                            <span>Desglose de Costos</span>
+                            <span>Total</span>
                         </div>
-                    )}
+
+                        <div className="flex justify-between items-center">
+                            <span className="text-slate-600">Gasto Mercancia (USD)</span>
+                            <span className="font-mono font-bold text-slate-800">${result.financial.totalSpendUS}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                            <span className="text-slate-600">Gasto Mercancia (RD$)</span>
+                            <span className="font-mono font-bold text-slate-800">RD${result.financial.totalMercanciaRD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                            <span className="text-slate-600">Courier ({result.stats.totalWeight} lb)</span>
+                            <span className="font-mono font-bold text-slate-800">RD${result.financial.totalCourierRD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </div>
+
+                        {result.financial.exceeds200 && (aplicarArancelSiExcede ? (
+                            <div className="flex justify-between items-center text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+                                <span className="font-bold">+ Impuestos Aduana</span>
+                                <span className="font-mono font-bold">RD${result.financial.taxAmountRD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 px-2 py-1.5 rounded-lg border border-yellow-200 mt-1 cursor-pointer" onClick={() => setAplicarArancelSiExcede(!aplicarArancelSiExcede)}>
+                                <AlertTriangle size={14} />
+                                <span className="font-bold underline text-[10px]">Alerta Aduanas (Click para aplicar)</span>
+                            </div>
+                        ))}
+
+                        <div className="border-t border-slate-300 pt-1 mt-1 flex justify-between items-center">
+                            <span className="font-black text-slate-900 uppercase">Inversión Total Real</span>
+                            <span className="font-black text-slate-900 text-sm">RD${result.financial.inversionTotalRD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </div>
+                    </div>
+
                 </div>
 
-                {/* Footer Resumen Flotante Mobile-First */}
-                <div className="bg-white border-t border-slate-200 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-20 shrink-0 safe-area-bottom">
-
-                    {/* Fila Totalizadores */}
-                    <div className="flex justify-between items-end mb-2">
-                        <div>
-                            <div className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Inversión Total</div>
-                            <div className="text-lg font-black text-slate-800 leading-none">RD${result.financial.inversionTotalRD}</div>
-                            <div className="text-[9px] text-slate-400 mt-0.5 font-medium">Inv. US: ${result.financial.totalSpendUS}</div>
+                {/* Footer Flotante - ROI y Ganancia */}
+                <div className="bg-white border-t border-slate-200 p-3 z-20 shrink-0">
+                    <div className="flex justify-between items-center">
+                        <div className="flex flex-col">
+                            <div className="text-[10px] text-slate-400 font-bold uppercase">ROI Estimado</div>
+                            <div className={`text-lg font-black leading-none ${parseFloat(result.financial.roi) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                {result.financial.roi}%
+                            </div>
                         </div>
                         <div className="text-right">
-                            <div className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Ganancia Neta</div>
-                            <div className={`text-2xl font-black leading-none ${parseFloat(result.financial.gananciaNetaRD.replace(/,/g, '')) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                RD${result.financial.gananciaNetaRD}
-                            </div>
-                            <div className="flex justify-end gap-2 mt-1">
-                                <span className={`text-[10px] font-bold px-1.5 rounded ${parseFloat(result.financial.roi) >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>ROI {result.financial.roi}%</span>
-                                <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 rounded font-bold">🎁 {result.stats.giftEfficiency}x</span>
+                            <div className="text-[10px] text-slate-400 font-bold uppercase">Ganancia Neta</div>
+                            <div className={`text-2xl font-black leading-none ${parseFloat(result.financial.gananciaNetaRD) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                RD${result.financial.gananciaNetaRD.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </div>
                         </div>
                     </div>
