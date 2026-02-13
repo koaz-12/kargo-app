@@ -55,6 +55,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
     ]);
 
     const [aplicarArancelSiExcede, setAplicarArancelSiExcede] = useState<boolean>(false);
+    const [permitirExceso, setPermitirExceso] = useState<boolean>(false); // Por defecto NO calcular exceso (Strict First Order)
 
     // --- PERSISTENCIA ---
     useEffect(() => {
@@ -74,14 +75,15 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                 if (state.articulos) setArticulos(state.articulos);
                 if (state.regalos) setRegalos(state.regalos);
                 if (state.aplicarArancelSiExcede !== undefined) setAplicarArancelSiExcede(state.aplicarArancelSiExcede);
+                if (state.permitirExceso !== undefined) setPermitirExceso(state.permitirExceso);
             } catch (e) { console.error(e); }
         }
     }, []);
 
     useEffect(() => {
-        const state = { tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, monedaTarget, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede };
+        const state = { tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, monedaTarget, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede, permitirExceso };
         localStorage.setItem('resellerCalcState_v5_currencies', JSON.stringify(state));
-    }, [tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, monedaTarget, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede]);
+    }, [tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, monedaTarget, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede, permitirExceso]);
 
     // --- EFFECT: CAMBIO MASIVO DE MONEDA ---
     const cambiarMonedaGlobal = (nuevaMoneda: Moneda) => {
@@ -189,7 +191,11 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         if (totalBaseCostUS <= cost1) {
             currentCut = totalBaseCostUS * r1;
         } else {
-            currentCut = limit1 + (totalBaseCostUS - cost1) * r2;
+            if (permitirExceso) {
+                currentCut = limit1 + (totalBaseCostUS - cost1) * r2;
+            } else {
+                currentCut = limit1; // Cap estricto al límite del primer pedido
+            }
         }
         const remainingToCutUSD = Math.max(0, targetUSD - currentCut);
         const progressPercentCut = targetUSD > 0 ? (currentCut / targetUSD) * 100 : 0;
@@ -313,9 +319,12 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                 </div>
                                 <div>
                                     <label className="text-[9px] text-slate-400 font-black uppercase mb-1 block">Tasas (%)</label>
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-1 mb-1">
                                         <input type="number" value={rate1} onChange={(e) => setRate1(e.target.value)} className="w-1/2 bg-emerald-50 border border-emerald-100 rounded px-1 py-1.5 text-center font-bold text-emerald-700" title="Tasa 1" />
                                         <input type="number" value={rate2} onChange={(e) => setRate2(e.target.value)} className="w-1/2 bg-rose-50 border border-rose-100 rounded px-1 py-1.5 text-center font-bold text-rose-700" title="Tasa 2" />
+                                    </div>
+                                    <div onClick={() => setPermitirExceso(!permitirExceso)} className={`cursor-pointer text-[8px] font-bold uppercase py-0.5 px-1 rounded border text-center select-none ${permitirExceso ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                                        {permitirExceso ? 'Con Exceso' : 'Solo 1er Pedido'}
                                     </div>
                                 </div>
                             </div>
