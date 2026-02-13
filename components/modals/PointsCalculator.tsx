@@ -38,7 +38,10 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
     const [taxUSA, setTaxUSA] = useState<string>('7'); // 7%
     const [arancelRD, setArancelRD] = useState<string>('38'); // 38%
 
+    // Meta (Cut Price)
     const [targetCut, setTargetCut] = useState<string>('30.57');
+    const [monedaTarget, setMonedaTarget] = useState<Moneda>('USD'); // Default USD
+
     const [rate1, setRate1] = useState<string>('150');
     const [limitFirst, setLimitFirst] = useState<string>('18.00');
     const [rate2, setRate2] = useState<string>('5');
@@ -55,7 +58,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
 
     // --- PERSISTENCIA ---
     useEffect(() => {
-        const saved = localStorage.getItem('resellerCalcState_v4_centered');
+        const saved = localStorage.getItem('resellerCalcState_v5_currencies');
         if (saved) {
             try {
                 const state = JSON.parse(saved);
@@ -64,6 +67,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                 if (state.taxUSA) setTaxUSA(state.taxUSA);
                 if (state.arancelRD) setArancelRD(state.arancelRD);
                 if (state.targetCut) setTargetCut(state.targetCut);
+                if (state.monedaTarget) setMonedaTarget(state.monedaTarget);
                 if (state.rate1) setRate1(state.rate1);
                 if (state.limitFirst) setLimitFirst(state.limitFirst);
                 if (state.rate2) setRate2(state.rate2);
@@ -75,16 +79,28 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
     }, []);
 
     useEffect(() => {
-        const state = { tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede };
-        localStorage.setItem('resellerCalcState_v4_centered', JSON.stringify(state));
-    }, [tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede]);
+        const state = { tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, monedaTarget, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede };
+        localStorage.setItem('resellerCalcState_v5_currencies', JSON.stringify(state));
+    }, [tasaDolar, precioPorLibra, taxUSA, arancelRD, targetCut, monedaTarget, rate1, limitFirst, rate2, articulos, regalos, aplicarArancelSiExcede]);
 
-    // --- HELPERS ---
+    // --- EFFECT: CAMBIO MASIVO DE MONEDA ---
+    // Si el usuario cambia la moneda del Target Cut, preguntar si quiere cambiar todo
+    // Por simplicidad en UX móvil, lo haremos automático pero reversible individualmente.
+    const cambiarMonedaGlobal = (nuevaMoneda: Moneda) => {
+        setMonedaTarget(nuevaMoneda);
+
+        // Actualizar todos los artículos y regalos a la nueva moneda
+        setArticulos(articulos.map(a => ({ ...a, monedaCosto: nuevaMoneda })));
+        setRegalos(regalos.map(r => ({ ...r, monedaValor: nuevaMoneda })));
+    };
+
+    // --- HELPERS LISTAS ---
     const agregarArticulo = () => {
         setArticulos([...articulos, {
             id: Date.now().toString(),
             nombre: `Item ${articulos.length + 1}`,
-            costo: 0, monedaCosto: 'USD', envioUS: 0, aplicarTaxUS: false, pesoLibras: 0, precioVentaRD: 0
+            // Hereda la moneda global actual
+            costo: 0, monedaCosto: monedaTarget, envioUS: 0, aplicarTaxUS: false, pesoLibras: 0, precioVentaRD: 0
         }]);
     };
     const eliminarArticulo = (id: string) => { if (articulos.length > 1) setArticulos(articulos.filter(a => a.id !== id)); };
@@ -94,47 +110,60 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         setRegalos([...regalos, {
             id: Date.now().toString(),
             nombre: `Regalo ${regalos.length + 1}`,
-            valorReferencia: 0, monedaValor: 'USD', pesoLibras: 0, precioVentaRD: 0, activo: true
+            // Hereda la moneda global actual
+            valorReferencia: 0, monedaValor: monedaTarget, pesoLibras: 0, precioVentaRD: 0, activo: true
         }]);
     };
     const eliminarRegalo = (id: string) => { setRegalos(regalos.filter(r => r.id !== id)); };
     const updateRegalo = (id: string, field: keyof Regalo, value: any) => { setRegalos(regalos.map(r => r.id === id ? { ...r, [field]: value } : r)); };
 
-    // --- CÁLCULO ---
+    // --- CÁLCULO CORE ---
     const calcular = () => {
         const rate = parseFloat(tasaDolar) || 60.50;
         const priceLb = parseFloat(precioPorLibra) || 193;
         const taxUSAPercent = parseFloat(taxUSA) || 7;
         const taxRDPercent = parseFloat(arancelRD) || 38;
 
-        const target = parseFloat(targetCut) || 0;
-        const limit1 = parseFloat(limitFirst) || 0;
+        // 1. Reglas (Target Cut)
+        // Convertimos el Target Cut a USD siempre para los cálculos internos del juego
+        let rawTarget = parseFloat(targetCut) || 0;
+        const targetUSD = monedaTarget === 'USD' ? rawTarget : (rawTarget / rate);
+
+        const limit1 = parseFloat(limitFirst) || 0; // Se asume que estos límites de reglas son fijos en la lógica del juego (usualmente USD)
+        // Si el usuario quisiera que limitFirst también fuera dinámico con la moneda, habría que cambiarlo. 
+        // Por ahora asumimos que las reglas del juego (Tasas y Límites) son constantes del sistema en USD.
+
         const r1 = (parseFloat(rate1) || 150) / 100;
         const r2 = (parseFloat(rate2) || 5) / 100;
 
         const cost1 = r1 > 0 ? limit1 / r1 : 0;
-        const remainingTarget = target - limit1;
+        const remainingTarget = targetUSD - limit1;
         const cost2 = (remainingTarget > 0 && r2 > 0) ? remainingTarget / r2 : 0;
-        const requiredBudgetBase = cost1 + cost2;
+        const requiredBudgetBase = cost1 + cost2; // USD
 
+        // 2. Inventario
         let totalBaseCostUS = 0;
         let totalSpendConvertidoUS = 0;
         let totalWeightInv = 0;
         let totalSaleInvRD = 0;
 
         articulos.forEach(a => {
+            // Conversión a USD para cálculo interno
             let costoBaseEnUSD = a.monedaCosto === 'USD' ? a.costo : (a.costo / rate);
             totalBaseCostUS += costoBaseEnUSD;
 
+            // Costo Real en USD (Base + Tax + Envio)
             let itemCostUS = costoBaseEnUSD;
             if (a.aplicarTaxUS) itemCostUS *= (1 + (taxUSAPercent / 100));
-            itemCostUS += a.envioUS;
+            itemCostUS += a.envioUS; // El envío asumimos que siempre se ingresa en USD por ser courier? O debería tener moneda?
+            // Dejemos envío en USD por simplicidad, suele ser tarifado en USD.
 
             totalSpendConvertidoUS += itemCostUS;
             totalWeightInv += a.pesoLibras;
             totalSaleInvRD += a.precioVentaRD;
         });
 
+        // 3. Regalos (Solo activos)
         let totalWeightRewards = 0;
         let totalSaleRewardsRD = 0;
         let totalRefValueRewardsUS = 0;
@@ -148,6 +177,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
             }
         });
 
+        // 4. Aduanas & Totales
         const exceeds200 = totalSpendConvertidoUS > 200;
         let taxAmountRD = 0;
         if (exceeds200 && aplicarArancelSiExcede) {
@@ -165,14 +195,18 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         const roi = inversionTotalRD > 0 ? (gananciaNetaRD / inversionTotalRD) * 100 : 0;
         const giftEfficiency = totalSpendConvertidoUS > 0 ? totalRefValueRewardsUS / totalSpendConvertidoUS : 0;
 
-        const remainingToCut = requiredBudgetBase - totalBaseCostUS;
+        // Progreso (Todo en USD internamente)
+        const remainingToCutUSD = requiredBudgetBase - totalBaseCostUS;
         const progressPercent = requiredBudgetBase > 0 ? (totalBaseCostUS / requiredBudgetBase) * 100 : 0;
+
+        // Mostramos el "Faltan" en la moneda seleccionada por el usuario para coherencia visual
+        const remainingToCutDisplay = monedaTarget === 'USD' ? remainingToCutUSD : (remainingToCutUSD * rate);
 
         return {
             game: {
-                remainingToCut: remainingToCut.toFixed(2),
+                remainingToCut: remainingToCutDisplay.toFixed(2),
                 progressPercent: Math.min(progressPercent, 100),
-                isComplete: remainingToCut <= 0.01
+                isComplete: remainingToCutUSD <= 0.01
             },
             financial: {
                 totalSpendUS: totalSpendConvertidoUS.toFixed(2),
@@ -194,8 +228,6 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
 
     const result = calcular();
 
-    // CENTRADO REAL: alignItems center en overlay + margin-auto en modal content
-    // + max-height calculado para que no toque los bordes si no es necesario
     return (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-slate-50 w-full sm:max-w-md md:max-w-xl max-h-[95vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
@@ -206,7 +238,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                         <Calculator className="text-orange-500" size={20} />
                         <div>
                             <h2 className="text-sm font-bold text-white leading-none">Calculadora PRO</h2>
-                            <span className="text-[10px] text-slate-400">Revendedor v4.0</span>
+                            <span className="text-[10px] text-slate-400">Revendedor v4.2</span>
                         </div>
                     </div>
                     <button onClick={onClose} className="bg-slate-800 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
@@ -241,15 +273,24 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                             <h3 className="font-bold text-orange-900 flex items-center gap-1.5">
                                 <Target size={14} className="text-orange-600" /> Meta (Cut Price)
                             </h3>
-                            <div className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded">USD</div>
+                            <div className="flex gap-1.5">
+                                <button
+                                    onClick={() => cambiarMonedaGlobal('USD')}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${monedaTarget === 'USD' ? 'bg-orange-500 text-white shadow-sm' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
+                                >USD</button>
+                                <button
+                                    onClick={() => cambiarMonedaGlobal('DOP')}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${monedaTarget === 'DOP' ? 'bg-orange-500 text-white shadow-sm' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
+                                >DOP</button>
+                            </div>
                         </div>
                         <div className="p-3">
                             <div className="grid grid-cols-2 gap-3 mb-3">
                                 <div className="col-span-2">
-                                    <label className="text-[9px] text-orange-800/70 font-black uppercase mb-1 block">Falta Recortar</label>
+                                    <label className="text-[9px] text-orange-800/70 font-black uppercase mb-1 block">Falta Recortar ({monedaTarget})</label>
                                     <div className="relative">
                                         <input type="number" value={targetCut} onChange={(e) => setTargetCut(e.target.value)} className="w-full border-2 border-orange-100 bg-orange-50/30 rounded-lg pl-8 pr-3 py-2 text-lg font-black text-orange-600 outline-none focus:border-orange-300 transition-colors" />
-                                        <DollarSign className="absolute left-2.5 top-3 text-orange-300" size={16} />
+                                        <div className="absolute left-2.5 top-3 text-orange-300 font-bold text-sm">{monedaTarget === 'USD' ? '$' : 'RD'}</div>
                                     </div>
                                 </div>
                                 <div>
@@ -269,7 +310,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                 <div className="flex justify-between text-[10px] mb-1 font-bold">
                                     <span className="text-slate-500">Progreso Carrito Base</span>
                                     <span className={result.game.isComplete ? 'text-emerald-600' : 'text-rose-500'}>
-                                        {result.game.isComplete ? 'COMPLETO' : `Faltan $${result.game.remainingToCut}`}
+                                        {result.game.isComplete ? 'COMPLETO' : `Faltan ${monedaTarget === 'USD' ? '$' : 'RD$'}${result.game.remainingToCut}`}
                                     </span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-2">
