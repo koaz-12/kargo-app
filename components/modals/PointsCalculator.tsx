@@ -55,7 +55,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
     ]);
 
     const [aplicarArancelSiExcede, setAplicarArancelSiExcede] = useState<boolean>(false);
-    const [permitirExceso, setPermitirExceso] = useState<boolean>(false); // Por defecto NO calcular exceso (Strict First Order)
+    const [permitirExceso, setPermitirExceso] = useState<boolean>(true); // Por defecto SÍ calcular con ambas tasas
 
     // --- PERSISTENCIA ---
     useEffect(() => {
