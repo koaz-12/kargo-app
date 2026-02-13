@@ -127,10 +127,11 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         const r2 = (parseFloat(rate2) || 5) / 100;
 
         const cost1 = r1 > 0 ? limit1 / r1 : 0;
-        // Calculation of requiredBudgetBase is still useful for reference, but Progress will be based on Cut Amount
+
+        // --- LOGICA DOBLE: CUT & BUDGET ---
         const remainingTarget = targetUSD - limit1;
         const cost2 = (remainingTarget > 0 && r2 > 0) ? remainingTarget / r2 : 0;
-        // const requiredBudgetBase = cost1 + cost2; 
+        const requiredBudgetBase = cost1 + cost2; // Presupuesto Necesario Estimado para llegar al Cut
 
         // 2. Inventario
         let totalBaseCostUS = 0;
@@ -183,30 +184,43 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         const roi = inversionTotalRD > 0 ? (gananciaNetaRD / inversionTotalRD) * 100 : 0;
         const giftEfficiency = totalSpendConvertidoUS > 0 ? totalRefValueRewardsUS / totalSpendConvertidoUS : 0;
 
-        // Progreso (Basado en Recorte Obtenido vs Target, no en Gasto)
-        // Lógica Cut Price:
-        // Si Gasto <= cost1 -> Cut = Gasto * r1
-        // Si Gasto > cost1 -> Cut = limit1 + (Gasto - cost1) * r2
+        // --- PROGRESO 1: CUT PRICE (Meta Principal) ---
         let currentCut = 0;
         if (totalBaseCostUS <= cost1) {
             currentCut = totalBaseCostUS * r1;
         } else {
             currentCut = limit1 + (totalBaseCostUS - cost1) * r2;
         }
-
         const remainingToCutUSD = Math.max(0, targetUSD - currentCut);
-        const progressPercent = targetUSD > 0 ? (currentCut / targetUSD) * 100 : 0;
+        const progressPercentCut = targetUSD > 0 ? (currentCut / targetUSD) * 100 : 0;
 
-        // Visualización
+        // --- PROGRESO 2: BUDGET (Gasto necesario) ---
+        const remainingBudgetUSD = Math.max(0, requiredBudgetBase - totalBaseCostUS);
+        const progressPercentSpend = requiredBudgetBase > 0 ? (totalBaseCostUS / requiredBudgetBase) * 100 : 0;
+
+
+        // Variables de Visualización (Moneda Target)
         const remainingToCutDisplay = monedaTarget === 'USD' ? remainingToCutUSD : (remainingToCutUSD * rate);
         const currentCutDisplay = monedaTarget === 'USD' ? currentCut : (currentCut * rate);
 
+        const remainingBudgetDisplay = monedaTarget === 'USD' ? remainingBudgetUSD : (remainingBudgetUSD * rate);
+        const currentSpendDisplay = monedaTarget === 'USD' ? totalBaseCostUS : (totalBaseCostUS * rate);
+        const requiredBudgetDisplay = monedaTarget === 'USD' ? requiredBudgetBase : (requiredBudgetBase * rate);
+
+
         return {
             game: {
+                // Cut Stats
                 remainingToCut: remainingToCutDisplay.toFixed(2),
                 currentCut: currentCutDisplay.toFixed(2),
-                progressPercent: Math.min(progressPercent, 100),
-                isComplete: remainingToCutUSD <= 0.01
+                progressPercent: Math.min(progressPercentCut, 100),
+                isComplete: remainingToCutUSD <= 0.01,
+
+                // Budget Stats (New)
+                remainingBudget: remainingBudgetDisplay.toFixed(2),
+                currentSpend: currentSpendDisplay.toFixed(2),
+                requiredBudget: requiredBudgetDisplay.toFixed(2),
+                progressPercentSpend: Math.min(progressPercentSpend, 100)
             },
             financial: {
                 totalSpendUS: totalSpendConvertidoUS.toFixed(2),
@@ -238,7 +252,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                         <Calculator className="text-orange-500" size={20} />
                         <div>
                             <h2 className="text-sm font-bold text-white leading-none">Calculadora PRO</h2>
-                            <span className="text-[10px] text-slate-400">Revendedor v4.3</span>
+                            <span className="text-[10px] text-slate-400">Revendedor v4.4</span>
                         </div>
                     </div>
                     <button onClick={onClose} className="bg-slate-800 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
@@ -306,22 +320,40 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                 </div>
                             </div>
 
-                            <div className="mt-3">
+                            {/* BLOCK 1: CUT PROGRESS (The Main Goal) */}
+                            <div className="mt-4">
                                 <div className="flex justify-between items-end mb-1">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tu Progreso (Meta)</span>
+                                    <span className="text-[10px] font-bold text-orange-900/70 uppercase tracking-wider">Meta Recorte (Principal)</span>
                                     <div className={`text-sm font-black ${result.game.isComplete ? 'text-emerald-600' : 'text-orange-600'}`}>
-                                        {result.game.isComplete ? '¡META ALCANZADA! 🎉' : `Te faltan ${monedaTarget === 'USD' ? '$' : 'RD$'}${result.game.remainingToCut}`}
+                                        {result.game.isComplete ? '¡LOGRADO! 🎉' : `Faltan ${monedaTarget === 'USD' ? '$' : 'RD$'}${result.game.remainingToCut}`}
                                     </div>
                                 </div>
-                                <div className="w-full bg-slate-100 rounded-full h-3 mb-1 shadow-inner">
-                                    <div className={`h-full rounded-full transition-all duration-500 shadow-sm ${result.game.isComplete ? 'bg-emerald-500' : 'bg-gradient-to-r from-orange-400 to-orange-500'}`} style={{ width: `${result.game.progressPercent}%` }} />
+                                <div className="w-full bg-orange-100 rounded-full h-3 mb-1 shadow-inner">
+                                    <div className={`h-full rounded-full transition-all duration-500 shadow-sm ${result.game.isComplete ? 'bg-emerald-500' : 'bg-gradient-to-r from-orange-500 to-orange-600'}`} style={{ width: `${result.game.progressPercent}%` }} />
                                 </div>
                                 <div className="flex justify-between text-[9px] font-bold text-slate-400">
                                     <span>0%</span>
-                                    <span>Has recortado {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.currentCut}</span>
+                                    <span>Recortado: {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.currentCut}</span>
                                     <span>100%</span>
                                 </div>
                             </div>
+
+                            {/* BLOCK 2: BUDGET PROGRESS (How much to spend to get there) */}
+                            <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+                                <div className="flex justify-between items-end mb-1">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Presupuesto (Costo Mercancía)</span>
+                                    <div className="text-xs font-bold text-slate-600">
+                                        {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.currentSpend} / {result.game.requiredBudget}
+                                    </div>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-2 mb-1">
+                                    <div className="h-full rounded-full bg-blue-400 transition-all duration-500" style={{ width: `${result.game.progressPercentSpend}%` }} />
+                                </div>
+                                <div className="text-right text-[9px] font-bold text-slate-400">
+                                    Falta Gastar: {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.remainingBudget}
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
