@@ -226,7 +226,8 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                 remainingBudget: remainingBudgetDisplay.toFixed(2),
                 currentSpend: currentSpendDisplay.toFixed(2),
                 requiredBudget: requiredBudgetDisplay.toFixed(2),
-                progressPercentSpend: Math.min(progressPercentSpend, 100)
+                progressPercentSpend: Math.min(progressPercentSpend, 100),
+                isCapped: !permitirExceso && totalBaseCostUS > cost1
             },
             financial: {
                 totalSpendUS: totalSpendConvertidoUS.toFixed(2),
