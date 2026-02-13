@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Package, Search, Calculator } from 'lucide-react';
+import { Settings, Package, Search, Calculator, Coins } from 'lucide-react';
 import { ShipmentTracker } from './modals/ShipmentTracker';
 import { PointsCalculator } from './modals/PointsCalculator';
+import { CoinsCalculator } from './modals/CoinsCalculator';
 
 export const UtilitiesMenu = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [showShipmentTracker, setShowShipmentTracker] = useState(false);
     const [showPointsCalc, setShowPointsCalc] = useState(false);
+    const [showCoinsCalc, setShowCoinsCalc] = useState(false);
 
     return (
         <>
@@ -69,6 +71,22 @@ export const UtilitiesMenu = () => {
 
                                 <button
                                     onClick={() => {
+                                        setShowCoinsCalc(true);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full px-4 py-3 hover:bg-slate-50 transition-colors flex items-center gap-3 text-left"
+                                >
+                                    <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                        <Coins size={18} className="text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800">Calculadora de Monedas</p>
+                                        <p className="text-xs text-slate-500">Juego de Coins</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => {
                                         setIsOpen(false);
                                         // TODO: Implementar búsqueda global
                                     }}
@@ -94,6 +112,9 @@ export const UtilitiesMenu = () => {
             )}
             {showPointsCalc && (
                 <PointsCalculator onClose={() => setShowPointsCalc(false)} />
+            )}
+            {showCoinsCalc && (
+                <CoinsCalculator onClose={() => setShowCoinsCalc(false)} />
             )}
         </>
     );
