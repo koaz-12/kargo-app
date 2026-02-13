@@ -306,15 +306,20 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                 </div>
                             </div>
 
-                            <div className="">
-                                <div className="flex justify-between text-[10px] mb-1 font-bold">
-                                    <span className="text-slate-500">Progreso Carrito Base</span>
-                                    <span className={result.game.isComplete ? 'text-emerald-600' : 'text-rose-500'}>
-                                        {result.game.isComplete ? 'COMPLETO' : `Faltan ${monedaTarget === 'USD' ? '$' : 'RD$'}${result.game.remainingToCut}`}
-                                    </span>
+                            <div className="mt-3">
+                                <div className="flex justify-between items-end mb-1">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tu Progreso</span>
+                                    <div className={`text-sm font-black ${result.game.isComplete ? 'text-emerald-600' : 'text-orange-600'}`}>
+                                        {result.game.isComplete ? '¡META ALCANZADA! 🎉' : `Te faltan ${monedaTarget === 'USD' ? '$' : 'RD$'}${result.game.remainingToCut}`}
+                                    </div>
                                 </div>
-                                <div className="w-full bg-slate-100 rounded-full h-2">
-                                    <div className={`h-full rounded-full transition-all duration-500 ${result.game.isComplete ? 'bg-emerald-500' : 'bg-orange-500'}`} style={{ width: `${result.game.progressPercent}%` }} />
+                                <div className="w-full bg-slate-100 rounded-full h-3 mb-1 shadow-inner">
+                                    <div className={`h-full rounded-full transition-all duration-500 shadow-sm ${result.game.isComplete ? 'bg-emerald-500' : 'bg-gradient-to-r from-orange-400 to-orange-500'}`} style={{ width: `${result.game.progressPercent}%` }} />
+                                </div>
+                                <div className="flex justify-between text-[9px] font-bold text-slate-400">
+                                    <span>0%</span>
+                                    <span>Has recortado {monedaTarget === 'USD' ? '$' : 'RD$'}{monedaTarget === 'USD' ? (parseFloat(targetCut) - parseFloat(result.game.remainingToCut)).toFixed(2) : (parseFloat(targetCut) - parseFloat(result.game.remainingToCut)).toFixed(2)}</span>
+                                    <span>100%</span>
                                 </div>
                             </div>
                         </div>
