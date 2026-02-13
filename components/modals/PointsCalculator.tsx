@@ -343,7 +343,13 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                 <div className="flex justify-between text-[9px] font-bold text-slate-400">
                                     <span>0%</span>
                                     <span>Recortado: {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.currentCut}</span>
-                                    <span>100%</span>
+                                    <span>
+                                        {!permitirExceso && totalBaseCostUS > cost1
+                                            ? <span className="text-rose-500 animate-pulse font-black flex items-center gap-1 cursor-pointer" onClick={() => setPermitirExceso(true)}>
+                                                <AlertTriangle size={10} /> Límite 1er Pedido (Activar Exceso?)
+                                            </span>
+                                            : '100%'}
+                                    </span>
                                 </div>
                             </div>
 
