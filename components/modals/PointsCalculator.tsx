@@ -343,14 +343,14 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                 <div className="flex justify-between items-end mb-1">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Presupuesto (Costo Mercancía)</span>
                                     <div className="text-xs font-bold text-slate-600">
-                                        {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.currentSpend} / {result.game.requiredBudget}
+                                        Falta Gastar: {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.remainingBudget}
                                     </div>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-2 mb-1">
-                                    <div className="h-full rounded-full bg-blue-400 transition-all duration-500" style={{ width: `${result.game.progressPercentSpend}%` }} />
+                                    <div className={`h-full rounded-full transition-all duration-500 ${parseFloat(result.game.remainingBudget) <= 0 ? 'bg-emerald-400' : 'bg-blue-400'}`} style={{ width: `${result.game.progressPercentSpend}%` }} />
                                 </div>
                                 <div className="text-right text-[9px] font-bold text-slate-400">
-                                    Falta Gastar: {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.remainingBudget}
+                                    {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.currentSpend} / {result.game.requiredBudget}
                                 </div>
                             </div>
 
