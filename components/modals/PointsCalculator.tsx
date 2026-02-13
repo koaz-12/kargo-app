@@ -55,7 +55,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
     ]);
 
     const [aplicarArancelSiExcede, setAplicarArancelSiExcede] = useState<boolean>(false);
-    const [permitirExceso, setPermitirExceso] = useState<boolean>(true); // Por defecto SÍ calcular con ambas tasas
+    const [permitirExceso, setPermitirExceso] = useState<boolean>(false); // Default: Solo 1er Pedido (cada artículo = pedido separado)
 
     // --- PERSISTENCIA ---
     useEffect(() => {
@@ -187,12 +187,27 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         const giftEfficiency = totalSpendConvertidoUS > 0 ? totalRefValueRewardsUS / totalSpendConvertidoUS : 0;
 
         // --- PROGRESO 1: CUT PRICE (Meta Principal) ---
+        // Cada artículo = un pedido separado en el juego
         let currentCut = 0;
-        if (totalBaseCostUS <= cost1) {
-            currentCut = totalBaseCostUS * r1;
+        if (!permitirExceso) {
+            // MODO "Solo 1er Pedido": Artículo 1 usa tasa1 (topado en limit1), los demás usan tasa2
+            articulos.forEach((a, index) => {
+                const costoUS = a.monedaCosto === 'USD' ? a.costo : (a.costo / rate);
+                if (index === 0) {
+                    // Primer pedido: tasa 1, pero topado en limit1
+                    currentCut += Math.min(costoUS * r1, limit1);
+                } else {
+                    // Pedidos siguientes: tasa 2
+                    currentCut += costoUS * r2;
+                }
+            });
         } else {
-            // SIEMPRE usa ambas tasas: primer pedido topado + exceso con tasa 2
-            currentCut = limit1 + (totalBaseCostUS - cost1) * r2;
+            // MODO "Con Exceso": Todo junto, sin separar por pedido
+            if (totalBaseCostUS <= cost1) {
+                currentCut = totalBaseCostUS * r1;
+            } else {
+                currentCut = limit1 + (totalBaseCostUS - cost1) * r2;
+            }
         }
         const remainingToCutUSD = Math.max(0, targetUSD - currentCut);
         const progressPercentCut = targetUSD > 0 ? (currentCut / targetUSD) * 100 : 0;
