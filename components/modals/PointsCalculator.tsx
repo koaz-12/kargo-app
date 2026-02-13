@@ -345,7 +345,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                                     <span>0%</span>
                                     <span>Recortado: {monedaTarget === 'USD' ? '$' : 'RD$'}{result.game.currentCut}</span>
                                     <span>
-                                        {!permitirExceso && totalBaseCostUS > cost1
+                                        {result.game.isCapped
                                             ? <span className="text-rose-500 animate-pulse font-black flex items-center gap-1 cursor-pointer" onClick={() => setPermitirExceso(true)}>
                                                 <AlertTriangle size={10} /> Límite 1er Pedido (Activar Exceso?)
                                             </span>
