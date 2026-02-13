@@ -191,11 +191,8 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
         if (totalBaseCostUS <= cost1) {
             currentCut = totalBaseCostUS * r1;
         } else {
-            if (permitirExceso) {
-                currentCut = limit1 + (totalBaseCostUS - cost1) * r2;
-            } else {
-                currentCut = limit1; // Cap estricto al límite del primer pedido
-            }
+            // SIEMPRE usa ambas tasas: primer pedido topado + exceso con tasa 2
+            currentCut = limit1 + (totalBaseCostUS - cost1) * r2;
         }
         const remainingToCutUSD = Math.max(0, targetUSD - currentCut);
         const progressPercentCut = targetUSD > 0 ? (currentCut / targetUSD) * 100 : 0;
@@ -227,7 +224,7 @@ export const PointsCalculator: React.FC<PointsCalculatorProps> = ({ onClose }) =
                 currentSpend: currentSpendDisplay.toFixed(2),
                 requiredBudget: requiredBudgetDisplay.toFixed(2),
                 progressPercentSpend: Math.min(progressPercentSpend, 100),
-                isCapped: !permitirExceso && totalBaseCostUS > cost1
+                isCapped: totalBaseCostUS > cost1 && !permitirExceso // Solo para mostrar advertencia visual
             },
             financial: {
                 totalSpendUS: totalSpendConvertidoUS.toFixed(2),
