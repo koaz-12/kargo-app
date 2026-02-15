@@ -22,6 +22,7 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
     // Form state
     const [trackingNumber, setTrackingNumber] = useState('');
+    const [storeTracking, setStoreTracking] = useState('');
     const [courier, setCourier] = useState('Pintopack');
     const [weightKg, setWeightKg] = useState('');
     const [weightLb, setWeightLb] = useState('');
@@ -30,7 +31,7 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
     // Pagination for trackings list
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 8; // Aumentado para ver más de un vistazo
 
     // Load courier presets and trackings
     useEffect(() => {
@@ -130,6 +131,7 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
             const { error } = await supabase.from('shipment_tracking').insert({
                 user_id: user.id,
                 tracking_number: trackingNumber.trim(),
+                store_tracking: storeTracking.trim() || null,
                 courier: courier.trim(),
                 weight_kg: weightKg ? parseFloat(weightKg) : null,
                 weight_lb: weightLb ? parseFloat(weightLb) : null,
@@ -144,7 +146,8 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
             // Reset form
             setTrackingNumber('');
-            setCourier('Pintopack');
+            setStoreTracking('');
+            setCourier(defaultCourier);
             setWeightKg('');
             setWeightLb('');
             setNotes('');
@@ -189,7 +192,7 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-            <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header - Optimized for Mobile */}
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
                     <div className="flex items-center gap-2">
@@ -206,19 +209,19 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
                 <div className="flex-1 overflow-y-auto px-4 py-3">
                     {/* Form - Mobile Optimized */}
-                    <form onSubmit={handleSubmit} className="space-y-3 mb-4">
+                    <form onSubmit={handleSubmit} className="space-y-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
                         {/* Tracking Type Selector */}
                         <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
+                            <label className="text-xs font-bold text-slate-600 block mb-1.5 uppercase tracking-wider">
                                 Tipo de Envío
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     type="button"
                                     onClick={() => setTrackingType('BUSINESS')}
-                                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-sm transition-all ${trackingType === 'BUSINESS'
+                                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-bold text-sm transition-all ${trackingType === 'BUSINESS'
                                         ? 'bg-blue-600 text-white shadow-md'
-                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                        : 'bg-white text-slate-600 border border-slate-200'
                                         }`}
                                 >
                                     <Briefcase size={16} />
@@ -227,9 +230,9 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                                 <button
                                     type="button"
                                     onClick={() => setTrackingType('PERSONAL')}
-                                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-sm transition-all ${trackingType === 'PERSONAL'
+                                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-bold text-sm transition-all ${trackingType === 'PERSONAL'
                                         ? 'bg-emerald-600 text-white shadow-md'
-                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                        : 'bg-white text-slate-600 border border-slate-200'
                                         }`}
                                 >
                                     <User size={16} />
@@ -238,18 +241,32 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                             </div>
                         </div>
 
-                        {/* Tracking Number with Auto-Detection */}
-                        <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
-                                Número de Tracking *
-                            </label>
-                            <input
-                                type="text"
-                                value={trackingNumber}
-                                onChange={(e) => handleTrackingNumberChange(e.target.value)}
-                                className="w-full px-3 py-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                placeholder="PP-12345 o TEMU-DO-67890"
-                            />
+                        {/* Tracking Numbers */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-xs font-bold text-slate-600 block mb-1 uppercase tracking-wider">
+                                    Tracking Courier RD *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={trackingNumber}
+                                    onChange={(e) => handleTrackingNumberChange(e.target.value)}
+                                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="PP-12345 o TEMU-DO..."
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-600 block mb-1 uppercase tracking-wider">
+                                    Tracking Tienda / USA
+                                </label>
+                                <input
+                                    type="text"
+                                    value={storeTracking}
+                                    onChange={(e) => setStoreTracking(e.target.value)}
+                                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="1Z999... o TBA..."
+                                />
+                            </div>
                         </div>
 
                         {/* Courier Selector */}
@@ -359,12 +376,19 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                                                     <span className="text-sm font-bold text-slate-800 truncate">
                                                         {tracking.tracking_number}
                                                     </span>
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${tracking.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-700' :
+                                                    {tracking.store_tracking && (
+                                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
+                                                            USA: {tracking.store_tracking}
+                                                        </span>
+                                                    )}
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${tracking.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-700' :
                                                         tracking.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-700' :
                                                             tracking.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
                                                                 'bg-slate-200 text-slate-600'
                                                         }`}>
-                                                        {tracking.status}
+                                                        {tracking.status === 'PENDING' ? 'Pendiente' :
+                                                            tracking.status === 'IN_TRANSIT' ? 'En Tránsito' :
+                                                                tracking.status === 'DELIVERED' ? 'Recibido' : 'Cancelado'}
                                                     </span>
                                                     <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${tracking.tracking_type === 'BUSINESS'
                                                         ? 'bg-blue-50 text-blue-700'
@@ -373,11 +397,17 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                                                         {tracking.tracking_type === 'BUSINESS' ? '💼' : '👤'}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-slate-600">
-                                                    {tracking.courier} {tracking.weight_kg && `• ${tracking.weight_kg} kg`}
-                                                </p>
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                                                    <span className="font-bold text-slate-700">{tracking.courier}</span>
+                                                    {tracking.weight_lb && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="text-blue-600 bg-blue-50 px-1 rounded">{tracking.weight_lb} lbs</span>
+                                                        </>
+                                                    )}
+                                                </div>
                                                 {tracking.notes && (
-                                                    <p className="text-xs text-slate-500 mt-1 line-clamp-1">{tracking.notes}</p>
+                                                    <p className="text-xs text-slate-500 mt-1 line-clamp-1 italic">{tracking.notes}</p>
                                                 )}
                                             </div>
                                             <button
