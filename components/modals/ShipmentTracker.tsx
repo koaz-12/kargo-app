@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 import type { ShipmentTracking } from '../../types/shipment';
 import { detectCourier, COURIER_OPTIONS } from '../../utils/courierDetection';
+import { BarcodeScanner } from '../ui/BarcodeScanner';
 
 interface ShipmentTrackerProps {
     onClose: () => void;
@@ -15,6 +16,10 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
     const [trackings, setTrackings] = useState<ShipmentTracking[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    // Scanner State
+    const [isScanning, setIsScanning] = useState(false);
+    const [targetScan, setTargetScan] = useState<'MAIN' | 'STORE'>('MAIN');
 
     // Courier Presets
     const [courierOptions, setCourierOptions] = useState<string[]>(COURIER_OPTIONS);
@@ -190,6 +195,15 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
         }
     };
 
+    const handleScan = (code: string) => {
+        if (targetScan === 'MAIN') {
+            handleTrackingNumberChange(code);
+        } else {
+            setStoreTracking(code);
+        }
+        setIsScanning(false);
+    };
+
     const handleKgChange = (value: string) => {
         setWeightKg(value);
         if (value) {
@@ -330,10 +344,6 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
     // Pagination
     const paginatedTrackings = useMemo(() => {
-        // Reset to page 1 if search changes (handled in useEffect ideally or just render logic)
-        // Since we are memoizing, if filteredTrackings changes significantly, we might want to ensure currentPage is valid.
-        // But for simplicity, let's just slice. We'll add a helper effect for page reset if needed, or rely on user navigating back.
-        // Better: Reset page when search term changes.
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
         return filteredTrackings.slice(start, start + ITEMS_PER_PAGE);
     }, [filteredTrackings, currentPage]);
@@ -347,6 +357,12 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+            {isScanning && (
+                <BarcodeScanner
+                    onScan={handleScan}
+                    onClose={() => setIsScanning(false)}
+                />
+            )}
             <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header - Optimized for Mobile */}
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
@@ -408,28 +424,46 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                         {/* Tracking Numbers */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xs font-bold text-slate-600 block mb-1 uppercase tracking-wider">
+                                <label className="text-xs font-bold text-slate-600 block mb-1 uppercase tracking-wider flex justify-between">
                                     Tracking Courier RD *
+                                    <button
+                                        type="button"
+                                        onClick={() => { setTargetScan('MAIN'); setIsScanning(true); }}
+                                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-[10px]"
+                                    >
+                                        📷 Escanear
+                                    </button>
                                 </label>
-                                <input
-                                    type="text"
-                                    value={trackingNumber}
-                                    onChange={(e) => handleTrackingNumberChange(e.target.value)}
-                                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    placeholder="PP-12345 o TEMU-DO..."
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={trackingNumber}
+                                        onChange={(e) => handleTrackingNumberChange(e.target.value)}
+                                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-8"
+                                        placeholder="PP-12345 o TEMU-DO..."
+                                    />
+                                </div>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-600 block mb-1 uppercase tracking-wider">
+                                <label className="text-xs font-bold text-slate-600 block mb-1 uppercase tracking-wider flex justify-between">
                                     Tracking Tienda / USA
+                                    <button
+                                        type="button"
+                                        onClick={() => { setTargetScan('STORE'); setIsScanning(true); }}
+                                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-[10px]"
+                                    >
+                                        📷 Escanear
+                                    </button>
                                 </label>
-                                <input
-                                    type="text"
-                                    value={storeTracking}
-                                    onChange={(e) => setStoreTracking(e.target.value)}
-                                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    placeholder="1Z999... o TBA..."
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={storeTracking}
+                                        onChange={(e) => setStoreTracking(e.target.value)}
+                                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-8"
+                                        placeholder="1Z999... o TBA..."
+                                    />
+                                </div>
                             </div>
                         </div>
 
