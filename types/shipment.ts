@@ -11,4 +11,6 @@ export interface ShipmentTracking {
     tracking_type: 'PERSONAL' | 'BUSINESS';
     created_at: string;
     updated_at: string;
+    associated_products?: { id: string, name: string }[];
+    is_from_inventory?: boolean;
 }

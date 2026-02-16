@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { X, Package, Loader2, Trash2, Briefcase, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Package, Loader2, Trash2, Briefcase, User, ChevronLeft, ChevronRight, Copy, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 import type { ShipmentTracking } from '../../types/shipment';
@@ -28,6 +28,9 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
     const [weightLb, setWeightLb] = useState('');
     const [notes, setNotes] = useState('');
     const [trackingType, setTrackingType] = useState<'PERSONAL' | 'BUSINESS'>('BUSINESS');
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState<'ALL' | 'BUSINESS' | 'PERSONAL'>('ALL');
 
     // Pagination for trackings list
     const [currentPage, setCurrentPage] = useState(1);
@@ -65,15 +68,107 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
         }
     };
 
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast.success('Copiado al portapapeles');
+    };
+
     const loadTrackings = async () => {
         try {
-            const { data, error } = await supabase
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // 1. Fetch Manual Trackings
+            const { data: manualData, error: manualError } = await supabase
                 .from('shipment_tracking')
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setTrackings(data || []);
+            if (manualError) throw manualError;
+
+            // 2. Fetch Products with Tracking Numbers
+            const { data: rawProducts, error: productsError } = await supabase
+                .from('products')
+                .select('id, name, tracking_number, courier_tracking, status, created_at')
+                .order('created_at', { ascending: false });
+
+            if (productsError) throw productsError;
+
+            // Filter client-side to avoid complex PostgREST syntax errors with nulls/empty strings
+            const productsData = (rawProducts || []).filter(p =>
+                (p.tracking_number && p.tracking_number.trim().length > 0) ||
+                (p.courier_tracking && p.courier_tracking.trim().length > 0)
+            );
+
+            // 3. Create "Virtual" Trackings (Grouped by Tracking Number)
+            const manualTrackingNums = new Set(manualData?.map(t => t.tracking_number) || []);
+            const manualStoreNums = new Set(manualData?.map(t => t.store_tracking) || []);
+            const virtualGroups = new Map<string, ShipmentTracking>();
+
+            productsData.forEach(p => {
+                const trackingNum = p.courier_tracking || p.tracking_number;
+                if (!trackingNum) return;
+
+                // Skip if already exists as a manual tracking
+                const hasManualTracking = p.courier_tracking && manualTrackingNums.has(p.courier_tracking);
+                const hasManualStore = p.tracking_number && manualStoreNums.has(p.tracking_number);
+
+                if (hasManualTracking || hasManualStore) return;
+
+                // Group by the tracking number
+                if (!virtualGroups.has(trackingNum)) {
+                    virtualGroups.set(trackingNum, {
+                        id: `prod-group-${trackingNum}`, // Unique ID based on tracking
+                        user_id: user.id,
+                        tracking_number: trackingNum,
+                        store_tracking: p.courier_tracking ? p.tracking_number : undefined,
+                        courier: p.courier_tracking ? detectCourier(p.courier_tracking) : 'Tienda',
+                        weight_kg: undefined,
+                        weight_lb: undefined,
+                        notes: 'Agrupado desde Inventario',
+                        status: p.status === 'RECEIVED' ? 'DELIVERED' :
+                            p.status === 'SOLD' ? 'DELIVERED' : 'PENDING',
+                        tracking_type: 'BUSINESS',
+                        created_at: p.created_at,
+                        updated_at: p.created_at,
+                        associated_products: [],
+                        is_from_inventory: true
+                    });
+                }
+
+                // Add product to the group's associated list
+                const group = virtualGroups.get(trackingNum)!;
+                group.associated_products?.push({ id: p.id, name: p.name });
+
+                // Update status if any item is pending, group is pending (conservative approach) or use latest
+                // Here we keep the first one found or logic can be improved. 
+                // Let's assume if one is pending, the package is pending.
+                if (p.status !== 'RECEIVED' && p.status !== 'SOLD' && group.status === 'DELIVERED') {
+                    group.status = 'PENDING';
+                }
+            });
+
+            const virtualTrackings = Array.from(virtualGroups.values());
+
+            // 4. Enrich Manual Trackings with Associated Products
+            const manualWithProducts: ShipmentTracking[] = (manualData || []).map(tracking => {
+                const associated = productsData.filter(p =>
+                    (p.courier_tracking === tracking.tracking_number && tracking.tracking_number) ||
+                    (p.tracking_number === tracking.store_tracking && tracking.store_tracking)
+                ).map(p => ({ id: p.id, name: p.name }));
+
+                return {
+                    ...tracking,
+                    associated_products: associated
+                };
+            });
+
+            // 5. Merge and Sort
+            const allTrackings = [...manualWithProducts, ...virtualTrackings].sort((a, b) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+
+            setTrackings(allTrackings);
         } catch (error) {
             console.error('Error loading trackings:', error);
             toast.error('Error al cargar trackings');
@@ -115,20 +210,41 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
         }
     };
 
+    const resetForm = () => {
+        setTrackingNumber('');
+        setStoreTracking('');
+        setCourier(defaultCourier);
+        setWeightKg('');
+        setWeightLb('');
+        setNotes('');
+        setTrackingType('BUSINESS'); // Default
+        setEditingId(null);
+    };
+
+    const handleEdit = (tracking: ShipmentTracking) => {
+        setEditingId(tracking.id);
+        setTrackingNumber(tracking.tracking_number);
+        setStoreTracking(tracking.store_tracking || '');
+        setCourier(tracking.courier);
+        setWeightKg(tracking.weight_kg?.toString() || '');
+        setWeightLb(tracking.weight_lb?.toString() || '');
+        setNotes(tracking.notes || '');
+        setTrackingType(tracking.tracking_type);
+
+        // Scroll to form (top)
+        const formElement = document.getElementById('tracker-form-top');
+        if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!trackingNumber.trim()) {
-            toast.error('El número de tracking es requerido');
-            return;
-        }
-
         setSaving(true);
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No autenticado');
+            if (!user) throw new Error('No user');
 
-            const { error } = await supabase.from('shipment_tracking').insert({
+            const payload = {
                 user_id: user.id,
                 tracking_number: trackingNumber.trim(),
                 store_tracking: storeTracking.trim() || null,
@@ -136,27 +252,33 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                 weight_kg: weightKg ? parseFloat(weightKg) : null,
                 weight_lb: weightLb ? parseFloat(weightLb) : null,
                 notes: notes.trim() || null,
-                status: 'PENDING',
-                tracking_type: trackingType
-            });
+                tracking_type: trackingType,
+                status: 'PENDING' // Default for new or re-save
+            };
 
-            if (error) throw error;
+            if (editingId) {
+                // UPDATE
+                const { error } = await supabase
+                    .from('shipment_tracking')
+                    .update(payload)
+                    .eq('id', editingId);
 
-            toast.success('Tracking guardado');
+                if (error) throw error;
+                toast.success('Tracking actualizado');
+            } else {
+                // CREATE
+                const { error } = await supabase
+                    .from('shipment_tracking')
+                    .insert(payload);
 
-            // Reset form
-            setTrackingNumber('');
-            setStoreTracking('');
-            setCourier(defaultCourier);
-            setWeightKg('');
-            setWeightLb('');
-            setNotes('');
-            setTrackingType('BUSINESS');
+                if (error) throw error;
+                toast.success('Tracking guardado');
+            }
 
-            // Reload list
+            resetForm();
             await loadTrackings();
         } catch (error) {
-            console.error('Error saving tracking:', error);
+            console.error('Error saving:', error);
             toast.error('Error al guardar');
         } finally {
             setSaving(false);
@@ -182,13 +304,46 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
         }
     };
 
+    // Filter Logic
+    const filteredTrackings = useMemo(() => {
+        let results = trackings;
+
+        // 1. Filter by Type
+        if (filterType !== 'ALL') {
+            results = results.filter(t => t.tracking_type === filterType);
+        }
+
+        // 2. Filter by Search Term
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            results = results.filter(t =>
+                (t.tracking_number && t.tracking_number.toLowerCase().includes(lowerTerm)) ||
+                (t.store_tracking && t.store_tracking.toLowerCase().includes(lowerTerm)) ||
+                (t.courier && t.courier.toLowerCase().includes(lowerTerm)) ||
+                (t.notes && t.notes.toLowerCase().includes(lowerTerm)) ||
+                (t.associated_products && t.associated_products.some(p => p.name.toLowerCase().includes(lowerTerm)))
+            );
+        }
+
+        return results;
+    }, [trackings, searchTerm, filterType]);
+
     // Pagination
     const paginatedTrackings = useMemo(() => {
+        // Reset to page 1 if search changes (handled in useEffect ideally or just render logic)
+        // Since we are memoizing, if filteredTrackings changes significantly, we might want to ensure currentPage is valid.
+        // But for simplicity, let's just slice. We'll add a helper effect for page reset if needed, or rely on user navigating back.
+        // Better: Reset page when search term changes.
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
-        return trackings.slice(start, start + ITEMS_PER_PAGE);
-    }, [trackings, currentPage]);
+        return filteredTrackings.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTrackings, currentPage]);
 
-    const totalPages = Math.ceil(trackings.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredTrackings.length / ITEMS_PER_PAGE);
+
+    // Reset page on search
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm">
@@ -207,24 +362,33 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 py-3">
-                    {/* Form - Mobile Optimized */}
-                    <form onSubmit={handleSubmit} className="space-y-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        {/* Tracking Type Selector */}
-                        <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1.5 uppercase tracking-wider">
-                                Tipo de Envío
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
+                <div className="p-4 overflow-y-auto custom-scrollbar flex-1 pb-20 sm:pb-4">
+                    {/* Input Form */}
+                    <form id="tracker-form-top" onSubmit={handleSubmit} className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                <Briefcase size={18} className="text-blue-600" />
+                                {editingId ? 'Editar Tracking' : 'Nuevo Tracking'}
+                            </h3>
+                            <div className="flex gap-2">
+                                {editingId && (
+                                    <button
+                                        type="button"
+                                        onClick={resetForm}
+                                        className="text-xs font-semibold text-slate-500 hover:text-slate-700 px-2 py-1 bg-white border border-slate-200 rounded"
+                                    >
+                                        Cancelar
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     onClick={() => setTrackingType('BUSINESS')}
-                                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-bold text-sm transition-all ${trackingType === 'BUSINESS'
+                                    className={`flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg font-bold text-xs transition-all ${trackingType === 'BUSINESS'
                                         ? 'bg-blue-600 text-white shadow-md'
                                         : 'bg-white text-slate-600 border border-slate-200'
                                         }`}
                                 >
-                                    <Briefcase size={16} />
+                                    <Briefcase size={14} />
                                     Negocio
                                 </button>
                                 <button
@@ -342,11 +506,34 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                         </button>
                     </form>
 
+
+                    {/* Search Bar */}
+                    <div className="mb-4 relative">
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Buscar tracking, courier, notas..."
+                            className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors"
+                        />
+                        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        )}
+                    </div>
+
                     {/* Saved Trackings List with Pagination */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="text-sm font-bold text-slate-700">
-                                Trackings Guardados ({trackings.length})
+                                {searchTerm
+                                    ? `Resultados (${filteredTrackings.length})`
+                                    : `Trackings Guardados (${trackings.length})`}
                             </h3>
                             {totalPages > 1 && (
                                 <span className="text-xs text-slate-500">
@@ -372,13 +559,40 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                                             className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-start justify-between hover:bg-slate-100 transition-colors"
                                         >
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                    <span className="text-sm font-bold text-slate-800 truncate">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                                        {tracking.courier === 'Tienda' ? (
+                                                            <span title="Tracking USA/Tienda" className="text-xs opacity-70">🇺🇸</span>
+                                                        ) : (
+                                                            <span title="Tracking Local (RD)" className="text-xs opacity-70">🇩🇴</span>
+                                                        )}
                                                         {tracking.tracking_number}
+                                                        <button
+                                                            className="text-slate-400 hover:text-blue-600 transition-colors"
+                                                            onClick={() => copyToClipboard(tracking.tracking_number)}
+                                                        >
+                                                            <Copy size={12} />
+                                                        </button>
                                                     </span>
+
+                                                    {/* Secondary Tracking (Store/USA) when Main is Courier */}
                                                     {tracking.store_tracking && (
-                                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
+                                                        <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-1 rounded w-fit flex items-center gap-1 mt-0.5">
+                                                            <span className="opacity-50">🇺🇸</span>
                                                             USA: {tracking.store_tracking}
+                                                            <button
+                                                                className="text-slate-400 hover:text-blue-600 transition-colors ml-1"
+                                                                onClick={() => copyToClipboard(tracking.store_tracking!)}
+                                                            >
+                                                                <Copy size={10} />
+                                                            </button>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap mt-1">
+                                                    {tracking.is_from_inventory && (
+                                                        <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-bold uppercase animate-pulse shrink-0">
+                                                            Inventario
                                                         </span>
                                                     )}
                                                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${tracking.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-700' :
@@ -409,14 +623,46 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                                                 {tracking.notes && (
                                                     <p className="text-xs text-slate-500 mt-1 line-clamp-1 italic">{tracking.notes}</p>
                                                 )}
+
+                                                {/* Associated Products */}
+                                                {tracking.associated_products && tracking.associated_products.length > 0 && (
+                                                    <div className="mt-2 flex flex-wrap gap-1">
+                                                        {tracking.associated_products.map(p => (
+                                                            <span key={p.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold border border-blue-100 shadow-sm">
+                                                                <Package size={10} />
+                                                                {p.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <button
-                                                onClick={() => handleDelete(tracking.id)}
-                                                className="p-2 hover:bg-red-100 rounded-lg transition-colors ml-2 flex-shrink-0"
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 size={16} className="text-red-600" />
-                                            </button>
+
+                                            <div className="flex flex-col gap-1 items-end">
+                                                {!tracking.is_from_inventory && (
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => handleEdit(tracking)}
+                                                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(tracking.id)}
+                                                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
+                                                            title="Eliminar"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <span className="text-[10px] text-slate-400 font-mono text-right mt-1">
+                                                    {new Date(tracking.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
