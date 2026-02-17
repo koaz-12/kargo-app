@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getPublicUrl } from '@/utils/imageUrl';
-import { Package, Trash2, Pencil } from 'lucide-react';
+import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
+import { Package, Trash2, Pencil, ScanBarcode } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { InventoryItem, AdjustmentType } from '../types';
 import { useRouter } from 'next/navigation';
@@ -31,6 +32,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         courierTracking: initialProduct.courier_tracking || '',
         adjustments: initialProduct.financial_adjustments ? [...initialProduct.financial_adjustments] : []
     });
+    const [scanTarget, setScanTarget] = useState<'STORE' | 'COURIER' | null>(null);
 
     const router = useRouter();
 
@@ -298,27 +300,58 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     <div className="mb-4">
                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística / Rastreo (Opcional)</p>
                         <div className="grid grid-cols-2 gap-2">
-                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors relative">
                                 <span className="text-slate-400 text-xs shrink-0">📦</span>
                                 <input
                                     type="text"
                                     placeholder="Tracking Tienda (TBA...)"
                                     value={editValues.trackingNumber || ''}
                                     onChange={(e) => setEditValues(prev => ({ ...prev, trackingNumber: e.target.value }))}
-                                    className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400"
+                                    className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400 pr-6"
                                 />
+                                <button
+                                    onClick={() => setScanTarget('STORE')}
+                                    className="absolute right-2 text-slate-400 hover:text-blue-600 p-0.5 rounded"
+                                    title="Escanear"
+                                >
+                                    <ScanBarcode size={14} />
+                                </button>
                             </div>
-                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors relative">
                                 <span className="text-slate-400 text-xs shrink-0">🚚</span>
                                 <input
                                     type="text"
                                     placeholder="Tracking Courier (MIA...)"
                                     value={editValues.courierTracking || ''}
                                     onChange={(e) => setEditValues(prev => ({ ...prev, courierTracking: e.target.value }))}
-                                    className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400"
+                                    className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400 pr-6"
                                 />
+                                <button
+                                    onClick={() => setScanTarget('COURIER')}
+                                    className="absolute right-2 text-slate-400 hover:text-blue-600 p-0.5 rounded"
+                                    title="Escanear"
+                                >
+                                    <ScanBarcode size={14} />
+                                </button>
                             </div>
                         </div>
+                        {scanTarget && (
+                            <BarcodeScanner
+                                onScan={(code) => {
+                                    if (scanTarget === 'STORE') {
+                                        setEditValues(prev => ({ ...prev, trackingNumber: code }));
+                                    } else if (scanTarget === 'COURIER') {
+                                        setEditValues(prev => ({ ...prev, courierTracking: code }));
+                                    }
+
+                                    // Copy to clipboard
+                                    navigator.clipboard.writeText(code).catch(() => { });
+
+                                    setScanTarget(null);
+                                }}
+                                onClose={() => setScanTarget(null)}
+                            />
+                        )}
                     </div>
 
                     <div className="mb-4">
