@@ -1,4 +1,5 @@
-import { Search, FileDown, Loader2, Filter, X } from 'lucide-react';
+import { Search, FileDown, Loader2, Filter, X, ScanBarcode, ArrowUpDown } from 'lucide-react';
+import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
 import { SortOption, StatusFilter } from '../types';
 import { MultiSelect } from '../../../components/ui/MultiSelect';
 import { useState } from 'react';
@@ -36,6 +37,7 @@ export default function InventoryFilterBar({
     onPriceRangeChange,
 }: InventoryFilterBarProps) {
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
     const hasActiveFilters = selectedPlatforms.length > 0 ||
         (priceRange && (priceRange.min > 0 || priceRange.max < Infinity));
 
@@ -57,49 +59,78 @@ export default function InventoryFilterBar({
             </div>
 
             {/* Search & Sort */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                     {loading ? (
-                        <Loader2 className="absolute left-3 top-2.5 text-slate-400 animate-spin" size={18} />
+                        <Loader2 className="absolute left-3 top-3.5 text-slate-400 animate-spin" size={18} />
                     ) : (
-                        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                        <Search className="absolute left-3 top-3.5 text-slate-400" size={18} />
                     )}
                     <input
                         type="text"
                         placeholder="Buscar por nombre, SKU, tracking..."
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none text-sm transition-all shadow-sm"
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none text-sm transition-all shadow-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <select
-                    value={sortOption}
-                    onChange={(e) => setSortOption(e.target.value as SortOption)}
-                    className="bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 outline-none focus:ring-2 focus:ring-slate-900 shadow-sm"
-                >
-                    <option value="DATE_DESC">Recientes</option>
-                    <option value="DATE_ASC">Antiguos</option>
-                    <option value="PRICE_DESC">Mayor Precio</option>
-                    <option value="PRICE_ASC">Menor Precio</option>
-                    <option value="NAME_ASC">Nombre (A-Z)</option>
-                </select>
-                <button
-                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className={`relative bg-white border border-slate-200 p-2 rounded-xl shadow-sm hover:bg-slate-50 transition-colors ${hasActiveFilters ? 'border-slate-900 bg-slate-900 text-white' : 'text-slate-600'}`}
-                    title="Filtros avanzados"
-                >
-                    <Filter size={20} />
-                    {hasActiveFilters && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+
+                <div className="flex gap-2 text-slate-600 overflow-x-auto pb-1 sm:pb-0">
+                    <button
+                        onClick={() => setShowScanner(true)}
+                        className="w-11 h-11 shrink-0 flex items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-colors hover:text-blue-600"
+                        title="Escanear código"
+                    >
+                        <ScanBarcode size={20} />
+                    </button>
+                    {showScanner && (
+                        <BarcodeScanner
+                            onScan={(code) => {
+                                setSearchTerm(code);
+                                setShowScanner(false);
+                            }}
+                            onClose={() => setShowScanner(false)}
+                        />
                     )}
-                </button>
-                <button
-                    onClick={onExport}
-                    className="bg-white border border-slate-200 text-slate-600 p-2 rounded-xl shadow-sm hover:bg-slate-50 transition-colors"
-                    title="Exportar a CSV"
-                >
-                    <FileDown size={20} />
-                </button>
+
+                    {/* Compact Sort Button */}
+                    <div className="relative shrink-0 w-11 h-11">
+                        <div className="w-full h-full flex items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-colors pointer-events-none">
+                            <ArrowUpDown size={20} />
+                        </div>
+                        <select
+                            value={sortOption}
+                            onChange={(e) => setSortOption(e.target.value as SortOption)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            title="Ordenar por..."
+                        >
+                            <option value="DATE_DESC">Más Recientes</option>
+                            <option value="DATE_ASC">Más Antiguos</option>
+                            <option value="PRICE_DESC">Mayor Precio</option>
+                            <option value="PRICE_ASC">Menor Precio</option>
+                            <option value="NAME_ASC">Nombre (A-Z)</option>
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={`w-11 h-11 shrink-0 flex items-center justify-center relative bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-colors ${hasActiveFilters ? 'border-slate-900 bg-slate-900 text-white' : ''}`}
+                        title="Filtros avanzados"
+                    >
+                        <Filter size={20} />
+                        {hasActiveFilters && (
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                        )}
+                    </button>
+
+                    <button
+                        onClick={onExport}
+                        className="w-11 h-11 shrink-0 flex items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-colors"
+                        title="Exportar a CSV"
+                    >
+                        <FileDown size={20} />
+                    </button>
+                </div>
             </div>
 
             {/* Advanced Filters Panel */}

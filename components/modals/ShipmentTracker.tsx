@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { X, Package, Loader2, Trash2, Briefcase, User, ChevronLeft, ChevronRight, Copy, Search } from 'lucide-react';
+import { X, Package, Loader2, Trash2, Briefcase, User, ChevronLeft, ChevronRight, Copy, Search, ScanBarcode } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 import type { ShipmentTracking } from '../../types/shipment';
@@ -19,7 +19,7 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
     // Scanner State
     const [isScanning, setIsScanning] = useState(false);
-    const [targetScan, setTargetScan] = useState<'MAIN' | 'STORE'>('MAIN');
+    const [targetScan, setTargetScan] = useState<'MAIN' | 'STORE' | 'SEARCH'>('MAIN');
 
     // Courier Presets
     const [courierOptions, setCourierOptions] = useState<string[]>(COURIER_OPTIONS);
@@ -198,6 +198,8 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
     const handleScan = (code: string) => {
         if (targetScan === 'MAIN') {
             handleTrackingNumberChange(code);
+        } else if (targetScan === 'SEARCH') {
+            setSearchTerm(code);
         } else {
             setStoreTracking(code);
         }
@@ -542,23 +544,39 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
 
 
                     {/* Search Bar */}
-                    <div className="mb-4 relative">
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar tracking, courier, notas..."
-                            className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors"
-                        />
-                        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm('')}
-                                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                            >
-                                <X size={18} />
-                            </button>
-                        )}
+                    {/* Search Bar */}
+                    <div className="mb-4 flex gap-2">
+                        <div className="relative flex-1">
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Buscar tracking..."
+                                className="w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors"
+                            />
+                            <Search className="absolute left-3 top-3.5 text-slate-400" size={18} />
+
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"
+                                >
+                                    <X size={18} />
+                                </button>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setTargetScan('SEARCH');
+                                setIsScanning(true);
+                            }}
+                            className="shrink-0 aspect-square flex items-center justify-center bg-slate-50 border border-slate-300 rounded-lg text-slate-600 hover:bg-white hover:text-blue-600 hover:border-blue-500 transition-all shadow-sm"
+                            title="Escanear para buscar"
+                        >
+                            <ScanBarcode size={20} />
+                        </button>
                     </div>
 
                     {/* Saved Trackings List with Pagination */}
