@@ -6,6 +6,7 @@ import { BarChart3, PieChart, TrendingUp, DollarSign, Wallet, ArrowLeft, Layers,
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { calculateProfit } from '../../utils/calculateProfit';
+import { getPublicUrl } from '../../utils/imageUrl';
 
 export default function StatsPage() {
     const router = useRouter();
@@ -176,6 +177,8 @@ export default function StatsPage() {
 
         // Grouping
         const productName = p.name || 'Producto sin nombre';
+        const publicImage = p.image_url ? getPublicUrl(p.image_url) : undefined;
+
         if (!productPerformance[productName]) {
             productPerformance[productName] = {
                 name: productName,
@@ -183,9 +186,13 @@ export default function StatsPage() {
                 revenue: 0,
                 cost: 0,
                 profit: 0,
-                image: p.image_url
+                image: publicImage
             };
+        } else if (!productPerformance[productName].image && publicImage) {
+            // Update image if previous one was missing
+            productPerformance[productName].image = publicImage;
         }
+
         productPerformance[productName].count += 1;
         productPerformance[productName].revenue += r;
         productPerformance[productName].cost += dopCost;

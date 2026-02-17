@@ -43,7 +43,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         let adjustmentsTotal = 0;
         if (editValues.adjustments) {
             adjustmentsTotal = editValues.adjustments.reduce((sum, adj) => {
-                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION') {
+                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION' || adj.type === 'COUPON' || adj.type === 'PRICE_ADJUSTMENT') {
                     return sum + (adj.amount || 0);
                 }
                 return sum;
