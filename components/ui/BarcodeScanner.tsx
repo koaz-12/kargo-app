@@ -30,6 +30,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScan, onClose 
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const workerRef = useRef<any>(null);
+    const processingScan = useRef(false);
 
     // Audio Context for Beep
     const playBeep = useCallback(() => {
@@ -61,18 +62,34 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScan, onClose 
         }
     }, []);
 
-    const handleSuccessfulScan = useCallback((decodedText: string) => {
+    const handleSuccessfulScan = useCallback(async (decodedText: string) => {
+        if (processingScan.current) return;
+        processingScan.current = true;
+
         console.log("Scanned:", decodedText);
         playBeep();
         vibrate();
-        onScan(decodedText);
+
         toast.success(`Leído: ${decodedText}`);
 
+        // Stop scanner immediately to prevent more reads
         if (scannerRef.current?.isScanning) {
-            scannerRef.current.stop().catch(console.error);
+            try {
+                await scannerRef.current.stop();
+            } catch (e) {
+                console.error("Error stopping scanner", e);
+            }
         }
-        onClose();
+
+        // Use timeout to allow state transition to complete and prevent race conditions
+        setTimeout(() => {
+            onScan(decodedText);
+            onClose();
+            // Reset for next mount
+            processingScan.current = false;
+        }, 300);
     }, [onScan, onClose, playBeep, vibrate]);
+
 
     // Initialize Tesseract Worker
     useEffect(() => {
