@@ -89,13 +89,29 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScan, onClose 
                     { facingMode: "environment" },
                     {
                         fps: 10,
-                        qrbox: { width: 250, height: 250 },
+                        // Use function for dynamic qrbox sizing based on viewport
+                        qrbox: (viewfinderWidth, viewfinderHeight) => {
+                            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                            return {
+                                width: Math.floor(minEdge * 0.8),
+                                height: Math.floor(minEdge * 0.5) // Wider box for barcodes
+                            };
+                        },
                         aspectRatio: 1.0,
                         formatsToSupport: [
                             Html5QrcodeSupportedFormats.CODE_128,
                             Html5QrcodeSupportedFormats.CODE_39,
+                            Html5QrcodeSupportedFormats.CODE_93,
                             Html5QrcodeSupportedFormats.QR_CODE,
                             Html5QrcodeSupportedFormats.EAN_13,
+                            Html5QrcodeSupportedFormats.EAN_8,
+                            Html5QrcodeSupportedFormats.ITF,
+                            Html5QrcodeSupportedFormats.UPC_A,
+                            Html5QrcodeSupportedFormats.UPC_E,
+                            Html5QrcodeSupportedFormats.CODABAR,
+                            Html5QrcodeSupportedFormats.PDF_417,
+                            Html5QrcodeSupportedFormats.AZTEC,
+                            Html5QrcodeSupportedFormats.DATA_MATRIX
                         ]
                     },
                     (decodedText) => handleSuccessfulScan(decodedText),
@@ -319,8 +335,8 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScan, onClose 
                                     <button
                                         onClick={toggleFlash}
                                         className={`p-4 rounded-full backdrop-blur-md shadow-lg transition-all pointer-events-auto ${isFlashOn
-                                                ? 'bg-yellow-400 text-black shadow-yellow-400/20'
-                                                : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+                                            ? 'bg-yellow-400 text-black shadow-yellow-400/20'
+                                            : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
                                             }`}
                                     >
                                         <Flashlight size={24} fill={isFlashOn ? "currentColor" : "none"} />
