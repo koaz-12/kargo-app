@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { getPublicUrl } from '@/utils/imageUrl';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
 import { Package, Trash2, Pencil, ScanBarcode, Plus } from 'lucide-react';
@@ -15,6 +16,7 @@ interface InventoryCardProps {
 
 export default function InventoryCard({ product: initialProduct, refreshList, onDelete }: InventoryCardProps) {
     const [p, setProduct] = useState(initialProduct);
+    const queryClient = useQueryClient();
 
     // Sync state with props (Important for ensuring data persistence across re-fetches)
     useEffect(() => {
@@ -166,6 +168,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
             }));
             setExpanded(false);
             if (refreshList) refreshList();
+
+            // Invalidate React Query cache to update Dashboard Stats and other pages
+            queryClient.invalidateQueries({ queryKey: ['products'] });
         } catch (error) {
             console.error(error);
             alert('Error al actualizar');

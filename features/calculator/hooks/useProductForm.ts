@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useProfitCalculator } from '../../../hooks/useProfitCalculator';
 import { FormState, FormSetters, ProductStatus } from '../../../types';
 import { useRouter } from 'next/navigation';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 
 export const useProductForm = (editingId: string | null) => {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const { formState, setters, results, courierDiscount } = useProfitCalculator();
 
     const [platforms, setPlatforms] = useState<any[]>([]);
@@ -176,6 +178,9 @@ export const useProductForm = (editingId: string | null) => {
                     await supabase.from('products').update({ image_url: primaryImage }).eq('id', targetId);
                 }
             }
+
+            // Invalidate React Query cache to update Dashboard Stats and other pages
+            queryClient.invalidateQueries({ queryKey: ['products'] });
 
             // Success feedback
             if (targetId && (editingId && !cloneMode)) {
