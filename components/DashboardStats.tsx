@@ -39,8 +39,16 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
         }, 0);
     };
 
+    // Helper: sum of ALL adjustments (credits + discounts) for sold items
+    // Once sold, both credits and discounts are realized profit.
+    const getAllAdjustmentsUSD = (p: Product): number => {
+        if (!p.adjustments || p.adjustments.length === 0) return 0;
+        return p.adjustments.reduce((sum, adj) => sum + (adj.amount || 0), 0);
+    };
+
     // 1. Capital Activo — Inversión real en artículos no vendidos
     //    = Costo total DOP − descuentos (category=DISCOUNT) en DOP
+    //    Créditos NO se descuentan porque el dinero está en la plataforma, no recuperado.
     const activeInvestment = products.reduce((acc, p) => {
         if (p.status === 'SOLD') return acc;
 
@@ -54,14 +62,15 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
     }, 0);
 
     // 2. Ganancia Real — De artículos vendidos
-    //    = Precio venta − Costo total DOP + descuentos en DOP
+    //    = Precio venta − Costo total DOP + TODOS los ajustes (créditos + descuentos)
+    //    Al estar vendido, tanto créditos como descuentos son ganancia realizada.
     const realizedProfit = products.reduce((acc, p) => {
         if (p.status !== 'SOLD') return acc;
 
         const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
         const dopCost = (usdCost * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0);
 
-        const adjustmentsUSD = getDiscountAdjustmentsUSD(p);
+        const adjustmentsUSD = getAllAdjustmentsUSD(p);
         const adjustmentsDOP = adjustmentsUSD * (p.exchange_rate || 58);
 
         return acc + ((p.sale_price || 0) - dopCost + adjustmentsDOP);
