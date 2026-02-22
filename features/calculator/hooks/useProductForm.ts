@@ -84,11 +84,12 @@ export const useProductForm = (editingId: string | null) => {
 
             // DOP CURRENCY FIX: When user enters prices in DOP, convert to USD before saving.
             // The DB always stores buy_price / shipping_cost in USD.
+            // We KEEP the real exchange_rate so that display math works: buy_price_usd * rate = DOP cost.
             const rate = formState.exchangeRate || 58;
             const isDOP = formState.currency === 'DOP';
             const savedBuyPrice = isDOP ? formState.buyPrice / rate : formState.buyPrice;
             const savedShippingCost = isDOP ? formState.shippingCost / rate : formState.shippingCost;
-            const savedExchangeRate = isDOP ? 1 : formState.exchangeRate; // No conversion needed when already DOP
+            const savedExchangeRate = formState.exchangeRate; // Always save the real rate
 
             // Create FormData for Server Action
             const formData = new FormData();
