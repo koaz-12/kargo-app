@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target, Settings as SettingsIcon, Truck, Star, Tag } from 'lucide-react';
-import { useAdjustmentTypes } from '../../hooks/useAdjustmentTypes';
+import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target, Settings as SettingsIcon, Truck, Star, Tag, Pencil, Check, X } from 'lucide-react';
+import { useAdjustmentTypes, AdjCategory } from '../../hooks/useAdjustmentTypes';
 import Link from 'next/link';
 import { Platform, PlatformType } from '../../types/index';
 
@@ -30,10 +30,13 @@ export default function SettingsPage() {
     const [localShippingDefault, setLocalShippingDefault] = useState<string>('0');
 
     // Adjustment Types
-    const { types: adjTypes, loading: adjTypesLoading, addType: addAdjType, deleteType: deleteAdjType } = useAdjustmentTypes();
+    const { types: adjTypes, loading: adjTypesLoading, addType: addAdjType, editType: editAdjType, deleteType: deleteAdjType } = useAdjustmentTypes();
     const [newAdjLabel, setNewAdjLabel] = useState('');
     const [newAdjDesc, setNewAdjDesc] = useState('');
     const [newAdjAffects, setNewAdjAffects] = useState(true);
+    const [newAdjCategory, setNewAdjCategory] = useState<AdjCategory>('CREDIT');
+    const [editingAdjId, setEditingAdjId] = useState<string | null>(null);
+    const [editAdjValues, setEditAdjValues] = useState<{ label: string; description: string; category: AdjCategory }>({ label: '', description: '', category: 'CREDIT' });
 
     const router = useRouter();
 
@@ -467,14 +470,44 @@ export default function SettingsPage() {
                             <Tag size={16} className="text-slate-400" />
                             Tipos de Ajuste / Créditos
                         </p>
-                        <p className="text-xs text-slate-400 mb-4">Gestiona los tipos de créditos y descuentos disponibles al registrar un producto.</p>
+                        <p className="text-xs text-slate-400 mb-4">Gestiona los créditos y descuentos disponibles al registrar un producto.</p>
 
-                        {/* Add new type form */}
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4 space-y-2">
+                        {/* --- CREATE FORM --- */}
+                        <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-3 mb-4 space-y-2.5">
                             <p className="text-[10px] font-bold text-slate-400 uppercase">Nuevo Tipo</p>
+
+                            {/* Category toggle */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setNewAdjCategory('CREDIT')}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${newAdjCategory === 'CREDIT'
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
+                                        }`}
+                                >
+                                    💳 Crédito
+                                </button>
+                                <button
+                                    onClick={() => setNewAdjCategory('DISCOUNT')}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${newAdjCategory === 'DISCOUNT'
+                                            ? 'bg-emerald-600 text-white border-emerald-600'
+                                            : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'
+                                        }`}
+                                >
+                                    🏷️ Descuento
+                                </button>
+                            </div>
+
+                            {/* Helper text for selected category */}
+                            <p className="text-[10px] text-slate-400 italic">
+                                {newAdjCategory === 'CREDIT'
+                                    ? '💡 Crédito: el dinero queda en tu cuenta de la plataforma (debes volver a gastar allá).'
+                                    : '💡 Descuento: ya viene descontado del precio al momento de la compra.'}
+                            </p>
+
                             <input
                                 type="text"
-                                placeholder="Nombre (ej. Store Coupon)"
+                                placeholder="Nombre (ej. Store Wallet)"
                                 className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                 value={newAdjLabel}
                                 onChange={(e) => setNewAdjLabel(e.target.value)}
@@ -501,45 +534,142 @@ export default function SettingsPage() {
                             <button
                                 onClick={async () => {
                                     if (!newAdjLabel.trim()) return;
-                                    const ok = await addAdjType({ label: newAdjLabel.trim(), description: newAdjDesc.trim(), affects_cost: newAdjAffects });
-                                    if (ok) { setNewAdjLabel(''); setNewAdjDesc(''); setNewAdjAffects(true); }
+                                    const ok = await addAdjType({
+                                        label: newAdjLabel.trim(),
+                                        description: newAdjDesc.trim(),
+                                        affects_cost: newAdjAffects,
+                                        category: newAdjCategory,
+                                    });
+                                    if (ok) { setNewAdjLabel(''); setNewAdjDesc(''); setNewAdjAffects(true); setNewAdjCategory('CREDIT'); }
                                 }}
                                 className="w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-sm hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
                             >
-                                <Plus size={16} /> Agregar Tipo
+                                <Plus size={16} /> Agregar
                             </button>
                         </div>
 
-                        {/* List */}
+                        {/* --- LIST --- */}
                         <div className="space-y-2">
                             {adjTypesLoading && <p className="text-xs text-slate-300 italic">Cargando...</p>}
-                            {adjTypes.map(t => (
-                                <div key={t.id} className="flex items-start gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-bold text-slate-800 text-sm">{t.label}</span>
-                                            {t.is_built_in && (
-                                                <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">PREDEFINIDO</span>
-                                            )}
-                                            {t.affects_cost ? (
-                                                <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">💰 Descuenta</span>
-                                            ) : (
-                                                <span className="text-[9px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-bold">Info</span>
-                                            )}
+
+                            {/* Group by category */}
+                            {['CREDIT', 'DISCOUNT'].map(cat => {
+                                const group = adjTypes.filter(t => (t.category || 'CREDIT') === cat);
+                                if (group.length === 0) return null;
+                                return (
+                                    <div key={cat} className="mb-3">
+                                        <p className={`text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1 ${cat === 'CREDIT' ? 'text-blue-500' : 'text-emerald-500'
+                                            }`}>
+                                            {cat === 'CREDIT' ? '💳 Créditos (quedan en la plataforma)' : '🏷️ Descuentos (aplicados al comprar)'}
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {group.map(t => (
+                                                <div key={t.id} className={`rounded-xl border p-3 ${cat === 'CREDIT' ? 'bg-blue-50 border-blue-100' : 'bg-emerald-50 border-emerald-100'
+                                                    }`}>
+                                                    {editingAdjId === t.id ? (
+                                                        /* --- EDIT MODE --- */
+                                                        <div className="space-y-2">
+                                                            {/* Category toggle in edit mode */}
+                                                            <div className="flex gap-1.5">
+                                                                <button
+                                                                    onClick={() => setEditAdjValues(v => ({ ...v, category: 'CREDIT' }))}
+                                                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${editAdjValues.category === 'CREDIT'
+                                                                            ? 'bg-blue-600 text-white border-blue-600'
+                                                                            : 'bg-white text-slate-400 border-slate-200'
+                                                                        }`}
+                                                                >💳 Crédito</button>
+                                                                <button
+                                                                    onClick={() => setEditAdjValues(v => ({ ...v, category: 'DISCOUNT' }))}
+                                                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${editAdjValues.category === 'DISCOUNT'
+                                                                            ? 'bg-emerald-600 text-white border-emerald-600'
+                                                                            : 'bg-white text-slate-400 border-slate-200'
+                                                                        }`}
+                                                                >🏷️ Descuento</button>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                value={editAdjValues.label}
+                                                                onChange={(e) => setEditAdjValues(v => ({ ...v, label: e.target.value }))}
+                                                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+                                                                placeholder="Nombre"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={editAdjValues.description}
+                                                                onChange={(e) => setEditAdjValues(v => ({ ...v, description: e.target.value }))}
+                                                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-400"
+                                                                placeholder="Descripción (opcional)"
+                                                            />
+                                                            <div className="flex gap-2 pt-1">
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (t.id) {
+                                                                            await editAdjType(t.id, {
+                                                                                label: editAdjValues.label,
+                                                                                description: editAdjValues.description,
+                                                                                category: editAdjValues.category,
+                                                                            });
+                                                                        }
+                                                                        setEditingAdjId(null);
+                                                                    }}
+                                                                    className="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 hover:bg-green-700"
+                                                                >
+                                                                    <Check size={12} /> Guardar
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingAdjId(null)}
+                                                                    className="flex-1 bg-slate-200 text-slate-600 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 hover:bg-slate-300"
+                                                                >
+                                                                    <X size={12} /> Cancelar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        /* --- VIEW MODE --- */
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <span className="font-bold text-slate-800 text-sm">{t.label}</span>
+                                                                    {t.is_built_in && (
+                                                                        <span className="text-[9px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-bold">PREDEFINIDO</span>
+                                                                    )}
+                                                                </div>
+                                                                {t.description && <p className="text-[11px] text-slate-500 mt-0.5">{t.description}</p>}
+                                                                <p className="text-[9px] font-mono text-slate-300 mt-0.5">{t.key}</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingAdjId(t.id || null);
+                                                                        setEditAdjValues({
+                                                                            label: t.label,
+                                                                            description: t.description || '',
+                                                                            category: (t.category || 'CREDIT') as AdjCategory,
+                                                                        });
+                                                                    }}
+                                                                    className="text-slate-400 hover:text-blue-500 p-1"
+                                                                    title="Editar"
+                                                                >
+                                                                    <Pencil size={13} />
+                                                                </button>
+                                                                {!t.is_built_in && (
+                                                                    <button
+                                                                        onClick={() => t.id && deleteAdjType(t.id)}
+                                                                        className="text-slate-400 hover:text-red-500 p-1"
+                                                                        title="Eliminar"
+                                                                    >
+                                                                        <Trash2 size={13} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
-                                        {t.description && <p className="text-[11px] text-slate-400 mt-0.5">{t.description}</p>}
-                                        <p className="text-[10px] font-mono text-slate-300 mt-0.5">{t.key}</p>
                                     </div>
-                                    {!t.is_built_in && (
-                                        <button
-                                            onClick={() => t.id && deleteAdjType(t.id)}
-                                            className="text-slate-400 hover:text-red-500 p-1 shrink-0"
-                                        >
-                                            <Trash2 size={15} />
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
