@@ -32,7 +32,9 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     const [courierTracking, setCourierTracking] = useState<string>(initialProduct?.courier_tracking || '');
 
     // NEW: Currency and Tax State
-    const [currency, setCurrency] = useState<'USD' | 'DOP'>('USD'); // Default USD
+    const [currency, setCurrency] = useState<'USD' | 'DOP'>(
+        initialProduct?.exchange_rate === 1 ? 'DOP' : 'USD'
+    );
     const [applyUSATax, setApplyUSATax] = useState<boolean>(false);
 
     const [courierDiscount, setCourierDiscount] = useState<number>(0);
@@ -311,6 +313,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setOriginTax(p.origin_tax || 0);
                 setTaxCost(p.tax_cost || 0);
                 setExchangeRate(p.exchange_rate || 60);
+                setCurrency(p.exchange_rate === 1 ? 'DOP' : 'USD');
                 setSalePrice(p.sale_price || 0);
                 setLocalShipping(p.local_shipping_cost || 0);
                 setAdjustments(p.adjustments || []);
