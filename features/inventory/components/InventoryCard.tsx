@@ -145,8 +145,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 const adjPayload = editValues.adjustments.map(a => ({
                     product_id: p.id,
                     type: a.type,
-                    amount: a.amount,
-                    percentage: a.percentage
+                    amount: a.amount || 0,
+                    percentage: a.percentage || 0
                 }));
                 const { error: adjError } = await supabase.from('financial_adjustments').insert(adjPayload);
                 if (adjError) throw adjError;

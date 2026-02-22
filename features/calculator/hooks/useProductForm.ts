@@ -149,8 +149,8 @@ export const useProductForm = (editingId: string | null) => {
                 const adjs = formState.adjustments.map(a => ({
                     product_id: targetId,
                     type: a.type,
-                    amount: a.amount,
-                    percentage: a.percentage
+                    amount: a.amount || 0,
+                    percentage: a.percentage || 0
                 }));
                 await supabase.from('financial_adjustments').insert(adjs);
             }
