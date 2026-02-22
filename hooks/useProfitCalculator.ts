@@ -40,6 +40,13 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     const [courierDiscount, setCourierDiscount] = useState<number>(0);
     const [isRateLoaded, setIsRateLoaded] = useState(false);
 
+    // Memory for USD Rate when switching to DOP
+    const [lastUsdRate, setLastUsdRate] = useState<number>(
+        initialProduct?.exchange_rate && initialProduct.exchange_rate > 1
+            ? initialProduct.exchange_rate
+            : 58.50
+    );
+
     // Persistence: Load Exchange Rate
     useEffect(() => {
         // Only load if not editing an existing product (which has its own rate)
@@ -291,11 +298,24 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             setShippingCost,
             setOriginTax,
             setTaxCost,
-            setExchangeRate,
+            setExchangeRate: (val: number) => {
+                setExchangeRate(val);
+                if (val > 1) setLastUsdRate(val);
+            },
             setSalePrice,
             setLocalShipping,
-            setCurrency, // NEW
-            setApplyUSATax, // NEW
+            setCurrency: (cur: 'USD' | 'DOP') => {
+                if (cur === 'DOP' && currency === 'USD') {
+                    // Switching to DOP: Save current rate as last USD rate and set rate to 1
+                    if (exchangeRate > 1) setLastUsdRate(exchangeRate);
+                    setExchangeRate(1);
+                } else if (cur === 'USD' && currency === 'DOP') {
+                    // Switching to USD: Restore last USD rate
+                    setExchangeRate(lastUsdRate);
+                }
+                setCurrency(cur);
+            },
+            setApplyUSATax,
             setAdjustments,
             setProductUrl,
             setImageUrl,
@@ -313,7 +333,14 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setOriginTax(p.origin_tax || 0);
                 setTaxCost(p.tax_cost || 0);
                 setExchangeRate(p.exchange_rate || 60);
-                setCurrency(p.exchange_rate === 1 ? 'DOP' : 'USD');
+
+                // Initialize currency and memory
+                const isDop = p.exchange_rate === 1;
+                setCurrency(isDop ? 'DOP' : 'USD');
+                if (!isDop && p.exchange_rate > 1) {
+                    setLastUsdRate(p.exchange_rate);
+                }
+
                 setSalePrice(p.sale_price || 0);
                 setLocalShipping(p.local_shipping_cost || 0);
                 setAdjustments(p.adjustments || []);
