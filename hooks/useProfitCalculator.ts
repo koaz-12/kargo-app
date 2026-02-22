@@ -103,17 +103,20 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
 
     // Real-time Calculation
     const profitMeta = useMemo(() => {
+        // When currency is DOP, buy_price and shipping_cost are already in DOP.
+        // Pass exchange_rate=1 so calculateProfit doesn't convert them again.
+        const effectiveRate = currency === 'DOP' ? 1 : exchangeRate;
         const transaction: Transaction = {
             buy_price: buyPrice,
             shipping_cost: shippingCost,
-            origin_tax: originTax, // Pass new state
+            origin_tax: originTax,
             tax_cost: taxCost,
             adjustments: adjustments,
-            exchange_rate: exchangeRate
+            exchange_rate: effectiveRate
         };
 
         return calculateProfit(transaction, salePrice, localShipping);
-    }, [buyPrice, shippingCost, taxCost, adjustments, salePrice, localShipping, exchangeRate]);
+    }, [buyPrice, shippingCost, taxCost, adjustments, salePrice, localShipping, exchangeRate, currency]);
 
     // State for Preferences
     const [preferences, setPreferences] = useState<Record<string, number>>({});

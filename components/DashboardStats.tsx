@@ -24,7 +24,7 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
         let adjustmentsTotalUSD = 0;
         if (p.adjustments) {
             adjustmentsTotalUSD = p.adjustments.reduce((sum, adj) => {
-                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION') {
+                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION' || adj.type === 'COUPON' || adj.type === 'PRICE_ADJUSTMENT') {
                     return sum + (adj.amount || 0);
                 }
                 return sum;
@@ -45,7 +45,7 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
         let adjustmentsTotalUSD = 0;
         if (p.adjustments) {
             adjustmentsTotalUSD = p.adjustments.reduce((sum, adj) => {
-                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION') {
+                if (adj.type === 'CREDIT_CLAIM' || adj.type === 'REWARD_BACK' || adj.type === 'PRICE_PROTECTION' || adj.type === 'COUPON' || adj.type === 'PRICE_ADJUSTMENT') {
                     return sum + (adj.amount || 0);
                 }
                 return sum;

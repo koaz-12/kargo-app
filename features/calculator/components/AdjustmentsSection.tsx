@@ -1,5 +1,6 @@
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { FormState, FormSetters } from '../../../types';
+import { useAdjustmentTypes } from '../../../hooks/useAdjustmentTypes';
 
 interface AdjustmentsSectionProps {
     formState: FormState;
@@ -7,24 +8,20 @@ interface AdjustmentsSectionProps {
 }
 
 export default function AdjustmentsSection({ formState, setters }: AdjustmentsSectionProps) {
+    const { types, loading } = useAdjustmentTypes();
+
+    const firstType = types[0]?.key || 'CREDIT_CLAIM';
+
     return (
         <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex justify-between items-center mb-2">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">AJUSTES/CREDITOS</p>
-                <div className="flex gap-1">
-                    <button
-                        onClick={() => setters.addAdjustment('CREDIT_CLAIM', 0)}
-                        className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-1 rounded font-bold hover:bg-emerald-100"
-                    >
-                        + Credit
-                    </button>
-                    <button
-                        onClick={() => setters.addAdjustment('REWARD_BACK', 0)}
-                        className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100 px-2 py-1 rounded font-bold hover:bg-amber-100"
-                    >
-                        + RewardBack
-                    </button>
-                </div>
+                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">AJUSTES / CRÉDITOS</p>
+                <button
+                    onClick={() => setters.addAdjustment(firstType, 0)}
+                    className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-1 rounded font-bold hover:bg-emerald-100 flex items-center gap-1"
+                >
+                    <Plus size={11} /> Agregar
+                </button>
             </div>
 
             {formState.adjustments.length === 0 && <p className="text-[10px] text-slate-300 py-2 text-center">Sin ajustes aplicados.</p>}
@@ -37,11 +34,10 @@ export default function AdjustmentsSection({ formState, setters }: AdjustmentsSe
                             value={adj.type}
                             onChange={(e) => setters.updateAdjustment(adj.id, 'type', e.target.value)}
                         >
-                            <option value="CREDIT_CLAIM">CreditClaim</option>
-                            <option value="REWARD_BACK">RewardBack</option>
-                            <option value="COUPON">Cupón</option>
-                            <option value="PRICE_ADJUSTMENT">Ajuste</option>
-                            {/* Removed Invalid/Duplicate Options: PRICE_PROTECTION, REWARD_BACK (old label) */}
+                            {loading && <option>Cargando...</option>}
+                            {types.map(t => (
+                                <option key={t.key} value={t.key}>{t.label}</option>
+                            ))}
                         </select>
                         <div className="w-10 shrink-0 flex items-center border border-slate-200 rounded px-0 py-1.5 bg-white focus-within:border-blue-500 transition-colors">
                             <input

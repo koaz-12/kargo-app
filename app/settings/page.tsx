@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target, Settings as SettingsIcon, Truck, Star } from 'lucide-react';
+import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target, Settings as SettingsIcon, Truck, Star, Tag } from 'lucide-react';
+import { useAdjustmentTypes } from '../../hooks/useAdjustmentTypes';
 import Link from 'next/link';
 import { Platform, PlatformType } from '../../types/index';
 
@@ -27,6 +28,12 @@ export default function SettingsPage() {
     // Courier Config
     const [courierDiscount, setCourierDiscount] = useState<string>('0');
     const [localShippingDefault, setLocalShippingDefault] = useState<string>('0');
+
+    // Adjustment Types
+    const { types: adjTypes, loading: adjTypesLoading, addType: addAdjType, deleteType: deleteAdjType } = useAdjustmentTypes();
+    const [newAdjLabel, setNewAdjLabel] = useState('');
+    const [newAdjDesc, setNewAdjDesc] = useState('');
+    const [newAdjAffects, setNewAdjAffects] = useState(true);
 
     const router = useRouter();
 
@@ -453,7 +460,89 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                {/* Purchase Accounts Management */}
+                {/* Adjustment Types Management */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mb-6">
+                    <div className="p-4">
+                        <p className="font-semibold text-slate-700 mb-1 flex items-center gap-2">
+                            <Tag size={16} className="text-slate-400" />
+                            Tipos de Ajuste / Créditos
+                        </p>
+                        <p className="text-xs text-slate-400 mb-4">Gestiona los tipos de créditos y descuentos disponibles al registrar un producto.</p>
+
+                        {/* Add new type form */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4 space-y-2">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Nuevo Tipo</p>
+                            <input
+                                type="text"
+                                placeholder="Nombre (ej. Store Coupon)"
+                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                value={newAdjLabel}
+                                onChange={(e) => setNewAdjLabel(e.target.value)}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Descripción (opcional)"
+                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                value={newAdjDesc}
+                                onChange={(e) => setNewAdjDesc(e.target.value)}
+                            />
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="adjAffectsCost"
+                                    checked={newAdjAffects}
+                                    onChange={(e) => setNewAdjAffects(e.target.checked)}
+                                    className="w-4 h-4 text-emerald-600 rounded"
+                                />
+                                <label htmlFor="adjAffectsCost" className="text-xs text-slate-600 font-medium cursor-pointer">
+                                    Descuenta del capital activo
+                                </label>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    if (!newAdjLabel.trim()) return;
+                                    const ok = await addAdjType({ label: newAdjLabel.trim(), description: newAdjDesc.trim(), affects_cost: newAdjAffects });
+                                    if (ok) { setNewAdjLabel(''); setNewAdjDesc(''); setNewAdjAffects(true); }
+                                }}
+                                className="w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-sm hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Plus size={16} /> Agregar Tipo
+                            </button>
+                        </div>
+
+                        {/* List */}
+                        <div className="space-y-2">
+                            {adjTypesLoading && <p className="text-xs text-slate-300 italic">Cargando...</p>}
+                            {adjTypes.map(t => (
+                                <div key={t.id} className="flex items-start gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-bold text-slate-800 text-sm">{t.label}</span>
+                                            {t.is_built_in && (
+                                                <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">PREDEFINIDO</span>
+                                            )}
+                                            {t.affects_cost ? (
+                                                <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">💰 Descuenta</span>
+                                            ) : (
+                                                <span className="text-[9px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-bold">Info</span>
+                                            )}
+                                        </div>
+                                        {t.description && <p className="text-[11px] text-slate-400 mt-0.5">{t.description}</p>}
+                                        <p className="text-[10px] font-mono text-slate-300 mt-0.5">{t.key}</p>
+                                    </div>
+                                    {!t.is_built_in && (
+                                        <button
+                                            onClick={() => t.id && deleteAdjType(t.id)}
+                                            className="text-slate-400 hover:text-red-500 p-1 shrink-0"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mb-6">
                     <div className="p-4 border-b border-slate-100">
                         <p className="font-semibold text-slate-700 mb-1 flex items-center gap-2">

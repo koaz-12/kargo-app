@@ -82,6 +82,14 @@ export const useProductForm = (editingId: string | null) => {
                 productStatus = 'RECEIVED';
             }
 
+            // DOP CURRENCY FIX: When user enters prices in DOP, convert to USD before saving.
+            // The DB always stores buy_price / shipping_cost in USD.
+            const rate = formState.exchangeRate || 58;
+            const isDOP = formState.currency === 'DOP';
+            const savedBuyPrice = isDOP ? formState.buyPrice / rate : formState.buyPrice;
+            const savedShippingCost = isDOP ? formState.shippingCost / rate : formState.shippingCost;
+            const savedExchangeRate = isDOP ? 1 : formState.exchangeRate; // No conversion needed when already DOP
+
             // Create FormData for Server Action
             const formData = new FormData();
             formData.append('platform_id', formState.platformId);
@@ -89,15 +97,15 @@ export const useProductForm = (editingId: string | null) => {
                 formData.append('purchase_account_id', formState.purchaseAccountId);
             }
             formData.append('name', formState.name);
-            formData.append('buy_price', formState.buyPrice.toString());
-            formData.append('shipping_cost', formState.shippingCost.toString());
+            formData.append('buy_price', savedBuyPrice.toFixed(4));
+            formData.append('shipping_cost', savedShippingCost.toFixed(4));
             formData.append('origin_tax', (formState.originTax || 0).toString());
             formData.append('tax_cost', formState.taxCost.toString());
             if (formState.salePrice) {
                 formData.append('sale_price', formState.salePrice.toString());
             }
             formData.append('local_shipping_cost', formState.localShipping.toString());
-            formData.append('exchange_rate', formState.exchangeRate.toString());
+            formData.append('exchange_rate', savedExchangeRate.toString());
             formData.append('status', productStatus);
 
             // Optional fields
@@ -105,7 +113,7 @@ export const useProductForm = (editingId: string | null) => {
             if (formState.imageUrl) formData.append('image_url', formState.imageUrl);
             if (formState.trackingNumber) formData.append('tracking_number', formState.trackingNumber);
             if (formState.courierTracking) formData.append('courier_tracking', formState.courierTracking);
-            if (formState.sku) formData.append('sku', formState.sku);
+
 
             let result;
             let targetId = editingId;

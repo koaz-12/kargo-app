@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { getPublicUrl } from '@/utils/imageUrl';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
-import { Package, Trash2, Pencil, ScanBarcode } from 'lucide-react';
+import { Package, Trash2, Pencil, ScanBarcode, Plus } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { InventoryItem, AdjustmentType } from '../types';
 import { useRouter } from 'next/navigation';
+import { useAdjustmentTypes } from '../../../hooks/useAdjustmentTypes';
 
 interface InventoryCardProps {
     product: InventoryItem;
@@ -22,6 +23,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
     const [expanded, setExpanded] = useState(false);
     const [courierDiscount, setCourierDiscount] = useState(0);
     const [isDiscountApplied, setIsDiscountApplied] = useState(false); // New State
+
+    const { types: adjTypes } = useAdjustmentTypes();
+    const firstAdjType = adjTypes[0]?.key || 'CREDIT_CLAIM';
 
     // Quick Edit State
     const [editValues, setEditValues] = useState({
@@ -203,23 +207,24 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
     return (
         <div className={`bg-white border text-slate-900 rounded-xl overflow-hidden shadow-sm transition-all ${expanded ? 'border-slate-400 ring-1 ring-slate-400' : 'border-slate-100'}`}>
             <div onClick={toggleExpand} className="p-3 flex gap-3 items-center cursor-pointer">
-                <div className="w-12 h-12 bg-slate-50 rounded-lg shrink-0 overflow-hidden border border-slate-200">
-                    {p.image_url ? (
-                        <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">
-                            <Package size={20} />
-                        </div>
-                    )}
+                <div className="flex flex-col items-center gap-1 shrink-0">
+                    <div className="w-12 h-12 bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
+                        {p.image_url ? (
+                            <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                <Package size={20} />
+                            </div>
+                        )}
+                    </div>
+                    <StatusBadge status={p.status} />
                 </div>
 
                 <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-800 text-sm truncate">{p.name}</p>
-                    <div className="flex gap-2 text-xs text-slate-500 mt-1">
-                        <StatusBadge status={p.status} />
-                        <span className="text-slate-400">•</span>
-                        <span>${p.buy_price}</span>
-                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                        RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
+                    </p>
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
@@ -357,10 +362,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     <div className="mb-4">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] uppercase font-bold text-slate-400">Ajustes / Créditos</span>
-                            <div className="flex gap-1">
-                                <button onClick={() => modifyAdjustment('ADD', { type: 'CREDIT_CLAIM' })} className="text-[9px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-200">+ Credit</button>
-                                <button onClick={() => modifyAdjustment('ADD', { type: 'REWARD_BACK' })} className="text-[9px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold hover:bg-amber-200">+ RewardBack</button>
-                            </div>
+                            <button onClick={() => modifyAdjustment('ADD', { type: firstAdjType })} className="text-[9px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-200 flex items-center gap-1">
+                                <Plus size={10} /> Agregar
+                            </button>
                         </div>
                         <div className="space-y-2">
                             {editValues.adjustments.map((adj, idx) => (
@@ -370,10 +374,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                                         value={adj.type}
                                         onChange={(e) => modifyAdjustment('UPDATE', { adjId: adj.id, field: 'type', value: e.target.value })}
                                     >
-                                        <option value="CREDIT_CLAIM">CreditClaim</option>
-                                        <option value="REWARD_BACK">RewardBack</option>
-                                        <option value="COUPON">Cupón</option>
-                                        <option value="PRICE_ADJUSTMENT">Ajuste</option>
+                                        {adjTypes.map(t => (
+                                            <option key={t.key} value={t.key}>{t.label}</option>
+                                        ))}
                                     </select>
                                     <div className="relative w-10 shrink-0">
                                         <input type="number" placeholder="%" value={adj.percentage || ''}
