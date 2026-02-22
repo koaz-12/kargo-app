@@ -12,12 +12,13 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
     // Load user's adjustment types to dynamically resolve affects_cost
     const { types: adjTypes } = useAdjustmentTypes();
 
-    // Build a lookup map: type key → affects_cost
-    // This replaces the old hardcoded checks and supports custom user-defined types
-    const adjTypeMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
+    // Build a lookup map: type key → category ('CREDIT' | 'DISCOUNT')
+    // DISCOUNT = deducts from capital (ya se pagó menos)
+    // CREDIT = does NOT deduct from capital (dinero en la plataforma, no recuperado)
+    const adjCategoryMap = useMemo(() => {
+        const map: Record<string, string> = {};
         adjTypes.forEach(t => {
-            map[t.key] = t.affects_cost;
+            map[t.key] = t.category || 'CREDIT';
         });
         return map;
     }, [adjTypes]);
@@ -27,41 +28,40 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
     const receivedCount = products.filter(p => p.status === 'RECEIVED').length;
     const soldCount = products.filter(p => p.status === 'SOLD').length;
 
-    // Helper: sum of deductible adjustments for a product (in USD)
-    // An adjustment is deductible if its type's affects_cost === true in adjustment_types DB.
-    // While adjTypes are loading (map is empty), we fall back to deducting nothing
-    // to avoid showing inflated capital.
-    const getDeductibleAdjustmentsUSD = (p: Product): number => {
+    // Helper: sum of discount-type adjustments for a product (in USD)
+    // Only DISCOUNT adjustments reduce capital (descuentos aplicados al comprar).
+    // CREDIT adjustments do NOT reduce capital (dinero en la plataforma).
+    const getDiscountAdjustmentsUSD = (p: Product): number => {
         if (!p.adjustments || p.adjustments.length === 0) return 0;
         return p.adjustments.reduce((sum, adj) => {
-            const affectsCost = adjTypeMap[adj.type] ?? false;
-            return affectsCost ? sum + (adj.amount || 0) : sum;
+            const isDiscount = adjCategoryMap[adj.type] === 'DISCOUNT';
+            return isDiscount ? sum + (adj.amount || 0) : sum;
         }, 0);
     };
 
     // 1. Capital Activo — Inversión real en artículos no vendidos
-    //    = Costo total DOP − ajustes deducibles (créditos y descuentos con affects_cost=true)
+    //    = Costo total DOP − descuentos (category=DISCOUNT) en DOP
     const activeInvestment = products.reduce((acc, p) => {
         if (p.status === 'SOLD') return acc;
 
         const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
         const dopCost = (usdCost * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0);
 
-        const adjustmentsUSD = getDeductibleAdjustmentsUSD(p);
+        const adjustmentsUSD = getDiscountAdjustmentsUSD(p);
         const adjustmentsDOP = adjustmentsUSD * (p.exchange_rate || 58);
 
         return acc + (dopCost - adjustmentsDOP);
     }, 0);
 
     // 2. Ganancia Real — De artículos vendidos
-    //    = Precio venta − Costo total DOP + ajustes deducibles
+    //    = Precio venta − Costo total DOP + descuentos en DOP
     const realizedProfit = products.reduce((acc, p) => {
         if (p.status !== 'SOLD') return acc;
 
         const usdCost = p.buy_price + p.shipping_cost + (p.origin_tax || 0);
         const dopCost = (usdCost * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0);
 
-        const adjustmentsUSD = getDeductibleAdjustmentsUSD(p);
+        const adjustmentsUSD = getDiscountAdjustmentsUSD(p);
         const adjustmentsDOP = adjustmentsUSD * (p.exchange_rate || 58);
 
         return acc + ((p.sale_price || 0) - dopCost + adjustmentsDOP);

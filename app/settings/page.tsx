@@ -33,7 +33,6 @@ export default function SettingsPage() {
     const { types: adjTypes, loading: adjTypesLoading, addType: addAdjType, editType: editAdjType, deleteType: deleteAdjType } = useAdjustmentTypes();
     const [newAdjLabel, setNewAdjLabel] = useState('');
     const [newAdjDesc, setNewAdjDesc] = useState('');
-    const [newAdjAffects, setNewAdjAffects] = useState(true);
     const [newAdjCategory, setNewAdjCategory] = useState<AdjCategory>('CREDIT');
     const [editingAdjId, setEditingAdjId] = useState<string | null>(null);
     const [editAdjValues, setEditAdjValues] = useState<{ label: string; description: string; category: AdjCategory }>({ label: '', description: '', category: 'CREDIT' });
@@ -481,8 +480,8 @@ export default function SettingsPage() {
                                 <button
                                     onClick={() => setNewAdjCategory('CREDIT')}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${newAdjCategory === 'CREDIT'
-                                            ? 'bg-blue-600 text-white border-blue-600'
-                                            : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
+                                        ? 'bg-blue-600 text-white border-blue-600'
+                                        : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
                                         }`}
                                 >
                                     💳 Crédito
@@ -490,8 +489,8 @@ export default function SettingsPage() {
                                 <button
                                     onClick={() => setNewAdjCategory('DISCOUNT')}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${newAdjCategory === 'DISCOUNT'
-                                            ? 'bg-emerald-600 text-white border-emerald-600'
-                                            : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'
+                                        ? 'bg-emerald-600 text-white border-emerald-600'
+                                        : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'
                                         }`}
                                 >
                                     🏷️ Descuento
@@ -519,28 +518,16 @@ export default function SettingsPage() {
                                 value={newAdjDesc}
                                 onChange={(e) => setNewAdjDesc(e.target.value)}
                             />
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    id="adjAffectsCost"
-                                    checked={newAdjAffects}
-                                    onChange={(e) => setNewAdjAffects(e.target.checked)}
-                                    className="w-4 h-4 text-emerald-600 rounded"
-                                />
-                                <label htmlFor="adjAffectsCost" className="text-xs text-slate-600 font-medium cursor-pointer">
-                                    Descuenta del capital activo
-                                </label>
-                            </div>
                             <button
                                 onClick={async () => {
                                     if (!newAdjLabel.trim()) return;
                                     const ok = await addAdjType({
                                         label: newAdjLabel.trim(),
                                         description: newAdjDesc.trim(),
-                                        affects_cost: newAdjAffects,
+                                        affects_cost: newAdjCategory === 'DISCOUNT',
                                         category: newAdjCategory,
                                     });
-                                    if (ok) { setNewAdjLabel(''); setNewAdjDesc(''); setNewAdjAffects(true); setNewAdjCategory('CREDIT'); }
+                                    if (ok) { setNewAdjLabel(''); setNewAdjDesc(''); setNewAdjCategory('CREDIT'); }
                                 }}
                                 className="w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-sm hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
                             >
@@ -574,15 +561,15 @@ export default function SettingsPage() {
                                                                 <button
                                                                     onClick={() => setEditAdjValues(v => ({ ...v, category: 'CREDIT' }))}
                                                                     className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${editAdjValues.category === 'CREDIT'
-                                                                            ? 'bg-blue-600 text-white border-blue-600'
-                                                                            : 'bg-white text-slate-400 border-slate-200'
+                                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                                        : 'bg-white text-slate-400 border-slate-200'
                                                                         }`}
                                                                 >💳 Crédito</button>
                                                                 <button
                                                                     onClick={() => setEditAdjValues(v => ({ ...v, category: 'DISCOUNT' }))}
                                                                     className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${editAdjValues.category === 'DISCOUNT'
-                                                                            ? 'bg-emerald-600 text-white border-emerald-600'
-                                                                            : 'bg-white text-slate-400 border-slate-200'
+                                                                        ? 'bg-emerald-600 text-white border-emerald-600'
+                                                                        : 'bg-white text-slate-400 border-slate-200'
                                                                         }`}
                                                                 >🏷️ Descuento</button>
                                                             </div>
