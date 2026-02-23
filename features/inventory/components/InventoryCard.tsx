@@ -227,9 +227,16 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
 
                 <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-800 text-sm truncate">{p.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                        RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        {p.sku && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wider">
+                                🏷️ {p.sku}
+                            </span>
+                        )}
+                        <span className="text-xs text-slate-400">
+                            RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="flex flex-col items-end gap-2">

@@ -13,6 +13,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     const [platformId, setPlatformId] = useState<string>(initialProduct?.platform_id || '');
     const [purchaseAccountId, setPurchaseAccountId] = useState<string>((initialProduct as any)?.purchase_account_id || '');
     const [name, setName] = useState<string>(initialProduct?.name || ''); // New Name State
+    const [sku, setSku] = useState<string>(initialProduct?.sku || ''); // NEW: SKU State
     const [buyPrice, setBuyPrice] = useState<number>(initialProduct?.buy_price || 0);
     const [shippingCost, setShippingCost] = useState<number>(initialProduct?.shipping_cost || 0);
     const [originTax, setOriginTax] = useState<number>(initialProduct?.origin_tax || 0); // New
@@ -281,6 +282,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             exchangeRate,
             currency, // NEW
             applyUSATax, // NEW
+            sku, // NEW: SKU
             adjustments,
             productUrl,
             imageUrl,
@@ -316,6 +318,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setCurrency(cur);
             },
             setApplyUSATax,
+            setSku, // NEW: SKU
             setAdjustments,
             setProductUrl,
             setImageUrl,
@@ -328,6 +331,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setPlatformId(p.platform_id || '');
                 setPurchaseAccountId(p.purchase_account_id || '');
                 setName(p.name || '');
+                setSku(p.sku || ''); // NEW: SKU
                 setBuyPrice(p.buy_price || 0);
                 setShippingCost(p.shipping_cost || 0);
                 setOriginTax(p.origin_tax || 0);
@@ -375,6 +379,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setImageUrl('');
                 setImages([]);
                 setName('');
+                setSku(''); // NEW: SKU
                 setTrackingNumber('');
                 setCourierTracking('');
             },
@@ -387,6 +392,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setProductUrl('');
                 setImageUrl('');
                 setImages([]);
+                setSku(''); // NEW: SKU
                 setTrackingNumber('');
                 setCourierTracking('');
             },

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Calculator, Zap, CheckCircle, Loader2 } from 'lucide-react';
+import { Calculator, Zap, CheckCircle, Loader2, ScanBarcode, Wand2 } from 'lucide-react';
+import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
 import { FormState, FormSetters } from '../../../types';
 
 interface CostInputsProps {
@@ -13,6 +14,25 @@ interface CostInputsProps {
 export default function CostInputs({ formState, setters, onApplyDiscount, selectedPlatformName, courierDiscount = 0 }: CostInputsProps) {
     const [showSuccess, setShowSuccess] = useState(false);
     const [isDiscountApplied, setIsDiscountApplied] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
+
+    const handleSuggestSku = () => {
+        const platformStr = selectedPlatformName ? selectedPlatformName.substring(0, 3).toUpperCase() : 'PRD';
+
+        let nameStr = 'XXX';
+        if (formState.name) {
+            const words = formState.name.trim().split(/\s+/).filter(w => w.length > 0);
+            if (words.length >= 2) {
+                nameStr = words.map(w => w[0]).join('').substring(0, 4).toUpperCase();
+            } else if (words.length > 0) {
+                nameStr = words[0].substring(0, 4).toUpperCase();
+            }
+        }
+
+        const randomNum = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 alphanumeric chars
+        const newSku = `${platformStr}-${nameStr}-${randomNum}`;
+        setters.setSku(newSku);
+    };
 
     const extractUrl = (text: string) => {
         // More robust URL extraction: Find http/https and grab everything until whitespace
@@ -69,8 +89,8 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                             type="button"
                             onClick={() => setters.setCurrency('USD')}
                             className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${formState.currency === 'USD'
-                                    ? 'bg-blue-500 text-white shadow-md'
-                                    : 'bg-white text-slate-600 border border-slate-200'
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-white text-slate-600 border border-slate-200'
                                 }`}
                         >
                             💵 USD
@@ -79,8 +99,8 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                             type="button"
                             onClick={() => setters.setCurrency('DOP')}
                             className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${formState.currency === 'DOP'
-                                    ? 'bg-emerald-500 text-white shadow-md'
-                                    : 'bg-white text-slate-600 border border-slate-200'
+                                ? 'bg-emerald-500 text-white shadow-md'
+                                : 'bg-white text-slate-600 border border-slate-200'
                                 }`}
                         >
                             🇩🇴 DOP
@@ -200,7 +220,49 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
 
                 {/* 5. Logistics (Optional) - Tracking */}
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5">
-                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística / Rastreo (Opcional)</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística y SKU</p>
+
+                    {/* SKU Field with Generator & Scanner */}
+                    <div className="mb-2">
+                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 overflow-hidden transition-colors shadow-sm">
+                            <span className="text-slate-400 text-xs shrink-0 pl-3">🏷️</span>
+                            <input
+                                type="text"
+                                placeholder="Código / SKU del producto"
+                                value={formState.sku || ''}
+                                onChange={(e) => setters.setSku(e.target.value.toUpperCase())}
+                                className="w-full text-xs bg-transparent outline-none px-2 py-2 text-slate-700 placeholder:text-slate-400 font-bold uppercase"
+                            />
+                            <button
+                                onClick={handleSuggestSku}
+                                className="px-3 py-2 bg-slate-50 border-l border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center shrink-0"
+                                title="Generar SKU Inteligente"
+                                type="button"
+                            >
+                                <Wand2 size={16} />
+                            </button>
+                            <button
+                                onClick={() => setShowScanner(!showScanner)}
+                                className={`px-3 py-2 border-l border-slate-200 transition-colors flex items-center justify-center shrink-0 ${showScanner ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500 hover:text-blue-600 hover:bg-blue-50'}`}
+                                title="Escanear Código de Barras"
+                                type="button"
+                            >
+                                <ScanBarcode size={16} />
+                            </button>
+                        </div>
+                    </div>
+                    {showScanner && (
+                        <div className="mb-2 overflow-hidden rounded-lg border border-slate-200">
+                            <BarcodeScanner
+                                onScan={(code) => {
+                                    setters.setSku(code);
+                                    setShowScanner(false);
+                                }}
+                                onClose={() => setShowScanner(false)}
+                            />
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2">
                         <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
                             <span className="text-slate-400 text-xs shrink-0">📦</span>

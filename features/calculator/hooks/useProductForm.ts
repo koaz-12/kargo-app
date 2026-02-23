@@ -76,6 +76,31 @@ export const useProductForm = (editingId: string | null) => {
         setStatusMsg('');
 
         try {
+            // Check for Duplicate SKU before doing anything else
+            if (formState.sku) {
+                // Initialize the query
+                let skuCheckQuery = supabase
+                    .from('products')
+                    .select('id, name')
+                    .eq('sku', formState.sku);
+
+                if (editingId && !cloneMode) {
+                    skuCheckQuery = skuCheckQuery.neq('id', editingId);
+                }
+
+                const { data: existingSkus, error: skuError } = await skuCheckQuery.limit(1);
+
+                if (skuError) {
+                    console.error('Error checking SKU:', skuError);
+                }
+
+                if (existingSkus && existingSkus.length > 0) {
+                    toast.error(`❌ El SKU "${formState.sku}" ya está usado por "${existingSkus[0].name}"`);
+                    setSaving(false);
+                    return;
+                }
+            }
+
             // Determine status based on fields
             let productStatus: ProductStatus = 'ORDERED';
             if (formState.salePrice > 0) {
@@ -114,6 +139,7 @@ export const useProductForm = (editingId: string | null) => {
             formData.append('status', productStatus);
 
             // Optional fields
+            if (formState.sku) formData.append('sku', formState.sku);
             if (formState.productUrl) formData.append('product_url', formState.productUrl);
             if (formState.imageUrl) formData.append('image_url', formState.imageUrl);
             if (formState.trackingNumber) formData.append('tracking_number', formState.trackingNumber);
