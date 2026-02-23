@@ -17,20 +17,24 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
     const [showScanner, setShowScanner] = useState(false);
 
     const handleSuggestSku = () => {
-        const platformStr = selectedPlatformName ? selectedPlatformName.substring(0, 3).toUpperCase() : 'PRD';
-
-        let nameStr = 'XXX';
+        let nameStr = 'PRD';
         if (formState.name) {
-            const words = formState.name.trim().split(/\s+/).filter(w => w.length > 0);
+            // Eliminar algunas preposiciones comunes para las iniciales
+            const ignoreWords = ['DE', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'A', 'CON', 'EN', 'POR', 'PARA'];
+            const words = formState.name.trim().split(/\s+/).filter(w => w.length > 0 && !ignoreWords.includes(w.toUpperCase()));
+
             if (words.length >= 2) {
+                // Tomar hasta 4 iniciales de las palabras
                 nameStr = words.map(w => w[0]).join('').substring(0, 4).toUpperCase();
             } else if (words.length > 0) {
+                // Tomar hasta las primeras 4 letras de la única palabra
                 nameStr = words[0].substring(0, 4).toUpperCase();
             }
         }
 
-        const randomNum = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 alphanumeric chars
-        const newSku = `${platformStr}-${nameStr}-${randomNum}`;
+        // 4 caracteres alfanuméricos al azar
+        const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const newSku = `${nameStr}-${randomNum}`;
         setters.setSku(newSku);
     };
 
