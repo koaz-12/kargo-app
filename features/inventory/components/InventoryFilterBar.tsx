@@ -17,6 +17,9 @@ interface InventoryFilterBarProps {
     selectedPlatforms?: string[];
     onPlatformsChange?: (platforms: string[]) => void;
     platformOptions?: { value: string; label: string }[];
+    selectedAccounts?: string[]; // NEW
+    onAccountsChange?: (accounts: string[]) => void; // NEW
+    accountOptions?: { value: string; label: string }[]; // NEW
     priceRange?: { min: number; max: number };
     onPriceRangeChange?: (range: { min: number; max: number }) => void;
 }
@@ -33,16 +36,21 @@ export default function InventoryFilterBar({
     selectedPlatforms = [],
     onPlatformsChange,
     platformOptions = [],
+    selectedAccounts = [], // NEW
+    onAccountsChange, // NEW
+    accountOptions = [], // NEW
     priceRange,
     onPriceRangeChange,
 }: InventoryFilterBarProps) {
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const hasActiveFilters = selectedPlatforms.length > 0 ||
+        selectedAccounts.length > 0 ||
         (priceRange && (priceRange.min > 0 || priceRange.max < Infinity));
 
     const clearAllFilters = () => {
         if (onPlatformsChange) onPlatformsChange([]);
+        if (onAccountsChange) onAccountsChange([]); // NEW
         if (onPriceRangeChange) onPriceRangeChange({ min: 0, max: Infinity });
         setStatusFilter('ALL');
         setSearchTerm('');
@@ -69,10 +77,19 @@ export default function InventoryFilterBar({
                     <input
                         type="text"
                         placeholder="Buscar por nombre, SKU, tracking..."
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none text-sm transition-all shadow-sm"
+                        className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none text-sm transition-all shadow-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 focus:outline-none bg-slate-100 hover:bg-slate-200 rounded-full p-0.5 transition-colors"
+                            title="Limpiar búsqueda"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex gap-2 text-slate-600 overflow-x-auto pb-1 sm:pb-0">
@@ -160,6 +177,21 @@ export default function InventoryFilterBar({
                                 selected={selectedPlatforms}
                                 onChange={onPlatformsChange}
                                 placeholder="Seleccionar plataformas..."
+                            />
+                        </div>
+                    )}
+
+                    {/* Account Filter */}
+                    {accountOptions.length > 0 && onAccountsChange && (
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                                Cuentas de Compra
+                            </label>
+                            <MultiSelect
+                                options={accountOptions}
+                                selected={selectedAccounts}
+                                onChange={onAccountsChange}
+                                placeholder="Seleccionar cuentas..."
                             />
                         </div>
                     )}

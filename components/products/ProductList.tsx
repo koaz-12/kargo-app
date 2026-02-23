@@ -63,6 +63,9 @@ export default function ProductList() {
         selectedPlatforms,
         setSelectedPlatforms,
         platformOptions,
+        selectedAccounts, // NEW
+        setSelectedAccounts, // NEW
+        accountOptions, // NEW
         priceRange,
         setPriceRange,
         // Pagination
@@ -141,6 +144,9 @@ export default function ProductList() {
                 selectedPlatforms={selectedPlatforms}
                 onPlatformsChange={setSelectedPlatforms}
                 platformOptions={platformOptions}
+                selectedAccounts={selectedAccounts} // NEW
+                onAccountsChange={setSelectedAccounts} // NEW
+                accountOptions={accountOptions} // NEW
                 priceRange={priceRange}
                 onPriceRangeChange={setPriceRange}
             />

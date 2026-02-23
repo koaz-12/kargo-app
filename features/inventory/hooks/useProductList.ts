@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { SortOption, StatusFilter } from '../types';
-import { useProducts, useDeleteProduct, usePlatforms } from '../../../hooks/useProducts';
+import { useProducts, useDeleteProduct, usePlatforms, usePurchaseAccounts } from '../../../hooks/useProducts';
 import { Product } from '../../../types';
 
 export function useProductList() {
@@ -11,6 +11,7 @@ export function useProductList() {
 
     // Advanced filters
     const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+    const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]); // NEW
     const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity });
 
     // Pagination
@@ -20,6 +21,7 @@ export function useProductList() {
     // Use React Query hooks
     const { data: allProducts = [], isLoading: loading } = useProducts();
     const { data: platforms = [] } = usePlatforms();
+    const { data: accounts = [] } = usePurchaseAccounts(); // NEW
     const deleteProductMutation = useDeleteProduct();
 
     // Debounce Logic
@@ -44,6 +46,14 @@ export function useProductList() {
         }))
         , [platforms]);
 
+    // Account options for multi-select
+    const accountOptions = useMemo(() =>
+        accounts.map(a => ({
+            value: a.id,
+            label: a.name
+        }))
+        , [accounts]);
+
     // Client-side filtering and sorting
     const products = useMemo(() => {
         let filtered = [...allProducts];
@@ -57,6 +67,13 @@ export function useProductList() {
         if (selectedPlatforms.length > 0) {
             filtered = filtered.filter(p =>
                 p.platform_id && selectedPlatforms.includes(p.platform_id)
+            );
+        }
+
+        // Apply account filter (NEW)
+        if (selectedAccounts.length > 0) {
+            filtered = filtered.filter(p =>
+                p.purchase_account_id && selectedAccounts.includes(p.purchase_account_id)
             );
         }
 
@@ -98,7 +115,7 @@ export function useProductList() {
         });
 
         return filtered;
-    }, [allProducts, statusFilter, debouncedSearchTerm, sortOption, selectedPlatforms, priceRange]);
+    }, [allProducts, statusFilter, debouncedSearchTerm, sortOption, selectedPlatforms, selectedAccounts, priceRange]);
 
     const handleDelete = async (id: string) => {
         deleteProductMutation.mutate(id);
@@ -107,7 +124,7 @@ export function useProductList() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter, debouncedSearchTerm, sortOption, selectedPlatforms, priceRange]);
+    }, [statusFilter, debouncedSearchTerm, sortOption, selectedPlatforms, selectedAccounts, priceRange]);
 
     // Paginated products
     const paginatedProducts = useMemo(() => {
@@ -130,6 +147,9 @@ export function useProductList() {
         selectedPlatforms,
         setSelectedPlatforms,
         platformOptions,
+        selectedAccounts, // NEW
+        setSelectedAccounts, // NEW
+        accountOptions, // NEW
         priceRange,
         setPriceRange,
         // Pagination
