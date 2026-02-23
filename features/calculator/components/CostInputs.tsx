@@ -17,25 +17,48 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
     const [showScanner, setShowScanner] = useState(false);
 
     const handleSuggestSku = () => {
-        let nameStr = 'PRD';
+        let finalSku = '';
         if (formState.name) {
             // Eliminar algunas preposiciones comunes para las iniciales
             const ignoreWords = ['DE', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'A', 'CON', 'EN', 'POR', 'PARA'];
             const words = formState.name.trim().split(/\s+/).filter(w => w.length > 0 && !ignoreWords.includes(w.toUpperCase()));
 
-            if (words.length >= 2) {
-                // Tomar hasta 4 iniciales de las palabras
-                nameStr = words.map(w => w[0]).join('').substring(0, 4).toUpperCase();
-            } else if (words.length > 0) {
-                // Tomar hasta las primeras 4 letras de la única palabra
-                nameStr = words[0].substring(0, 4).toUpperCase();
+            if (words.length >= 3) {
+                // [MARCA] - [MODELO] - [VARIANTE/CONECTOR]
+                const marca = words[0].substring(0, 4).toUpperCase();
+                const variante = words[words.length - 1].substring(0, 4).toUpperCase();
+
+                // Modelo (todo lo del medio)
+                const middleWords = words.slice(1, words.length - 1);
+                let modelo = '';
+                if (middleWords.length === 1) {
+                    modelo = middleWords[0].substring(0, 5).toUpperCase();
+                } else {
+                    modelo = middleWords.map(w => w[0]).join('').substring(0, 4).toUpperCase();
+                }
+
+                finalSku = `${marca}-${modelo}-${variante}`;
+            } else if (words.length === 2) {
+                // [MARCA] - [MODELO] - [RANDOM]
+                const marca = words[0].substring(0, 4).toUpperCase();
+                const modelo = words[1].substring(0, 5).toUpperCase();
+                const randomNum = Math.random().toString(36).substring(2, 5).toUpperCase();
+                finalSku = `${marca}-${modelo}-${randomNum}`;
+            } else if (words.length === 1) {
+                // [MARCA] - [RANDOM]
+                const marca = words[0].substring(0, 5).toUpperCase();
+                const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
+                finalSku = `${marca}-${randomNum}`;
             }
         }
 
-        // 4 caracteres alfanuméricos al azar
-        const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const newSku = `${nameStr}-${randomNum}`;
-        setters.setSku(newSku);
+        // Fallback
+        if (!finalSku) {
+            const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
+            finalSku = `PRD-${randomNum}`;
+        }
+
+        setters.setSku(finalSku);
     };
 
     const extractUrl = (text: string) => {
