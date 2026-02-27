@@ -36,6 +36,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         taxCost: initialProduct.tax_cost || 0,
         trackingNumber: initialProduct.tracking_number || '',
         courierTracking: initialProduct.courier_tracking || '',
+        sku: initialProduct.sku || '', // NEW
         adjustments: initialProduct.financial_adjustments ? [...initialProduct.financial_adjustments] : []
     });
     const [scanTarget, setScanTarget] = useState<'STORE' | 'COURIER' | null>(null);
@@ -80,6 +81,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 taxCost: p.tax_cost || 0,
                 trackingNumber: p.tracking_number || '',
                 courierTracking: p.courier_tracking || '',
+                sku: p.sku || '', // NEW
                 adjustments: p.financial_adjustments ? [...p.financial_adjustments] : []
             });
 
@@ -118,6 +120,26 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         }
 
         try {
+            // Check for duplicate SKU
+            if (editValues.sku && editValues.sku !== p.sku) {
+                const { data: existingSkus, error: skuError } = await supabase
+                    .from('products')
+                    .select('id, name')
+                    .eq('sku', editValues.sku)
+                    .neq('id', p.id)
+                    .limit(1);
+
+                if (skuError) console.error('Error checking SKU:', skuError);
+
+                if (existingSkus && existingSkus.length > 0) {
+                    const existingName = existingSkus[0].name;
+                    if (existingName.trim().toLowerCase() !== p.name.trim().toLowerCase()) {
+                        alert(`❌ El SKU "${editValues.sku}" ya pertenece a "${existingName}". Si es el mismo producto, usa el mismo nombre exacto.`);
+                        return; // Stop saving
+                    }
+                }
+            }
+
             // Prepare update payload
             const updatePayload: any = {
                 sale_price: editValues.salePrice,
@@ -125,6 +147,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 tax_cost: editValues.taxCost,
                 tracking_number: editValues.trackingNumber,
                 courier_tracking: editValues.courierTracking,
+                sku: editValues.sku, // NEW
                 status: newStatus as any
             };
 
@@ -164,7 +187,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 status: newStatus as any,
                 financial_adjustments: newAdjustments,
                 tracking_number: editValues.trackingNumber,
-                courier_tracking: editValues.courierTracking
+                courier_tracking: editValues.courierTracking,
+                sku: editValues.sku // NEW
             }));
             setExpanded(false);
             if (refreshList) refreshList();
@@ -207,6 +231,41 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 })
             }));
         }
+    };
+
+    const handleSuggestSku = () => {
+        let finalSku = '';
+        if (p.name) {
+            const ignoreWords = ['DE', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'A', 'CON', 'EN', 'POR', 'PARA'];
+            const words = p.name.trim().split(/\s+/).filter(w => w.length > 0 && !ignoreWords.includes(w.toUpperCase()));
+
+            if (words.length >= 3) {
+                const marca = words[0].substring(0, 4).toUpperCase();
+                const variante = words[words.length - 1].substring(0, 4).toUpperCase();
+                const middleWords = words.slice(1, words.length - 1);
+                let modelo = '';
+                if (middleWords.length === 1) {
+                    modelo = middleWords[0].substring(0, 5).toUpperCase();
+                } else {
+                    modelo = middleWords.map(w => w[0]).join('').substring(0, 4).toUpperCase();
+                }
+                finalSku = `${marca}-${modelo}-${variante}`;
+            } else if (words.length === 2) {
+                const marca = words[0].substring(0, 4).toUpperCase();
+                const modelo = words[1].substring(0, 5).toUpperCase();
+                const randomNum = Math.random().toString(36).substring(2, 5).toUpperCase();
+                finalSku = `${marca}-${modelo}-${randomNum}`;
+            } else if (words.length === 1) {
+                const marca = words[0].substring(0, 5).toUpperCase();
+                const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
+                finalSku = `${marca}-${randomNum}`;
+            }
+        }
+        if (!finalSku) {
+            const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
+            finalSku = `PRD-${randomNum}`;
+        }
+        setEditValues(prev => ({ ...prev, sku: finalSku }));
     };
 
     return (
@@ -316,6 +375,27 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
 
                     <div className="mb-4">
                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística / Rastreo (Opcional)</p>
+
+                        {/* NEW: SKU Field in Quick Edit */}
+                        <div className="flex gap-2 items-center mb-2">
+                            <div className="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors relative">
+                                <span className="text-slate-400 text-xs shrink-0 font-bold">SKU</span>
+                                <input
+                                    type="text"
+                                    placeholder="Código interno..."
+                                    value={editValues.sku || ''}
+                                    onChange={(e) => setEditValues(prev => ({ ...prev, sku: e.target.value.toUpperCase() }))}
+                                    className="w-full text-xs font-bold uppercase bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400 pr-6"
+                                />
+                            </div>
+                            <button onClick={handleSuggestSku} title="Sugerir SKU" className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                <span className="text-xs">🪄</span>
+                            </button>
+                            <button onClick={() => setScanTarget('STORE')} className="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center shrink-0 border border-slate-200 hover:bg-slate-100 transition-colors" title="Escanear Código">
+                                <ScanBarcode size={14} />
+                            </button>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-2">
                             <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors relative">
                                 <span className="text-slate-400 text-xs shrink-0">📦</span>
