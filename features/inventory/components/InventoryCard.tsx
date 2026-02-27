@@ -301,22 +301,22 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     </div>
 
                     <div className="flex-1 min-w-0">
-                        <p className={`font-semibold text-sm truncate ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{p.name}</p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <p className={`font-semibold text-sm leading-tight line-clamp-2 break-words ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{p.name}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             {p.sku && (
                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${isSelected ? 'bg-indigo-100 text-indigo-600 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                                     🏷️ {p.sku}
                                 </span>
                             )}
-                            <span className="text-xs text-slate-400 font-medium">
-                                RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
-                            </span>
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${profit > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${profit > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                             {profit > 0 ? '+' : ''}RD$ {profit.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                            Costo: RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
                         </span>
                     </div>
                 </div>
