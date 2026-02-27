@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getPublicUrl } from '@/utils/imageUrl';
+import { getPublicUrl, getThumbnailUrl } from '../../../utils/imageUrl';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
 import { Package, Trash2, Pencil, ScanBarcode, Plus } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -290,7 +290,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     <div className="flex flex-col items-center gap-1 shrink-0">
                         <div className="w-12 h-12 bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
                             {p.image_url ? (
-                                <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
+                                <img src={getThumbnailUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-300">
                                     <Package size={20} />

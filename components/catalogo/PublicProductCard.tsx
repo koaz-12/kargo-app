@@ -1,4 +1,4 @@
-import { getPublicUrl } from '@/utils/imageUrl';
+import { getThumbnailUrl } from '@/utils/imageUrl';
 import { Package } from 'lucide-react';
 
 interface PublicProductCardProps {
@@ -16,7 +16,7 @@ export default function PublicProductCard({ product }: PublicProductCardProps) {
             <div className="aspect-square bg-slate-50 relative overflow-hidden flex items-center justify-center">
                 {product.image_url ? (
                     <img
-                        src={getPublicUrl(product.image_url)}
+                        src={getThumbnailUrl(product.image_url, 300, 300)}
                         alt={product.name}
                         className="w-full h-full object-cover"
                         loading="lazy"

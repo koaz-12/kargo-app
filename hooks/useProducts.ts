@@ -30,6 +30,81 @@ export const useProducts = () => {
     });
 };
 
+export interface PaginatedProductsParams {
+    page: number;
+    itemsPerPage: number;
+    searchTerm: string;
+    statusFilter: string;
+    sortOption: string;
+    selectedPlatforms: string[];
+    selectedAccounts: string[];
+}
+
+export const usePaginatedProducts = (params: PaginatedProductsParams) => {
+    return useQuery({
+        queryKey: ['products', 'paginated', params],
+        queryFn: async () => {
+            let query = supabase
+                .from('products')
+                .select('*, financial_adjustments(*), platform:platforms(*), purchase_account:purchase_accounts(*)', { count: 'exact' });
+
+            if (params.statusFilter !== 'ALL') {
+                query = query.eq('status', params.statusFilter);
+            }
+
+            if (params.selectedPlatforms.length > 0) {
+                query = query.in('platform_id', params.selectedPlatforms);
+            }
+
+            if (params.selectedAccounts.length > 0) {
+                query = query.in('purchase_account_id', params.selectedAccounts);
+            }
+
+            if (params.searchTerm) {
+                query = query.or(`name.ilike.%${params.searchTerm}%,sku.ilike.%${params.searchTerm}%,tracking_number.ilike.%${params.searchTerm}%,courier_tracking.ilike.%${params.searchTerm}%`);
+            }
+
+            switch (params.sortOption) {
+                case 'DATE_ASC':
+                    query = query.order('created_at', { ascending: true });
+                    break;
+                case 'DATE_DESC':
+                    query = query.order('created_at', { ascending: false });
+                    break;
+                case 'PRICE_DESC':
+                    query = query.order('sale_price', { ascending: false, nullsFirst: false });
+                    break;
+                case 'PRICE_ASC':
+                    query = query.order('sale_price', { ascending: true, nullsFirst: false });
+                    break;
+                case 'NAME_ASC':
+                    query = query.order('name', { ascending: true });
+                    break;
+                default:
+                    query = query.order('created_at', { ascending: false });
+            }
+
+            const from = (params.page - 1) * params.itemsPerPage;
+            const to = from + params.itemsPerPage - 1;
+            query = query.range(from, to);
+
+            const { data, error, count } = await query;
+
+            if (error) {
+                toast.error('Error al cargar página de productos');
+                throw error;
+            }
+
+            const products = data.map((p: any) => ({
+                ...p,
+                adjustments: p.financial_adjustments,
+            })) as Product[];
+
+            return { products, count: count || 0 };
+        },
+    });
+};
+
 export const useProduct = (id: string | undefined) => {
     return useQuery({
         queryKey: ['products', id],
