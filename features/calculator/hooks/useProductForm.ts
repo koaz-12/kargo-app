@@ -95,9 +95,13 @@ export const useProductForm = (editingId: string | null) => {
                 }
 
                 if (existingSkus && existingSkus.length > 0) {
-                    toast.error(`❌ El SKU "${formState.sku}" ya está usado por "${existingSkus[0].name}"`);
-                    setSaving(false);
-                    return;
+                    const existingName = existingSkus[0].name;
+                    // Permitir el mismo SKU si el nombre del producto es exactamente el mismo (otra unidad)
+                    if (existingName.trim().toLowerCase() !== formState.name.trim().toLowerCase()) {
+                        toast.error(`❌ El SKU "${formState.sku}" ya pertenece a "${existingName}". Si es el mismo producto, usa el mismo nombre exacto.`);
+                        setSaving(false);
+                        return;
+                    }
                 }
             }
 
