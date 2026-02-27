@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Package, AlertTriangle, X } from 'lucide-react';
+import { Package, AlertTriangle, X, Trash2 } from 'lucide-react';
 import { useProductList } from '../../features/inventory/hooks/useProductList';
 import InventoryFilterBar from '../../features/inventory/components/InventoryFilterBar';
 import InventoryCard from '../../features/inventory/components/InventoryCard';
@@ -73,14 +73,41 @@ export default function ProductList() {
         setCurrentPage,
         totalItems,
         itemsPerPage,
+        handleMassUpdateStatus, // NEW
+        handleMassGenerateSKU, // NEW
+        isMassActing // NEW
     } = useProductList();
 
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+    const [isMassDeleting, setIsMassDeleting] = useState(false);
 
     const executeDelete = () => {
-        if (deletingId) {
+        if (isMassDeleting && selectedProductIds.length > 0) {
+            // Eliminar masivamente
+            selectedProductIds.forEach(id => handleDelete(id));
+            setSelectedProductIds([]);
+            setIsMassDeleting(false);
+            setDeletingId(null);
+        } else if (deletingId) {
             handleDelete(deletingId);
             setDeletingId(null);
+        }
+    };
+
+    const handleSelectProduct = (id: string, isSelected: boolean) => {
+        if (isSelected) {
+            setSelectedProductIds(prev => [...prev, id]);
+        } else {
+            setSelectedProductIds(prev => prev.filter(pId => pId !== id));
+        }
+    };
+
+    const handleSelectAll = () => {
+        if (selectedProductIds.length === products.length) {
+            setSelectedProductIds([]);
+        } else {
+            setSelectedProductIds(products.map(p => p.id));
         }
     };
 
@@ -129,10 +156,22 @@ export default function ProductList() {
     return (
         <div className="max-w-md mx-auto p-4 mb-24 cursor-default">
 
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Package size={20} className="text-slate-500" />
-                Inventario
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <Package size={20} className="text-slate-500" />
+                    Inventario
+                </h2>
+
+                {/* Select All Button */}
+                {products.length > 0 && (
+                    <button
+                        onClick={handleSelectAll}
+                        className="text-xs font-semibold text-slate-500 hover:text-indigo-600 bg-white border border-slate-200 px-2 py-1.5 rounded-lg shadow-sm transition-colors"
+                    >
+                        {selectedProductIds.length === products.length ? 'Desmarcar Todos' : 'Seleccionar Todo (Página)'}
+                    </button>
+                )}
+            </div>
 
             <InventoryFilterBar
                 searchTerm={searchTerm} setSearchTerm={setSearchTerm}
@@ -162,6 +201,8 @@ export default function ProductList() {
                             key={product.id}
                             product={product}
                             onDelete={setDeletingId}
+                            isSelected={selectedProductIds.includes(product.id)}
+                            onSelect={handleSelectProduct}
                         />
                     ))
                 )}
@@ -176,10 +217,66 @@ export default function ProductList() {
                 loading={loading}
             />
 
+            {/* Mass Actions Floating Toolbar */}
+            {selectedProductIds.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl p-2 flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-5">
+                    <div className="px-3 border-r border-slate-700">
+                        <span className="text-sm font-bold">{selectedProductIds.length}</span>
+                        <span className="text-[10px] text-slate-400 block -mt-1 uppercase">Sel.</span>
+                    </div>
+
+                    <button
+                        onClick={() => { handleMassGenerateSKU(selectedProductIds); setSelectedProductIds([]); }}
+                        disabled={isMassActing}
+                        className={`p-2 rounded-xl transition-colors flex flex-col items-center gap-1 min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-blue-400'}`}
+                        title="Generar SKUs"
+                    >
+                        <span className="text-xl leading-none">🪄</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider">SKUs</span>
+                    </button>
+
+                    <div className="w-px h-8 bg-slate-700"></div>
+
+                    <button
+                        onClick={() => { handleMassUpdateStatus(selectedProductIds, 'RECEIVED'); setSelectedProductIds([]); }}
+                        disabled={isMassActing}
+                        className={`p-2 rounded-xl transition-colors flex flex-col items-center gap-1 min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-emerald-400'}`}
+                        title="Marcar Recibidos"
+                    >
+                        <span className="text-xl leading-none">📦</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider">Recib.</span>
+                    </button>
+
+                    <button
+                        onClick={() => { handleMassUpdateStatus(selectedProductIds, 'SOLD'); setSelectedProductIds([]); }}
+                        disabled={isMassActing}
+                        className={`p-2 rounded-xl transition-colors flex flex-col items-center gap-1 min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-slate-300'}`}
+                        title="Marcar Vendidos"
+                    >
+                        <span className="text-xl leading-none">🤝</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider">Ventas</span>
+                    </button>
+
+                    <div className="w-px h-8 bg-slate-700"></div>
+
+                    <button
+                        onClick={() => { setIsMassDeleting(true); setDeletingId('mass'); }}
+                        className="p-2 hover:bg-red-950/50 rounded-xl transition-colors text-red-400 flex flex-col items-center gap-1 min-w-[60px]" title="Eliminar Seleccionados"
+                    >
+                        <Trash2 size={18} className="mb-0.5" />
+                        <span className="text-[9px] font-bold uppercase tracking-wider">Borrar</span>
+                    </button>
+
+                    <button onClick={() => setSelectedProductIds([])} className="ml-1 p-2 text-slate-500 hover:text-white bg-slate-800 rounded-full hover:bg-slate-700 transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
             {/* Inlined Modal */}
             <DeleteModal
                 isOpen={!!deletingId}
-                onClose={() => setDeletingId(null)}
+                onClose={() => { setDeletingId(null); setIsMassDeleting(false); }}
                 onConfirm={executeDelete}
             />
         </div>

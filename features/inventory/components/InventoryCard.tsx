@@ -12,9 +12,13 @@ interface InventoryCardProps {
     product: InventoryItem;
     refreshList?: () => void;
     onDelete: (id: string) => void;
+
+    // Mass Actions Props
+    isSelected?: boolean;
+    onSelect?: (id: string, selected: boolean) => void;
 }
 
-export default function InventoryCard({ product: initialProduct, refreshList, onDelete }: InventoryCardProps) {
+export default function InventoryCard({ product: initialProduct, refreshList, onDelete, isSelected, onSelect }: InventoryCardProps) {
     const [p, setProduct] = useState(initialProduct);
     const queryClient = useQueryClient();
 
@@ -269,39 +273,52 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
     };
 
     return (
-        <div className={`bg-white border text-slate-900 rounded-xl overflow-hidden shadow-sm transition-all ${expanded ? 'border-slate-400 ring-1 ring-slate-400' : 'border-slate-100'}`}>
-            <div onClick={toggleExpand} className="p-3 flex gap-3 items-center cursor-pointer">
-                <div className="flex flex-col items-center gap-1 shrink-0">
-                    <div className="w-12 h-12 bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
-                        {p.image_url ? (
-                            <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                <Package size={20} />
-                            </div>
-                        )}
-                    </div>
-                    <StatusBadge status={p.status} />
-                </div>
+        <div className={`bg-white border text-slate-900 rounded-xl overflow-hidden shadow-sm transition-all focus-within:ring-2 focus-within:ring-slate-400 ${expanded ? 'border-slate-400 ring-1 ring-slate-400' : 'border-slate-100'} ${isSelected ? 'border-indigo-400 ring-1 ring-indigo-400 bg-indigo-50/30' : ''}`}>
+            <div className="flex bg-transparent relative">
 
-                <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-800 text-sm truncate">{p.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                        {p.sku && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wider">
-                                🏷️ {p.sku}
+                {/* Checkbox Area for Bulk Actions */}
+                {onSelect && (
+                    <div className="absolute top-0 bottom-0 left-0 w-10 flex items-center justify-center bg-slate-50/50 border-r border-slate-100 rounded-l-xl z-10" onClick={(e) => { e.stopPropagation(); onSelect(p.id, !isSelected); }}>
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors cursor-pointer ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300 hover:border-indigo-400'}`}>
+                            {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                        </div>
+                    </div>
+                )}
+
+                {/* Main Card Content */}
+                <div onClick={toggleExpand} className={`p-3 flex gap-3 flex-1 items-center cursor-pointer ${onSelect ? 'ml-10' : ''}`}>
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                        <div className="w-12 h-12 bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
+                            {p.image_url ? (
+                                <img src={getPublicUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                    <Package size={20} />
+                                </div>
+                            )}
+                        </div>
+                        <StatusBadge status={p.status} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                        <p className={`font-semibold text-sm truncate ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{p.name}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            {p.sku && (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${isSelected ? 'bg-indigo-100 text-indigo-600 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                    🏷️ {p.sku}
+                                </span>
+                            )}
+                            <span className="text-xs text-slate-400 font-medium">
+                                RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
                             </span>
-                        )}
-                        <span className="text-xs text-slate-400">
-                            RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${profit > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {profit > 0 ? '+' : ''}RD$ {profit.toLocaleString()}
                         </span>
                     </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${profit > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                        {profit > 0 ? '+' : ''}RD$ {profit.toLocaleString()}
-                    </span>
                 </div>
             </div>
 
