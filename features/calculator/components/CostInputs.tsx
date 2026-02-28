@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Calculator, Zap, CheckCircle, Loader2, ScanBarcode, Wand2 } from 'lucide-react';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
 import { FormState, FormSetters } from '../../../types';
+import { useHistoricalSkus } from '../../../hooks/useProducts';
 
 interface CostInputsProps {
     formState: FormState;
@@ -15,6 +16,10 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
     const [showSuccess, setShowSuccess] = useState(false);
     const [isDiscountApplied, setIsDiscountApplied] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
+    const [showSkuDropdown, setShowSkuDropdown] = useState(false);
+
+    // Fetch historical SKUs based on the current product name
+    const { data: historicalSkus = [], isLoading: isLoadingSkus } = useHistoricalSkus(formState.name);
 
     const handleSuggestSku = () => {
         let finalSku = '';
@@ -250,14 +255,16 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                     <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Logística y SKU</p>
 
                     {/* SKU Field with Generator & Scanner */}
-                    <div className="mb-2">
-                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 overflow-hidden transition-colors shadow-sm">
+                    <div className="relative mb-2">
+                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 overflow-hidden transition-colors shadow-sm relative z-20">
                             <span className="text-slate-400 text-xs shrink-0 pl-3">🏷️</span>
                             <input
                                 type="text"
                                 placeholder="Código / SKU del producto"
                                 value={formState.sku || ''}
                                 onChange={(e) => setters.setSku(e.target.value.toUpperCase())}
+                                onFocus={() => setShowSkuDropdown(true)}
+                                onBlur={() => setShowSkuDropdown(false)}
                                 className="w-full text-xs bg-transparent outline-none px-2 py-2 text-slate-700 placeholder:text-slate-400 font-bold uppercase"
                             />
                             <button
@@ -277,6 +284,38 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                                 <ScanBarcode size={16} />
                             </button>
                         </div>
+
+                        {/* Historical SKU Suggestions */}
+                        {showSkuDropdown && historicalSkus.length > 0 && formState.name.trim().length >= 3 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                                <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                                        Historial Sugerido
+                                    </span>
+                                    {isLoadingSkus && <Loader2 size={12} className="text-slate-400 animate-spin" />}
+                                </div>
+                                <div className="max-h-48 overflow-y-auto">
+                                    {historicalSkus.map(sku => (
+                                        <button
+                                            key={sku}
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => {
+                                                setters.setSku(sku);
+                                                setShowSkuDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-3 py-2.5 text-xs font-bold transition-colors border-b border-slate-50 last:border-0 flex items-center gap-2
+                                                ${formState.sku === sku
+                                                    ? 'bg-blue-50/50 text-blue-700'
+                                                    : 'text-slate-600 hover:bg-slate-50'
+                                                }`}
+                                            type="button"
+                                        >
+                                            <span className="opacity-50 text-[10px]">🔖</span> {sku}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     {showScanner && (
                         <div className="mb-2 overflow-hidden rounded-lg border border-slate-200">

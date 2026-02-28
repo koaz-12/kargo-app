@@ -132,6 +132,27 @@ export const useProduct = (id: string | undefined) => {
     });
 };
 
+export const useHistoricalSkus = (productName: string) => {
+    return useQuery({
+        queryKey: ['historical_skus', productName],
+        queryFn: async () => {
+            if (!productName || productName.trim().length < 3) return [];
+
+            const { data, error } = await supabase
+                .rpc('get_historical_skus', { search_name: productName.trim() });
+
+            if (error) {
+                console.error('Error fetching historical SKUs:', error);
+                return [];
+            }
+
+            return data.map((row: any) => row.sku) as string[];
+        },
+        enabled: productName.trim().length >= 3,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+};
+
 // ============================================
 // MUTATION HOOKS
 // ============================================
