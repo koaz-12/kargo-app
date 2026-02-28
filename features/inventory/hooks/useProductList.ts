@@ -22,7 +22,7 @@ export function useProductList() {
     const ITEMS_PER_PAGE = 10;
 
     // Use React Query hooks
-    const { data: paginatedData, isLoading: loading } = usePaginatedProducts({
+    const { data: paginatedData, isLoading, isFetching } = usePaginatedProducts({
         page: currentPage,
         itemsPerPage: ITEMS_PER_PAGE,
         searchTerm: debouncedSearchTerm,
@@ -45,19 +45,46 @@ export function useProductList() {
     // Mass Actions State
     const [isMassActing, setIsMassActing] = useState(false);
 
-    // Debounce Logic
+    // Debounce Logic for Search
     useEffect(() => {
         if (searchTerm === '') {
             setDebouncedSearchTerm('');
+            setCurrentPage(1);
             return;
         }
 
         const timer = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
+            setCurrentPage(1);
         }, 500);
 
         return () => clearTimeout(timer);
     }, [searchTerm]);
+
+    // Setter overrides to automatically reset page to 1
+    const handleSetSearchTerm = (val: string) => {
+        setSearchTerm(val);
+    };
+
+    const handleSetStatusFilter = (val: StatusFilter) => {
+        setStatusFilter(val);
+        setCurrentPage(1);
+    };
+
+    const handleSetSortOption = (val: SortOption) => {
+        setSortOption(val);
+        setCurrentPage(1);
+    };
+
+    const handleSetSelectedPlatforms = (val: string[]) => {
+        setSelectedPlatforms(val);
+        setCurrentPage(1);
+    };
+
+    const handleSetSelectedAccounts = (val: string[]) => {
+        setSelectedAccounts(val);
+        setCurrentPage(1);
+    };
 
     // Platform options for multi-select
     const platformOptions = useMemo(() =>
@@ -201,21 +228,22 @@ export function useProductList() {
 
     return {
         products: paginatedProducts,
-        loading,
-        searchTerm, setSearchTerm,
-        statusFilter, setStatusFilter,
-        sortOption, setSortOption,
+        isLoading,
+        isFetching,
+        searchTerm, setSearchTerm: handleSetSearchTerm,
+        statusFilter, setStatusFilter: handleSetStatusFilter,
+        sortOption, setSortOption: handleSetSortOption,
         handleDelete,
         handleMassUpdateStatus,
         handleMassGenerateSKU,
         isMassActing,
         // Advanced filters
         selectedPlatforms,
-        setSelectedPlatforms,
+        setSelectedPlatforms: handleSetSelectedPlatforms,
         platformOptions,
-        selectedAccounts, // NEW
-        setSelectedAccounts, // NEW
-        accountOptions, // NEW
+        selectedAccounts,
+        setSelectedAccounts: handleSetSelectedAccounts,
+        accountOptions,
         priceRange,
         setPriceRange,
         // Pagination

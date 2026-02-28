@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { Product } from '../types';
 import { toast } from 'sonner';
@@ -43,6 +43,7 @@ export interface PaginatedProductsParams {
 export const usePaginatedProducts = (params: PaginatedProductsParams) => {
     return useQuery({
         queryKey: ['products', 'paginated', params],
+        placeholderData: keepPreviousData,
         queryFn: async () => {
             let query = supabase
                 .from('products')

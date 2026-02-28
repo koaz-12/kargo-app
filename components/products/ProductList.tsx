@@ -54,7 +54,8 @@ function DeleteModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose:
 export default function ProductList() {
     const {
         products,
-        loading,
+        isLoading,
+        isFetching,
         searchTerm, setSearchTerm,
         statusFilter, setStatusFilter,
         sortOption, setSortOption,
@@ -143,18 +144,8 @@ export default function ProductList() {
         window.URL.revokeObjectURL(url);
     };
 
-    if (loading && products.length === 0) return (
-        <div className="max-w-md mx-auto p-4 mb-24 cursor-default space-y-4">
-            <div className="h-6 w-32 bg-slate-100 rounded animate-pulse"></div>
-            <div className="h-10 bg-slate-100 rounded animate-pulse"></div>
-            <div className="space-y-3">
-                {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-50 rounded-xl animate-pulse"></div>)}
-            </div>
-        </div>
-    );
-
     return (
-        <div className="max-w-md mx-auto p-4 mb-24 cursor-default">
+        <div className="max-w-md mx-auto p-4 mb-24 cursor-default min-h-[75vh]">
 
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -178,7 +169,7 @@ export default function ProductList() {
                 statusFilter={statusFilter} setStatusFilter={setStatusFilter}
                 sortOption={sortOption} setSortOption={setSortOption}
                 onExport={handleDownloadCSV}
-                loading={loading}
+                loading={isFetching}
                 // Advanced filters
                 selectedPlatforms={selectedPlatforms}
                 onPlatformsChange={setSelectedPlatforms}
@@ -191,7 +182,11 @@ export default function ProductList() {
             />
 
             <div className="space-y-3">
-                {products.length === 0 ? (
+                {isLoading && products.length === 0 ? (
+                    <div className="space-y-3">
+                        {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-50 rounded-xl animate-pulse"></div>)}
+                    </div>
+                ) : products.length === 0 ? (
                     <p className="text-sm text-slate-400 py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
                         {searchTerm ? 'Sin resultados para tu búsqueda.' : 'No tienes productos aquí todavía.'}
                     </p>
@@ -208,13 +203,12 @@ export default function ProductList() {
                 )}
             </div>
 
-            {/* Pagination */}
             <Pagination
                 currentPage={currentPage}
                 totalItems={totalItems}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
-                loading={loading}
+                loading={isFetching}
             />
 
             {/* Mass Actions Floating Toolbar */}

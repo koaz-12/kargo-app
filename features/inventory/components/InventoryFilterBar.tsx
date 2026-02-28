@@ -68,28 +68,38 @@ export default function InventoryFilterBar({
 
             {/* Search & Sort */}
             <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                    {loading ? (
-                        <Loader2 className="absolute left-3 top-3.5 text-slate-400 animate-spin" size={18} />
-                    ) : (
-                        <Search className="absolute left-3 top-3.5 text-slate-400" size={18} />
-                    )}
+                <div className="relative flex-1 flex items-center">
+                    {/* Fixed Icon Container */}
+                    <div className={`absolute left-3 text-slate-400 pointer-events-none transition-opacity duration-200 ${loading ? 'opacity-100' : 'opacity-0'}`}>
+                        <Loader2 className="animate-spin" size={18} />
+                    </div>
+                    <div className={`absolute left-3 text-slate-400 pointer-events-none transition-opacity duration-200 ${!loading ? 'opacity-100' : 'opacity-0'}`}>
+                        <Search size={18} />
+                    </div>
+
                     <input
-                        type="text"
+                        key="inventory-search-input"
+                        id="inventory-search-input"
+                        type="search"
+                        autoComplete="off"
+                        spellCheck="false"
                         placeholder="Buscar por nombre, SKU, tracking..."
                         className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none text-sm transition-all shadow-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    {searchTerm && (
+
+                    {/* Fixed Clear Container */}
+                    <div className={`absolute right-3 transition-opacity duration-200 ${searchTerm ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <button
                             onClick={() => setSearchTerm('')}
-                            className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 focus:outline-none bg-slate-100 hover:bg-slate-200 rounded-full p-0.5 transition-colors"
+                            className="text-slate-400 hover:text-slate-600 focus:outline-none bg-slate-100 hover:bg-slate-200 rounded-full p-0.5 transition-colors"
                             title="Limpiar búsqueda"
+                            tabIndex={searchTerm ? 0 : -1}
                         >
                             <X size={14} />
                         </button>
-                    )}
+                    </div>
                 </div>
 
                 <div className="flex gap-2 text-slate-600 overflow-x-auto pb-1 sm:pb-0">
