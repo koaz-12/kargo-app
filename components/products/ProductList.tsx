@@ -213,7 +213,7 @@ export default function ProductList() {
 
             {/* Mass Actions Floating Toolbar */}
             {selectedProductIds.length > 0 && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl p-2 flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-5">
+                <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl p-2 flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-5">
                     <div className="px-3 border-r border-slate-700">
                         <span className="text-sm font-bold">{selectedProductIds.length}</span>
                         <span className="text-[10px] text-slate-400 block -mt-1 uppercase">Sel.</span>

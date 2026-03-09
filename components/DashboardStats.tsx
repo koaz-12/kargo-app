@@ -10,7 +10,7 @@ interface DashboardStatsProps {
 
 export default function DashboardStats({ products }: DashboardStatsProps) {
     // Load user's adjustment types to dynamically resolve affects_cost
-    const { types: adjTypes } = useAdjustmentTypes();
+    const { types: adjTypes, loading: isLoadingTypes } = useAdjustmentTypes();
 
     // Build a lookup map: type key → category ('CREDIT' | 'DISCOUNT')
     // DISCOUNT = deducts from capital (ya se pagó menos)
@@ -87,7 +87,11 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
                 <p className="text-[9px] uppercase font-bold text-slate-400">Capital Activo</p>
                 <div className="flex items-baseline gap-1">
                     <span className="text-xs font-semibold text-slate-500">RD$</span>
-                    <span className="text-lg font-bold text-slate-800">{Math.round(activeInvestment).toLocaleString()}</span>
+                    {isLoadingTypes ? (
+                        <div className="h-6 w-24 bg-slate-100 rounded animate-pulse mt-0.5" />
+                    ) : (
+                        <span className="text-lg font-bold text-slate-800">{Math.round(activeInvestment).toLocaleString()}</span>
+                    )}
                 </div>
                 <div className="flex gap-2 mt-2">
                     <div className="flex flex-col">
@@ -110,7 +114,11 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
                 <p className="text-[9px] uppercase font-bold text-emerald-600/70">Ganancia Real (Vendidos)</p>
                 <div className="flex items-baseline gap-1">
                     <span className="text-xs font-semibold text-emerald-600">RD$</span>
-                    <span className="text-lg font-bold text-emerald-700">{Math.round(realizedProfit).toLocaleString()}</span>
+                    {isLoadingTypes ? (
+                        <div className="h-6 w-24 bg-emerald-50 rounded animate-pulse mt-0.5" />
+                    ) : (
+                        <span className="text-lg font-bold text-emerald-700">{Math.round(realizedProfit).toLocaleString()}</span>
+                    )}
                 </div>
                 <div className="mt-2 text-xs font-bold text-slate-400 flex items-center gap-1">
                     <Package size={12} />

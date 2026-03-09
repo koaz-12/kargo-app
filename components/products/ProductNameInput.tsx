@@ -40,7 +40,7 @@ export default function ProductNameInput({ value, onChange, onSelectHistory }: P
                 const { data, error } = await supabase
                     .from('products')
                     .select('*, product_images(*)') // Include images for autocomplete
-                    .ilike('name', `%${value}%`)
+                    .or(`name.ilike.%${value}%,sku.ilike.%${value}%`)
                     .order('created_at', { ascending: false })
                     .limit(5);
 
@@ -114,9 +114,16 @@ export default function ProductNameInput({ value, onChange, onSelectHistory }: P
                             className="w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors flex flex-col border-b border-slate-50 last:border-none group"
                         >
                             <span className="font-bold text-slate-700 text-xs group-hover:text-blue-700">{product.name}</span>
-                            <span className="text-[10px] text-slate-400">
-                                ${product.buy_price} • {product.created_at?.substring(0, 10)}
-                            </span>
+                            <div className="flex items-center justify-between mt-0.5">
+                                <span className="text-[10px] text-slate-400">
+                                    ${product.buy_price} • {product.created_at?.substring(0, 10)}
+                                </span>
+                                {product.sku && (
+                                    <span className="text-[9px] font-mono bg-slate-100/80 px-1 py-0.5 rounded text-slate-500">
+                                        {product.sku}
+                                    </span>
+                                )}
+                            </div>
                         </button>
                     ))}
                 </div>
