@@ -213,56 +213,56 @@ export default function ProductList() {
 
             {/* Mass Actions Floating Toolbar */}
             {selectedProductIds.length > 0 && (
-                <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl p-2 flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-5">
-                    <div className="px-3 border-r border-slate-700">
+                <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl p-1.5 sm:p-2 flex items-center justify-between gap-1 sm:gap-2 border border-slate-700 animate-in slide-in-from-bottom-5 w-[96%] md:w-auto overflow-hidden">
+                    <div className="px-1.5 sm:px-3 border-r border-slate-700 shrink-0 text-center">
                         <span className="text-sm font-bold">{selectedProductIds.length}</span>
-                        <span className="text-[10px] text-slate-400 block -mt-1 uppercase">Sel.</span>
+                        <span className="text-[9px] sm:text-[10px] text-slate-400 block -mt-1 uppercase">Sel.</span>
                     </div>
 
                     <button
                         onClick={() => { handleMassGenerateSKU(selectedProductIds); setSelectedProductIds([]); }}
                         disabled={isMassActing}
-                        className={`p-2 rounded-xl transition-colors flex flex-col items-center gap-1 min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-blue-400'}`}
+                        className={`p-1.5 sm:p-2 rounded-xl transition-colors flex flex-col items-center gap-1 flex-1 md:min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-blue-400'}`}
                         title="Generar SKUs"
                     >
-                        <span className="text-xl leading-none">🪄</span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">SKUs</span>
+                        <span className="text-lg sm:text-xl leading-none">🪄</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider">SKUs</span>
                     </button>
 
-                    <div className="w-px h-8 bg-slate-700"></div>
+                    <div className="w-px h-6 sm:h-8 bg-slate-700 shrink-0"></div>
 
                     <button
                         onClick={() => { handleMassUpdateStatus(selectedProductIds, 'RECEIVED'); setSelectedProductIds([]); }}
                         disabled={isMassActing}
-                        className={`p-2 rounded-xl transition-colors flex flex-col items-center gap-1 min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-emerald-400'}`}
+                        className={`p-1.5 sm:p-2 rounded-xl transition-colors flex flex-col items-center gap-1 flex-1 md:min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-emerald-400'}`}
                         title="Marcar Recibidos"
                     >
-                        <span className="text-xl leading-none">📦</span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">Recib.</span>
+                        <span className="text-lg sm:text-xl leading-none">📦</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider">Recib.</span>
                     </button>
 
                     <button
                         onClick={() => { handleMassUpdateStatus(selectedProductIds, 'SOLD'); setSelectedProductIds([]); }}
                         disabled={isMassActing}
-                        className={`p-2 rounded-xl transition-colors flex flex-col items-center gap-1 min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-slate-300'}`}
+                        className={`p-1.5 sm:p-2 rounded-xl transition-colors flex flex-col items-center gap-1 flex-1 md:min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-slate-300'}`}
                         title="Marcar Vendidos"
                     >
-                        <span className="text-xl leading-none">🤝</span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">Ventas</span>
+                        <span className="text-lg sm:text-xl leading-none">🤝</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider">Ventas</span>
                     </button>
 
-                    <div className="w-px h-8 bg-slate-700"></div>
+                    <div className="w-px h-6 sm:h-8 bg-slate-700 shrink-0"></div>
 
                     <button
                         onClick={() => { setIsMassDeleting(true); setDeletingId('mass'); }}
-                        className="p-2 hover:bg-red-950/50 rounded-xl transition-colors text-red-400 flex flex-col items-center gap-1 min-w-[60px]" title="Eliminar Seleccionados"
+                        className="p-1.5 sm:p-2 hover:bg-red-950/50 rounded-xl transition-colors text-red-400 flex flex-col items-center gap-1 flex-1 md:min-w-[60px]" title="Eliminar"
                     >
-                        <Trash2 size={18} className="mb-0.5" />
-                        <span className="text-[9px] font-bold uppercase tracking-wider">Borrar</span>
+                        <Trash2 size={16} className="mb-0.5 sm:w-[18px] sm:h-[18px]" />
+                        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider">Borrar</span>
                     </button>
 
-                    <button onClick={() => setSelectedProductIds([])} className="ml-1 p-2 text-slate-500 hover:text-white bg-slate-800 rounded-full hover:bg-slate-700 transition-colors">
-                        <X size={16} />
+                    <button onClick={() => setSelectedProductIds([])} className="p-1 sm:p-2 shrink-0 text-slate-500 hover:text-white bg-slate-800 rounded-full hover:bg-slate-700 transition-colors ml-1">
+                        <X size={14} className="sm:w-[16px] sm:h-[16px]" />
                     </button>
                 </div>
             )}
