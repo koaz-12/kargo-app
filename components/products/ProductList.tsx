@@ -152,16 +152,6 @@ export default function ProductList() {
                     <Package size={20} className="text-slate-500" />
                     Inventario
                 </h2>
-
-                {/* Select All Button */}
-                {products.length > 0 && (
-                    <button
-                        onClick={handleSelectAll}
-                        className="text-xs font-semibold text-slate-500 hover:text-indigo-600 bg-white border border-slate-200 px-2 py-1.5 rounded-lg shadow-sm transition-colors"
-                    >
-                        {selectedProductIds.length === products.length ? 'Desmarcar Todos' : 'Seleccionar Todo (Página)'}
-                    </button>
-                )}
             </div>
 
             <InventoryFilterBar
@@ -174,11 +164,15 @@ export default function ProductList() {
                 selectedPlatforms={selectedPlatforms}
                 onPlatformsChange={setSelectedPlatforms}
                 platformOptions={platformOptions}
-                selectedAccounts={selectedAccounts} // NEW
-                onAccountsChange={setSelectedAccounts} // NEW
-                accountOptions={accountOptions} // NEW
+                selectedAccounts={selectedAccounts}
+                onAccountsChange={setSelectedAccounts}
+                accountOptions={accountOptions}
                 priceRange={priceRange}
                 onPriceRangeChange={setPriceRange}
+                // Selection
+                onSelectAll={handleSelectAll}
+                isAllSelected={selectedProductIds.length === products.length && products.length > 0}
+                hasProducts={products.length > 0}
             />
 
             <div className="space-y-3">

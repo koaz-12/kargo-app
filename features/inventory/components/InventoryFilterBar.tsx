@@ -22,6 +22,10 @@ interface InventoryFilterBarProps {
     accountOptions?: { value: string; label: string }[]; // NEW
     priceRange?: { min: number; max: number };
     onPriceRangeChange?: (range: { min: number; max: number }) => void;
+    // Selection props
+    onSelectAll?: () => void;
+    isAllSelected?: boolean;
+    hasProducts?: boolean;
 }
 
 export default function InventoryFilterBar({
@@ -41,6 +45,9 @@ export default function InventoryFilterBar({
     accountOptions = [], // NEW
     priceRange,
     onPriceRangeChange,
+    onSelectAll,
+    isAllSelected,
+    hasProducts,
 }: InventoryFilterBarProps) {
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
@@ -157,6 +164,17 @@ export default function InventoryFilterBar({
                     >
                         <FileDown size={20} />
                     </button>
+                    {hasProducts && onSelectAll && (
+                        <button
+                            onClick={onSelectAll}
+                            className={`w-11 h-11 shrink-0 flex items-center justify-center border rounded-xl shadow-sm transition-colors ${isAllSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}
+                            title={isAllSelected ? 'Desmarcar Todos' : 'Seleccionar Todo'}
+                        >
+                            <div className={`w-4 h-4 rounded-sm border flex items-center justify-center ${isAllSelected ? 'border-none' : 'border-slate-400'}`}>
+                                {isAllSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                            </div>
+                        </button>
+                    )}
                 </div>
             </div>
 
