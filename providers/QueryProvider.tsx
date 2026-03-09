@@ -1,5 +1,5 @@
 'use client';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useState, useEffect } from 'react';
@@ -28,8 +28,13 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     if (!persister) {
-        // Return children while calculating the persister on client side, avoiding hydration mismatch.
-        return <>{children}</>;
+        // Return children wrapped in standard QueryClientProvider while calculating 
+        // the persister on client side, avoiding hydration context mismatch.
+        return (
+            <QueryClientProvider client={queryClient}>
+                {children}
+            </QueryClientProvider>
+        );
     }
 
     return (
