@@ -1,0 +1,16 @@
+{
+    "name": "Kargo App",
+    "short_name": "Kargo",
+    "description": "Gestión Inteligente de Importaciones",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0ea5e9",
+    "icons": [
+        {
+            "src": "/favicon.ico",
+            "sizes": "any",
+            "type": "image/x-icon"
+        }
+    ]
+}

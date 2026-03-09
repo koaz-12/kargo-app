@@ -8,12 +8,14 @@ import BottomNav from "../components/ui/BottomNav";
 import { QueryProvider } from "../providers/QueryProvider";
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { NetworkStatus } from '../components/ui/NetworkStatus';
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Kargo",
   description: "Gestión Inteligente de Importaciones",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -26,6 +28,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-slate-50 min-h-[100dvh] w-full`}>
         <QueryProvider>
           <ErrorBoundary>
+            <NetworkStatus />
             {/* Main Content */}
             {children}
             <BottomNav />
