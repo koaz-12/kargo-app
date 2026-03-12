@@ -144,6 +144,7 @@ export const useProductForm = (editingId: string | null) => {
 
             // Optional fields
             if (formState.sku) formData.append('sku', formState.sku);
+            if (formState.storageLocationId) formData.append('storage_location_id', formState.storageLocationId); // NEW
             if (formState.productUrl) formData.append('product_url', formState.productUrl);
             if (formState.imageUrl) formData.append('image_url', formState.imageUrl);
             if (formState.trackingNumber) formData.append('tracking_number', formState.trackingNumber);

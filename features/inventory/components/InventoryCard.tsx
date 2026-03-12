@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPublicUrl, getThumbnailUrl } from '../../../utils/imageUrl';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
-import { Package, Trash2, Pencil, ScanBarcode, Plus } from 'lucide-react';
+import { Package, Trash2, Pencil, ScanBarcode, Plus, MapPin } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { InventoryItem, AdjustmentType } from '../types';
 import { useRouter } from 'next/navigation';
 import { useAdjustmentTypes } from '../../../hooks/useAdjustmentTypes';
+import { useStorageLocations } from '../../../hooks/useStorageLocations';
 
 interface InventoryCardProps {
     product: InventoryItem;
@@ -31,6 +32,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
     const [isDiscountApplied, setIsDiscountApplied] = useState(false); // New State
 
     const { types: adjTypes } = useAdjustmentTypes();
+    const { data: storageLocations = [] } = useStorageLocations();
     const firstAdjType = adjTypes[0]?.key || 'CREDIT_CLAIM';
 
     // Quick Edit State
@@ -41,6 +43,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         trackingNumber: initialProduct.tracking_number || '',
         courierTracking: initialProduct.courier_tracking || '',
         sku: initialProduct.sku || '', // NEW
+        storageLocationId: initialProduct.storage_location_id || '', // NEW: Storage location
         adjustments: initialProduct.financial_adjustments ? [...initialProduct.financial_adjustments] : []
     });
     const [scanTarget, setScanTarget] = useState<'STORE' | 'COURIER' | null>(null);
@@ -86,6 +89,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 trackingNumber: p.tracking_number || '',
                 courierTracking: p.courier_tracking || '',
                 sku: p.sku || '', // NEW
+                storageLocationId: p.storage_location_id || '', // NEW
                 adjustments: p.financial_adjustments ? [...p.financial_adjustments] : []
             });
 
@@ -152,6 +156,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 tracking_number: editValues.trackingNumber,
                 courier_tracking: editValues.courierTracking,
                 sku: editValues.sku, // NEW
+                storage_location_id: editValues.storageLocationId || null, // NEW
                 status: newStatus as any
             };
 
@@ -192,7 +197,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 financial_adjustments: newAdjustments,
                 tracking_number: editValues.trackingNumber,
                 courier_tracking: editValues.courierTracking,
-                sku: editValues.sku // NEW
+                sku: editValues.sku, // NEW
+                storage_location_id: editValues.storageLocationId || undefined // NEW
             }));
             setExpanded(false);
             if (refreshList) refreshList();
@@ -301,7 +307,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     </div>
 
                     <div className="flex-1 min-w-0">
-                        <p className={`font-semibold text-sm leading-tight line-clamp-2 break-words ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{p.name}</p>
+                        <p className={`font-semibold text-sm leading-tight line-clamp-2 break-words ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>
+                            {p.name}
+                        </p>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             {p.sku && (
                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${isSelected ? 'bg-indigo-100 text-indigo-600 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
@@ -388,6 +396,21 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                                 className="w-full p-2 border border-slate-300 rounded-lg font-bold text-slate-600 outline-none focus:border-blue-500"
                             />
                         </div>
+                    </div>
+
+                    {/* Storage Location Dropdown */}
+                    <div className="mb-3">
+                        <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">📍 Ubicación / Almacén</label>
+                        <select
+                            value={editValues.storageLocationId}
+                            onChange={(e) => setEditValues(prev => ({ ...prev, storageLocationId: e.target.value }))}
+                            className="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-700 outline-none focus:border-indigo-400 transition-colors"
+                        >
+                            <option value="">-- Sin asignar --</option>
+                            {storageLocations.map(loc => (
+                                <option key={loc.id} value={loc.id}>{loc.name}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="mb-4">

@@ -30,12 +30,23 @@ export interface PurchaseAccount {
   created_at?: string;
 }
 
+export interface StorageLocation {
+  id: string;
+  user_id?: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  created_at: string;
+}
+
 export type ProductStatus = 'DRAFT' | 'ORDERED' | 'RECEIVED' | 'SOLD';
 
 export interface Product {
   id: string;
   platform_id: string;
   purchase_account_id?: string; // New field
+  storage_location_id?: string; // Storage location reference
   name: string;
   sku?: string;
   buy_price: number;
@@ -121,6 +132,7 @@ export interface FormState {
   images?: any[];
   trackingNumber?: string;
   courierTracking?: string;
+  storageLocationId?: string; // Storage location reference
 }
 
 export interface FormSetters {
@@ -143,6 +155,7 @@ export interface FormSetters {
   setImages: (val: any[]) => void;
   setTrackingNumber: (val: string) => void;
   setCourierTracking: (val: string) => void;
+  setStorageLocationId: (val: string) => void; // Storage location
   setIsScraping: (val: boolean) => void;
   loadProduct: (p: any) => void;
   resetForm: () => void;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target, Settings as SettingsIcon, Truck, Star, Tag, Pencil, Check, X } from 'lucide-react';
+import { LogOut, DollarSign, User, ShieldCheck, CreditCard, Package, Wallet, Trash2, Plus, Globe, FileDown, Database, ArrowLeft, Target, Settings as SettingsIcon, Truck, Star, Tag, Pencil, Check, X, MapPin } from 'lucide-react';
 import { useAdjustmentTypes, AdjCategory } from '../../hooks/useAdjustmentTypes';
 import Link from 'next/link';
 import { Platform, PlatformType } from '../../types/index';
@@ -19,6 +19,11 @@ export default function SettingsPage() {
     const [platforms, setPlatforms] = useState<Platform[]>([]);
     const [newPlatformName, setNewPlatformName] = useState('');
     const [newPlatformType, setNewPlatformType] = useState<PlatformType>('OTHER');
+
+    // Storage Locations
+    const [storageLocations, setStorageLocations] = useState<{ id: string, name: string, phone?: string, address?: string, notes?: string }[]>([]);
+    const [newLocationName, setNewLocationName] = useState('');
+    const [newLocationPhone, setNewLocationPhone] = useState('');
 
     // Courier Presets
     const [couriers, setCouriers] = useState<{ id: string, name: string, is_default: boolean, identification_pattern?: string }[]>([]);
@@ -78,6 +83,7 @@ export default function SettingsPage() {
         fetchAccounts();
         fetchPlatforms();
         fetchCouriers();
+        fetchStorageLocations();
     }, []);
 
     // ... (fetchPlatforms, handleAddPlatform, etc - kept same)
@@ -230,6 +236,35 @@ export default function SettingsPage() {
             .eq('id', id);
 
         if (!error) fetchCouriers();
+    };
+
+    // Storage Locations Management
+    const fetchStorageLocations = async () => {
+        const { data } = await supabase.from('storage_locations').select('*').order('name');
+        if (data) setStorageLocations(data);
+    };
+
+    const handleAddLocation = async () => {
+        if (!newLocationName.trim()) return;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { error } = await supabase.from('storage_locations').insert({
+            user_id: user.id,
+            name: newLocationName.trim(),
+            phone: newLocationPhone.trim() || null
+        });
+        if (!error) {
+            setNewLocationName('');
+            setNewLocationPhone('');
+            fetchStorageLocations();
+        }
+    };
+
+    const handleDeleteLocation = async (id: string) => {
+        if (!confirm('¿Borrar esta ubicación? Los productos asignados quedarán sin ubicación.')) return;
+        const { error } = await supabase.from('storage_locations').delete().eq('id', id);
+        if (!error) fetchStorageLocations();
     };
 
     const handleRateChange = async (val: string) => {
@@ -456,6 +491,62 @@ export default function SettingsPage() {
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Storage Locations Management */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mb-6">
+                    <div className="p-4 border-b border-slate-100">
+                        <p className="font-semibold text-slate-700 mb-1 flex items-center gap-2">
+                            <MapPin size={16} className="text-slate-400" />
+                            Almacenes / Personas
+                        </p>
+                        <p className="text-xs text-slate-400 mb-3">Lugares o personas donde guardas artículos.</p>
+
+                        <div className="space-y-2 mb-4">
+                            <input
+                                type="text"
+                                placeholder="Nombre (ej. Casa de María, Almacén Central)"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                value={newLocationName}
+                                onChange={(e) => setNewLocationName(e.target.value)}
+                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Teléfono (opcional)"
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={newLocationPhone}
+                                    onChange={(e) => setNewLocationPhone(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleAddLocation()}
+                                />
+                                <button
+                                    onClick={handleAddLocation}
+                                    className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 active:scale-95 transition-all font-bold text-sm"
+                                >
+                                    <Plus size={18} className="inline mr-1" />
+                                    Agregar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            {storageLocations.length === 0 && <p className="text-xs text-slate-300 italic">No hay ubicaciones guardadas.</p>}
+                            {storageLocations.map(loc => (
+                                <div key={loc.id} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                    <div className="flex items-center gap-2">
+                                        <MapPin size={14} className="text-indigo-400" />
+                                        <div>
+                                            <span className="font-bold text-slate-700 text-sm">{loc.name}</span>
+                                            {loc.phone && <span className="text-[10px] text-slate-400 ml-2">📞 {loc.phone}</span>}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleDeleteLocation(loc.id)} className="text-slate-400 hover:text-red-500">
+                                        <Trash2 size={16} />
+                                    </button>
                                 </div>
                             ))}
                         </div>

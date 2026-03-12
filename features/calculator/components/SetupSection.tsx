@@ -2,6 +2,8 @@ import Link from 'next/link';
 import ProductNameInput from '../../../components/products/ProductNameInput'; // Moving later
 import ImageUploader from '../../../components/products/ImageUploader'; // Moving later
 import { FormState, FormSetters, Platform } from '../../../types';
+import { useStorageLocations } from '../../../hooks/useStorageLocations';
+import { MapPin } from 'lucide-react';
 
 interface Account {
     id: string;
@@ -23,6 +25,8 @@ export default function SetupSection({
     accounts,
     editingId
 }: SetupSectionProps) {
+    const { data: storageLocations = [] } = useStorageLocations();
+
     return (
         <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
             <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wide">Configuración</p>
@@ -54,6 +58,26 @@ export default function SetupSection({
                     </select>
                 </div>
             </div>
+
+            {/* Storage Location Dropdown */}
+            {storageLocations.length > 0 && (
+                <div className="mb-3">
+                    <label className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
+                        <MapPin size={10} />
+                        Ubicación / Almacén
+                    </label>
+                    <select
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-slate-700 outline-none focus:border-indigo-400 transition-colors"
+                        value={(formState as any).storageLocationId || ''}
+                        onChange={(e) => (setters as any).setStorageLocationId?.(e.target.value)}
+                    >
+                        <option value="">-- Sin asignar --</option>
+                        {storageLocations.map(loc => (
+                            <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
             {/* Product Name Input */}
             <div className="mb-1">

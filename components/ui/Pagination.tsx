@@ -24,22 +24,29 @@ export const Pagination: React.FC<PaginationProps> = ({
 
     return (
         <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200">
-            {/* Info */}
-            <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                    onClick={() => onPageChange(currentPage - 1)}
-                    disabled={currentPage === 1 || loading}
-                    className="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Anterior
-                </button>
-                <button
-                    onClick={() => onPageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages || loading}
-                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Siguiente
-                </button>
+            {/* Info Mobile */}
+            <div className="flex-1 flex flex-col sm:hidden gap-3 w-full">
+                <p className="text-[11px] text-center text-slate-500">
+                    Mostrando <span className="font-bold">{startItem}</span> a{' '}
+                    <span className="font-bold">{endItem}</span> de{' '}
+                    <span className="font-bold">{totalItems}</span> productos
+                </p>
+                <div className="flex justify-between">
+                    <button
+                        onClick={() => onPageChange(currentPage - 1)}
+                        disabled={currentPage === 1 || loading}
+                        className="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Anterior
+                    </button>
+                    <button
+                        onClick={() => onPageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages || loading}
+                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Siguiente
+                    </button>
+                </div>
             </div>
 
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between w-full">

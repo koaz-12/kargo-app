@@ -38,6 +38,7 @@ export async function createProductAction(
             name: formData.get('name'),
             platform_id: formData.get('platform_id'),
             purchase_account_id: formData.get('purchase_account_id') || undefined,
+            storage_location_id: formData.get('storage_location_id') || undefined,
             buy_price: parseFloat(formData.get('buy_price') as string) || 0,
             shipping_cost: parseFloat(formData.get('shipping_cost') as string) || 0,
             origin_tax: parseFloat(formData.get('origin_tax') as string) || 0,
@@ -123,7 +124,7 @@ export async function updateProductAction(
 
         // Only include fields that were provided
         const fields = [
-            'name', 'platform_id', 'purchase_account_id', 'buy_price',
+            'name', 'platform_id', 'purchase_account_id', 'storage_location_id', 'buy_price',
             'shipping_cost', 'origin_tax', 'tax_cost', 'sale_price',
             'local_shipping_cost', 'exchange_rate', 'status', 'sku',
             'product_url', 'image_url', 'tracking_number', 'courier_tracking'

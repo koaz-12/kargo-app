@@ -4,6 +4,7 @@ export const productSchema = z.object({
     name: z.string().min(1, 'El nombre es requerido').max(200, 'Nombre muy largo'),
     platform_id: z.string().uuid('Plataforma inválida'),
     purchase_account_id: z.string().uuid().optional(),
+    storage_location_id: z.string().uuid().optional(),
     buy_price: z.number().min(0, 'El precio debe ser positivo').default(0),
     shipping_cost: z.number().min(0, 'El costo de envío debe ser positivo').default(0),
     origin_tax: z.number().min(0, 'El tax debe ser positivo').default(0),

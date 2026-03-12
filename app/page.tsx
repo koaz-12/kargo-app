@@ -7,6 +7,8 @@ import { useProducts } from '../hooks/useProducts';
 import { useUserPreferences } from '../hooks/useUserPreferences';
 import { DashboardStatsSkeleton } from '../components/ui/Skeleton';
 import { UtilitiesMenu } from '../components/UtilitiesMenu';
+import { useStorageLocations } from '../hooks/useStorageLocations';
+import { MapPin, FileDown, CheckCircle2 } from 'lucide-react';
 
 export default function Home() {
     // Use React Query hook for products
@@ -53,6 +55,21 @@ export default function Home() {
                         <div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase block">En Stock</span>
                             <span className="text-xs font-bold text-slate-600 block">Ver Disponibles</span>
+                        </div>
+                    </Link>
+                    {/* Inventory Review Button */}
+                    <Link href="/inventory/review" className="col-span-2 bg-white border border-slate-200 p-3 rounded-xl shadow-sm mb-2 flex items-center justify-between active:scale-95 transition-transform">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-blue-50 w-10 h-10 rounded-full flex items-center justify-center text-blue-600">
+                                <CheckCircle2 size={20} />
+                            </div>
+                            <div>
+                                <span className="font-bold text-slate-800 block text-sm">Revisión de Inventario</span>
+                                <span className="text-[10px] text-slate-500 block">Conteo y verificación de stock físico</span>
+                            </div>
+                        </div>
+                        <div className="text-slate-400 font-bold text-xl">
+                            →
                         </div>
                     </Link>
                 </div>
