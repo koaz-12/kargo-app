@@ -26,7 +26,14 @@ function StatusBadge({ status }: { status: string }) {
         RECEIVED: 'bg-amber-100 text-amber-700',
         SOLD: 'bg-emerald-100 text-emerald-700',
     };
-    return <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${styles[status as keyof typeof styles] || 'bg-slate-100'}`}>{status}</span>;
+    
+    const labels = {
+        ORDERED: 'COMPRADO',
+        RECEIVED: 'RECIBIDO',
+        SOLD: 'VENDIDO',
+    };
+
+    return <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${styles[status as keyof typeof styles] || 'bg-slate-100'}`}>{labels[status as keyof typeof labels] || status}</span>;
 }
 
 export default function InventoryCard({ product: initialProduct, refreshList, onDelete, isSelected, onSelect }: InventoryCardProps) {
