@@ -7,6 +7,18 @@ import { toast } from 'sonner';
 // QUERY HOOKS
 // ============================================
 
+// Sanitize search terms to prevent PostgREST filter injection
+export function sanitizeSearchTerm(term: string): string {
+    return term
+        .replace(/\\/g, '\\\\')
+        .replace(/%/g, '\\%')
+        .replace(/_/g, '\\_')
+        .replace(/,/g, '')
+        .replace(/\(/g, '')
+        .replace(/\)/g, '')
+        .replace(/\./g, '');
+}
+
 export const useProducts = () => {
     return useQuery({
         queryKey: ['products'],
@@ -62,7 +74,8 @@ export const usePaginatedProducts = (params: PaginatedProductsParams) => {
             }
 
             if (params.searchTerm) {
-                query = query.or(`name.ilike.%${params.searchTerm}%,sku.ilike.%${params.searchTerm}%,tracking_number.ilike.%${params.searchTerm}%,courier_tracking.ilike.%${params.searchTerm}%`);
+                const safe = sanitizeSearchTerm(params.searchTerm);
+                query = query.or(`name.ilike.%${safe}%,sku.ilike.%${safe}%,tracking_number.ilike.%${safe}%,courier_tracking.ilike.%${safe}%`);
             }
 
             switch (params.sortOption) {

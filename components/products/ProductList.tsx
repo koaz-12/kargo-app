@@ -76,6 +76,7 @@ export default function ProductList() {
         itemsPerPage,
         handleMassUpdateStatus, // NEW
         handleMassGenerateSKU, // NEW
+        handleMassDelete, // NEW
         isMassActing // NEW
     } = useProductList();
 
@@ -83,10 +84,10 @@ export default function ProductList() {
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [isMassDeleting, setIsMassDeleting] = useState(false);
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (isMassDeleting && selectedProductIds.length > 0) {
             // Eliminar masivamente
-            selectedProductIds.forEach(id => handleDelete(id));
+            await handleMassDelete(selectedProductIds);
             setSelectedProductIds([]);
             setIsMassDeleting(false);
             setDeletingId(null);
@@ -115,7 +116,7 @@ export default function ProductList() {
     // CSV LOGIC OMITTED FOR BREVITY (Keep strictly what changes or use ... if possible? No, replace_file_content needs context)
     // Re-implement CSV download here or in utils, for now inline to save time as it was in original
     const handleDownloadCSV = () => {
-        if (!products.length) return alert("No hay datos cargados para exportar.");
+        if (!products.length) return toast.info("No hay datos cargados para exportar.");
 
         const headers = ['Nombre', 'Precio Compra (USD)', 'Envío (USD)', 'Tax USA (USD)', 'Aduanas (RD$)', 'Envío Local (RD$)', 'Precio Venta (RD$)', 'Estado', 'Fecha'];
         const csvRows = [headers.join(',')];

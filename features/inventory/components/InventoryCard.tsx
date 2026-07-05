@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPublicUrl, getThumbnailUrl } from '../../../utils/imageUrl';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
-import { Package, Trash2, Pencil, ScanBarcode, Plus, MapPin } from 'lucide-react';
+import { Package, Trash2, Pencil, ScanBarcode, Plus, MapPin, Loader2, DollarSign, X, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabaseClient';
 import { InventoryItem, AdjustmentType } from '../types';
 import { useRouter } from 'next/navigation';
@@ -19,6 +20,15 @@ interface InventoryCardProps {
     onSelect?: (id: string, selected: boolean) => void;
 }
 
+function StatusBadge({ status }: { status: string }) {
+    const styles = {
+        ORDERED: 'bg-blue-100 text-blue-700',
+        RECEIVED: 'bg-amber-100 text-amber-700',
+        SOLD: 'bg-emerald-100 text-emerald-700',
+    };
+    return <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${styles[status as keyof typeof styles] || 'bg-slate-100'}`}>{status}</span>;
+}
+
 export default function InventoryCard({ product: initialProduct, refreshList, onDelete, isSelected, onSelect }: InventoryCardProps) {
     const [p, setProduct] = useState(initialProduct);
     const queryClient = useQueryClient();
@@ -30,6 +40,8 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
     const [expanded, setExpanded] = useState(false);
     const [courierDiscount, setCourierDiscount] = useState(0);
     const [isDiscountApplied, setIsDiscountApplied] = useState(false); // New State
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingUser, setIsLoadingUser] = useState(false);
 
     const { types: adjTypes } = useAdjustmentTypes();
     const { data: storageLocations = [] } = useStorageLocations();
@@ -47,6 +59,11 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         adjustments: initialProduct.financial_adjustments ? [...initialProduct.financial_adjustments] : []
     });
     const [scanTarget, setScanTarget] = useState<'STORE' | 'COURIER' | null>(null);
+
+    // Sell Mode State
+    const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+    const [sellPrice, setSellPrice] = useState<number>(initialProduct.sale_price || 0);
+    const [sellShipping, setSellShipping] = useState<number>(initialProduct.local_shipping_cost || 0);
 
     const router = useRouter();
 
@@ -93,23 +110,31 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 adjustments: p.financial_adjustments ? [...p.financial_adjustments] : []
             });
 
-            // Load Preferences (Discount & Local Shipping)
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data } = await supabase.from('user_preferences')
-                    .select('default_courier_discount, default_local_shipping')
-                    .eq('user_id', user.id)
-                    .single();
+            setIsLoadingUser(true);
+            try {
+                // Load Preferences (Discount & Local Shipping)
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data } = await supabase.from('user_preferences')
+                        .select('default_courier_discount, default_local_shipping')
+                        .eq('user_id', user.id)
+                        .single();
 
-                if (data) {
-                    if (data.default_courier_discount) {
-                        setCourierDiscount(Number(data.default_courier_discount));
-                    }
-                    // Auto-fill Local Shipping if 0
-                    if (data.default_local_shipping && (p.local_shipping_cost === 0 || !p.local_shipping_cost)) {
-                        setEditValues(prev => ({ ...prev, localShipping: Number(data.default_local_shipping) }));
+                    if (data) {
+                        if (data.default_courier_discount) {
+                            setCourierDiscount(Number(data.default_courier_discount));
+                        }
+                        // Auto-fill Local Shipping if 0
+                        if (data.default_local_shipping && (p.local_shipping_cost === 0 || !p.local_shipping_cost)) {
+                            setEditValues(prev => ({ ...prev, localShipping: Number(data.default_local_shipping) }));
+                        }
                     }
                 }
+            } catch (error) {
+                console.error("Error fetching user preferences:", error);
+                toast.error("Error al cargar preferencias del usuario");
+            } finally {
+                setIsLoadingUser(false);
             }
         }
     };
@@ -127,6 +152,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
             newStatus = 'ORDERED';
         }
 
+        setIsSaving(true);
         try {
             // Check for duplicate SKU
             if (editValues.sku && editValues.sku !== p.sku) {
@@ -142,7 +168,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 if (existingSkus && existingSkus.length > 0) {
                     const existingName = existingSkus[0].name;
                     if (existingName.trim().toLowerCase() !== p.name.trim().toLowerCase()) {
-                        alert(`❌ El SKU "${editValues.sku}" ya pertenece a "${existingName}". Si es el mismo producto, usa el mismo nombre exacto.`);
+                        toast.error(`❌ El SKU "${editValues.sku}" ya pertenece a "${existingName}". Si es el mismo producto, usa el mismo nombre exacto.`);
                         return; // Stop saving
                     }
                 }
@@ -207,7 +233,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
             queryClient.invalidateQueries({ queryKey: ['products'] });
         } catch (error) {
             console.error(error);
-            alert('Error al actualizar');
+            toast.error('Error al actualizar');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -240,6 +268,39 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                     return updated;
                 })
             }));
+        }
+    };
+
+    const handleSellSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            const { error } = await supabase.from('products').update({
+                status: 'SOLD',
+                sale_price: sellPrice,
+                local_shipping_cost: sellShipping,
+                sold_at: new Date().toISOString()
+            }).eq('id', p.id);
+
+            if (error) throw error;
+
+            setProduct(prev => ({
+                ...prev,
+                status: 'SOLD',
+                sale_price: sellPrice,
+                local_shipping_cost: sellShipping,
+                sold_at: new Date().toISOString()
+            }));
+            
+            toast.success('¡Producto vendido con éxito! 🎉');
+            setIsSellModalOpen(false);
+            if (refreshList) refreshList();
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al registrar venta');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -279,7 +340,7 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
     };
 
     return (
-        <div className={`bg-white border text-slate-900 rounded-xl overflow-hidden shadow-sm transition-all focus-within:ring-2 focus-within:ring-slate-400 ${expanded ? 'border-slate-400 ring-1 ring-slate-400' : 'border-slate-100'} ${isSelected ? 'border-indigo-400 ring-1 ring-indigo-400 bg-indigo-50/30' : ''}`}>
+        <div className={`bg-white border text-slate-900 rounded-2xl overflow-hidden shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all focus-within:ring-2 focus-within:ring-slate-400 ${expanded ? 'border-slate-300 ring-1 ring-slate-300 shadow-md' : 'border-slate-100'} ${isSelected ? 'border-indigo-400 ring-1 ring-indigo-400 bg-indigo-50/30' : ''}`}>
             <div className="flex bg-transparent relative">
 
                 {/* Checkbox Area for Bulk Actions */}
@@ -292,9 +353,9 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                 )}
 
                 {/* Main Card Content */}
-                <div onClick={toggleExpand} className={`p-3 flex gap-3 flex-1 items-center cursor-pointer ${onSelect ? 'ml-10' : ''}`}>
+                <div onClick={toggleExpand} className={`p-2.5 flex gap-3 flex-1 items-center cursor-pointer group ${onSelect ? 'ml-10' : ''}`}>
                     <div className="flex flex-col items-center gap-1 shrink-0">
-                        <div className="w-12 h-12 bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
+                        <div className="w-12 h-12 bg-slate-50 rounded-xl overflow-hidden border border-slate-100 shadow-sm group-hover:shadow-md transition-shadow">
                             {p.image_url ? (
                                 <img src={getThumbnailUrl(p.image_url)} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -326,6 +387,20 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                         <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
                             Costo: RD$ {Math.round(((p.buy_price + p.shipping_cost + (p.origin_tax || 0)) * (p.exchange_rate || 58)) + (p.tax_cost || 0) + (p.local_shipping_cost || 0)).toLocaleString()}
                         </span>
+                        {p.status === 'RECEIVED' && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSellPrice(p.sale_price || 0);
+                                    setSellShipping(p.local_shipping_cost || 0);
+                                    setIsSellModalOpen(true);
+                                }}
+                                className="mt-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg shadow-sm shadow-emerald-200/50 transition-all flex items-center gap-1 active:scale-95"
+                            >
+                                <DollarSign size={10} strokeWidth={3} />
+                                VENDER
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -533,23 +608,74 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
                         </div>
                     </div>
 
-                    <button onClick={handleQuickSave} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2">
-                        <Package size={16} /> Confirmar Cambios
+                    <button onClick={handleQuickSave} disabled={isSaving || isLoadingUser} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Package size={16} />} 
+                        {isSaving ? 'Guardando...' : 'Confirmar Cambios'}
                     </button>
 
                     <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
-                        <button type="button" onClick={(e) => { e.stopPropagation(); console.log('Delete Requested', p.id); onDelete(p.id); }} className="text-red-500 text-xs font-bold flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors"><Trash2 size={14} /> Eliminar</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(p.id); }} className="text-red-500 text-xs font-bold flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors"><Trash2 size={14} /> Eliminar</button>
                         <button type="button" onClick={() => router.push('/calculator?edit=' + p.id)} className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"><Pencil size={14} /> Editar Completo</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Sell Modal */}
+            {isSellModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsSellModalOpen(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="bg-emerald-500 p-4 text-white flex justify-between items-start">
+                            <div>
+                                <h3 className="font-black text-lg flex items-center gap-2">
+                                    <DollarSign size={20} /> Registrar Venta
+                                </h3>
+                                <p className="text-emerald-100 text-xs mt-1 line-clamp-1">{p.name}</p>
+                            </div>
+                            <button onClick={() => setIsSellModalOpen(false)} className="text-emerald-100 hover:text-white transition-colors bg-black/10 p-1.5 rounded-full">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleSellSubmit} className="p-5">
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-1.5">Precio de Venta Final (RD$)</label>
+                                    <input 
+                                        type="number" 
+                                        required
+                                        value={sellPrice || ''}
+                                        onChange={(e) => setSellPrice(Number(e.target.value))}
+                                        className="w-full border-2 border-slate-200 focus:border-emerald-500 rounded-xl px-4 py-3 font-bold text-slate-800 text-lg outline-none transition-colors"
+                                        placeholder="Ej. 1500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-1.5 flex justify-between">
+                                        <span>Costo de Envío (RD$)</span>
+                                        <span className="text-slate-300 font-medium">Opcional</span>
+                                    </label>
+                                    <input 
+                                        type="number" 
+                                        value={sellShipping || ''}
+                                        onChange={(e) => setSellShipping(Number(e.target.value))}
+                                        className="w-full border-2 border-slate-200 focus:border-emerald-500 rounded-xl px-4 py-3 font-bold text-slate-800 outline-none transition-colors"
+                                        placeholder="Costo de delivery..."
+                                    />
+                                </div>
+                            </div>
+                            
+                            <button 
+                                type="submit" 
+                                disabled={isSaving || sellPrice <= 0}
+                                className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 disabled:opacity-50 disabled:active:scale-100 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2"
+                            >
+                                {isSaving ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
+                                Confirmar Venta
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
         </div>
     );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    if (status === 'RECEIVED') return <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] uppercase font-bold">Recibido</span>;
-    if (status === 'SOLD') return <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] uppercase font-bold">Vendido</span>;
-    if (status === 'ORDERED') return <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] uppercase font-bold">Comprado</span>;
-    return null;
 }

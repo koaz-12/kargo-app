@@ -7,7 +7,7 @@ import { LayoutDashboard, BarChart3, PlusCircle, Package, Settings } from 'lucid
 export default function BottomNav() {
     const pathname = usePathname();
 
-    if (pathname === '/login') return null;
+    if (pathname === '/login' || pathname === '/catalogo') return null;
 
     const isActive = (path: string) => pathname === path;
 
@@ -16,18 +16,21 @@ export default function BottomNav() {
         return (
             <Link
                 href={href}
-                className={`group flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 
-                    ${active ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                aria-current={active ? 'page' : undefined}
+                className={`group flex flex-col items-center justify-center w-[60px] h-[52px] rounded-2xl transition-all duration-300 relative
+                    ${active ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                {/* Clean Icon - No Pill Background */}
-                <div className="relative p-1">
+                {active && (
+                    <div className="absolute inset-0 bg-indigo-50/80 rounded-2xl -z-10 animate-in zoom-in-90 duration-200" />
+                )}
+                <div className={`relative transition-transform duration-300 ${active ? '-translate-y-0.5' : 'group-hover:-translate-y-0.5'}`}>
                     <Icon
-                        size={24}
+                        size={active ? 22 : 24}
                         strokeWidth={active ? 2.5 : 2}
-                        className={`transition-transform duration-200 ${active ? 'scale-110 drop-shadow-sm' : 'scale-100'}`}
+                        className={active ? 'drop-shadow-sm' : ''}
                     />
                 </div>
-                <span className={`text-[10px] leading-none transition-all ${active ? 'font-bold' : 'font-medium'}`}>
+                <span className={`text-[9px] mt-1 tracking-wide transition-all duration-300 ${active ? 'font-bold opacity-100 translate-y-0' : 'font-medium opacity-0 translate-y-1 absolute bottom-1'}`}>
                     {label}
                 </span>
             </Link>
@@ -35,14 +38,16 @@ export default function BottomNav() {
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white border-t border-x border-slate-100 z-50 safe-area-bottom pb-safe shadow-[0_-1px_2px_0_rgba(0,0,0,0.05)]">
-            <div className="flex justify-around items-center h-16 w-full px-2">
-                <NavItem href="/" icon={LayoutDashboard} label="Inicio" />
-                <NavItem href="/stats" icon={BarChart3} label="Estadística" />
-                <NavItem href="/calculator" icon={PlusCircle} label="Producto" />
-                <NavItem href="/inventory" icon={Package} label="Stock" />
-                <NavItem href="/settings" icon={Settings} label="Ajustes" />
-            </div>
-        </nav>
+        <div className="fixed bottom-4 left-0 right-0 z-50 px-4 w-full max-w-md mx-auto pointer-events-none">
+            <nav role="navigation" aria-label="Navegación Principal" className="pointer-events-auto bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl safe-area-bottom">
+                <div className="flex justify-around items-center h-16 w-full px-2">
+                    <NavItem href="/" icon={LayoutDashboard} label="Inicio" />
+                    <NavItem href="/stats" icon={BarChart3} label="Data" />
+                    <NavItem href="/calculator" icon={PlusCircle} label="Añadir" />
+                    <NavItem href="/inventory" icon={Package} label="Stock" />
+                    <NavItem href="/settings" icon={Settings} label="Ajustes" />
+                </div>
+            </nav>
+        </div>
     );
 }

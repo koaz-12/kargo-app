@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { Product, PurchaseAccount, Platform, MonthlyGoal } from '../../types/index';
+import { toast } from 'sonner';
+import { useStats } from '../../hooks/useStats';
 import { BarChart3, PieChart, TrendingUp, DollarSign, Wallet, ArrowLeft, Layers, Trophy, Target, Calendar, Package, Activity, Timer, Edit2, Save, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,261 +9,57 @@ import { getPublicUrl } from '../../utils/imageUrl';
 
 export default function StatsPage() {
     const router = useRouter();
-    const [products, setProducts] = useState<Product[]>([]);
-    const [platforms, setPlatforms] = useState<Platform[]>([]);
-    const [loading, setLoading] = useState(true);
+    
+    const {
+        loading,
+        products,
+        platforms,
+        monthlyGoal,
+        tempGoal,
+        isEditingGoal,
+        selectedDate,
+        rentabilityPage,
+        RENTABILITY_ITEMS_PER_PAGE,
+        currentMonthKey,
+        monthNames,
+        
+        setTempGoal,
+        setIsEditingGoal,
+        changeMonth,
+        setRentabilityPage,
+        handleSaveGoal,
 
-    // Goal State
-    const [monthlyGoal, setMonthlyGoal] = useState<number>(0); // Start at 0 to avoid flash of 50k
-    const [isEditingGoal, setIsEditingGoal] = useState(false);
-    const [tempGoal, setTempGoal] = useState<string>('');
+        totalItems,
+        realizedRevenue,
+        realizedCost,
+        profitThisMonth,
+        profitThisYear,
+        monthlyTrend,
+        realizedProfit,
+        realizedMargin,
+        roi,
+        avgInventoryDays,
+        last6Keys,
+        sortedProducts,
+        activeInvestment,
+        projectedRevenue,
+        trueProjectedProfit,
+        platformStats,
+        totalInvested,
+        staleItems,
+    } = useStats();
 
-    // Date State
-    const [selectedDate, setSelectedDate] = useState(new Date());
-
-    // Pagination for Rentability by Product
-    const [rentabilityPage, setRentabilityPage] = useState(1);
-    const RENTABILITY_ITEMS_PER_PAGE = 10;
+    const onSaveGoal = async () => {
+        const res = await handleSaveGoal();
+        if (res.success) {
+            toast.success("Meta guardada con éxito");
+        } else {
+            toast.error("No se pudo guardar la meta.");
+        }
+    };
 
     const currentMonth = selectedDate.getMonth();
     const currentYear = selectedDate.getFullYear();
-    const currentMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-
-    // Derived Controls
-    const changeMonth = (offset: number) => {
-        const newDate = new Date(selectedDate);
-        newDate.setMonth(newDate.getMonth() + offset);
-        setSelectedDate(newDate);
-        setRentabilityPage(1); // Reset pagination when changing month
-    };
-
-    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
-    useEffect(() => {
-        const loadData = async () => {
-            // Reset goal when month changes
-            setMonthlyGoal(0);
-            setTempGoal('');
-
-            const [prodRes, platRes, goalRes] = await Promise.all([
-                supabase.from('products').select('*, adjustments:financial_adjustments(*)'),
-                supabase.from('platforms').select('*'),
-                supabase.from('monthly_goals').select('*').eq('month_key', currentMonthKey).single()
-            ]);
-
-            if (prodRes.data) setProducts(prodRes.data);
-            if (platRes.data) setPlatforms(platRes.data);
-
-            if (goalRes.data) {
-                setMonthlyGoal(goalRes.data.target_amount);
-                setTempGoal(String(goalRes.data.target_amount));
-            } else {
-                // Fallback to DB preference
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const { data: prefData } = await supabase.from('user_preferences')
-                        .select('default_monthly_goal')
-                        .eq('user_id', user.id)
-                        .single();
-
-                    if (prefData?.default_monthly_goal) {
-                        setMonthlyGoal(prefData.default_monthly_goal);
-                        setTempGoal(String(prefData.default_monthly_goal));
-                    }
-                }
-            }
-
-            setLoading(false);
-        };
-        loadData();
-    }, [currentMonthKey]);
-
-    const handleSaveGoal = async () => {
-        const amount = parseFloat(tempGoal);
-        if (isNaN(amount) || amount <= 0) return;
-
-        try {
-            const { error } = await supabase
-                .from('monthly_goals')
-                .upsert({
-                    month_key: currentMonthKey,
-                    target_amount: amount
-                }, { onConflict: 'month_key' });
-
-            if (error) throw error;
-
-            setMonthlyGoal(amount);
-            setIsEditingGoal(false);
-        } catch (err) {
-            console.error("Error saving goal:", err);
-            alert("No se pudo guardar la meta.");
-        }
-    };
-
-    // --- CALCULATIONS ---
-    const totalItems = products.length;
-
-    // 1. Sold Stats (Realized) & Time Analysis
-    const soldProducts = products.filter(p => p.status === 'SOLD');
-
-    let realizedRevenue = 0;
-    let realizedCost = 0;
-    let profitThisMonth = 0;
-    let profitThisYear = 0;
-
-    // Trend Chart Data: { '2024-01': profit, '2024-02': profit }
-    const monthlyTrend: Record<string, number> = {};
-
-    // Inventory Days
-    let totalDaysToSell = 0;
-    let productsWithDates = 0;
-
-    // Grouping for "Profit per Product"
-    const productPerformance: Record<string, { name: string, count: number, revenue: number, cost: number, profit: number, image?: string }> = {};
-
-    soldProducts.forEach(p => {
-        // Construct transaction object (Defensive)
-        const tx = {
-            buy_price: Number(p.buy_price) || 0,
-            shipping_cost: Number(p.shipping_cost) || 0,
-            origin_tax: Number(p.origin_tax) || 0,
-            tax_cost: Number(p.tax_cost) || 0,
-            adjustments: p.adjustments || [],
-            exchange_rate: Number(p.exchange_rate) || 58.5
-        };
-
-        const calc = calculateProfit(tx, Number(p.sale_price) || 0, Number(p.local_shipping_cost) || 0);
-
-        const r = (Number(p.sale_price) || 0);
-        const dopCost = calc.net_cost; // Net cost in DOP (includes everything)
-        // Profit is calc.gross_profit. However, logic uses r - dopCost manually below. Let's use calc.gross_profit for consistency.
-        const profit = calc.gross_profit;
-
-        // Totals
-        realizedRevenue += r;
-        realizedCost += dopCost;
-
-        // Time Analysis
-        // Logic: Use 'sold_at' -> 'updated_at' -> 'created_at' as fallback
-        const effectiveDateStr = p.sold_at || p.updated_at || p.created_at;
-
-        if (effectiveDateStr) {
-            const saleDate = new Date(effectiveDateStr);
-            const saleMonth = saleDate.getMonth();
-            const saleYear = saleDate.getFullYear();
-            const monthKey = `${saleYear}-${String(saleMonth + 1).padStart(2, '0')}`; // YYYY-MM
-
-            // Monthly Trend
-            monthlyTrend[monthKey] = (monthlyTrend[monthKey] || 0) + profit;
-
-            // Filters
-            if (saleYear === currentYear) {
-                profitThisYear += profit;
-                if (saleMonth === currentMonth) {
-                    profitThisMonth += profit;
-                }
-            }
-
-            // Inventory Days
-            if (p.created_at) {
-                const createDate = new Date(p.created_at);
-                const diffTime = Math.abs(saleDate.getTime() - createDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                totalDaysToSell += diffDays;
-                productsWithDates++;
-            }
-        }
-
-        // Grouping
-        const productName = p.name || 'Producto sin nombre';
-        const publicImage = p.image_url ? getPublicUrl(p.image_url) : undefined;
-
-        if (!productPerformance[productName]) {
-            productPerformance[productName] = {
-                name: productName,
-                count: 0,
-                revenue: 0,
-                cost: 0,
-                profit: 0,
-                image: publicImage
-            };
-        } else if (!productPerformance[productName].image && publicImage) {
-            // Update image if previous one was missing
-            productPerformance[productName].image = publicImage;
-        }
-
-        productPerformance[productName].count += 1;
-        productPerformance[productName].revenue += r;
-        productPerformance[productName].cost += dopCost;
-        productPerformance[productName].profit += profit;
-    });
-
-    const realizedProfit = realizedRevenue - realizedCost;
-    const realizedMargin = realizedRevenue > 0 ? Math.round((realizedProfit / realizedRevenue) * 100) : 0;
-    const roi = realizedCost > 0 ? Math.round((realizedProfit / realizedCost) * 100) : 0;
-    const avgInventoryDays = productsWithDates > 0 ? Math.round(totalDaysToSell / productsWithDates) : 0;
-
-    // Process Trend Chart Data (Last 6 months)
-    const trendKeys = Object.keys(monthlyTrend).sort();
-    const last6Keys = trendKeys.slice(-6);
-    // If empty (no dates yet), show generic msg in UI.
-
-    // Sort Grouped Products
-    const sortedProducts = Object.values(productPerformance).sort((a, b) => b.profit - a.profit);
-
-    // 2. Unsold Stats (Active Investment + Projected)
-    const unsoldProducts = products.filter(p => p.status !== 'SOLD');
-    let activeInvestment = 0;
-    let projectedRevenue = 0;
-    let activeCostPriced = 0;
-
-    unsoldProducts.forEach(p => {
-        const tx = {
-            buy_price: Number(p.buy_price) || 0,
-            shipping_cost: Number(p.shipping_cost) || 0,
-            origin_tax: Number(p.origin_tax) || 0,
-            tax_cost: Number(p.tax_cost) || 0,
-            adjustments: p.adjustments || [],
-            exchange_rate: Number(p.exchange_rate) || 58.5
-        };
-        const calc = calculateProfit(tx, Number(p.sale_price) || 0, Number(p.local_shipping_cost) || 0);
-
-        // Active Investment (Net Cost of all unsold items)
-        activeInvestment += calc.net_cost;
-
-        if (p.sale_price && p.sale_price > 0) {
-            projectedRevenue += Number(p.sale_price);
-            activeCostPriced += calc.net_cost; // Cost of items that contribute to projected revenue
-        }
-    });
-
-    // Projected Profit: Only from items that have a sale price set.
-    const trueProjectedProfit = projectedRevenue > 0 ? (projectedRevenue - activeCostPriced) : 0;
-
-    // Platform Aggregation
-    const platformStats: Record<string, { count: number, invested: number }> = {};
-    let totalInvested = 0;
-
-    products.forEach(p => {
-        const tx = {
-            buy_price: Number(p.buy_price) || 0,
-            shipping_cost: Number(p.shipping_cost) || 0,
-            origin_tax: Number(p.origin_tax) || 0,
-            tax_cost: Number(p.tax_cost) || 0,
-            adjustments: p.adjustments || [],
-            exchange_rate: Number(p.exchange_rate) || 58.5
-        };
-        const calc = calculateProfit(tx); // Sale price 0 just to get cost
-        const dopCost = calc.net_cost;
-
-        totalInvested += dopCost;
-
-        // Platform
-        const pId = p.platform_id || 'unknown';
-        if (!platformStats[pId]) platformStats[pId] = { count: 0, invested: 0 };
-        platformStats[pId].count += 1;
-        platformStats[pId].invested += dopCost;
-    });
 
     const sortedPlatforms = Object.entries(platformStats)
         .map(([id, stats]) => {
@@ -292,24 +87,27 @@ export default function StatsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-24 max-w-md mx-auto shadow-2xl shadow-slate-200">
-            <header className="bg-white px-4 py-3 sticky top-0 z-20 border-b border-slate-100 flex items-center justify-between shadow-sm mb-6">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">
-                        <BarChart3 size={18} />
+        <div className="min-h-screen bg-slate-50/50 pb-28 max-w-md mx-auto relative">
+            <header className="sticky top-0 z-20 pt-6 pb-4 px-4 bg-slate-50/80 backdrop-blur-xl mb-4 border-b border-slate-200/50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                        <BarChart3 size={22} strokeWidth={2.5} />
                     </div>
-                    <h1 className="text-lg font-black text-slate-800 tracking-tight sm:block">Estadísticas</h1>
+                    <div>
+                        <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none">Data</h1>
+                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mt-1">Métricas</p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
-                    <button onClick={() => changeMonth(-1)} className="p-0.5 text-slate-400 hover:text-slate-900 rounded hover:bg-white transition-all">
-                        <ChevronLeft size={14} />
+                <div className="flex items-center gap-0.5 bg-white border border-slate-200/60 shadow-sm rounded-lg p-0.5">
+                    <button onClick={() => changeMonth(-1)} className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-all">
+                        <ChevronLeft size={16} />
                     </button>
                     <span className="text-[11px] font-bold text-slate-700 capitalize w-16 text-center select-none leading-none">
                         {monthNames[currentMonth].substring(0, 3)}-{String(currentYear).slice(2)}
                     </span>
-                    <button onClick={() => changeMonth(1)} className="p-0.5 text-slate-400 hover:text-slate-900 rounded hover:bg-white transition-all">
-                        <ChevronRight size={14} />
+                    <button onClick={() => changeMonth(1)} className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-all">
+                        <ChevronRight size={16} />
                     </button>
                 </div>
             </header>
@@ -340,7 +138,7 @@ export default function StatsPage() {
                                                     onChange={(e) => setTempGoal(e.target.value)}
                                                     className="w-24 bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-white text-lg font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
                                                 />
-                                                <button onClick={handleSaveGoal} className="p-1.5 bg-emerald-500 rounded hover:bg-emerald-600 transition-colors">
+                                                <button onClick={onSaveGoal} className="p-1.5 bg-emerald-500 rounded hover:bg-emerald-600 transition-colors">
                                                     <Save size={14} />
                                                 </button>
                                                 <button onClick={() => setIsEditingGoal(false)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors">
@@ -362,18 +160,20 @@ export default function StatsPage() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-3xl font-black text-emerald-400">{Math.round((profitThisMonth / monthlyGoal) * 100)}%</span>
+                                    <span className="text-3xl font-black text-emerald-400">{Math.round((profitThisMonth / (monthlyGoal || 1)) * 100)}%</span>
                                 </div>
                             </div>
                             {/* Progress Bar */}
                             <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                                 <div
                                     className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full transition-all duration-1000 ease-out"
-                                    style={{ width: `${Math.min((profitThisMonth / monthlyGoal) * 100, 100)}%` }}
+                                    style={{ width: `${Math.min((profitThisMonth / (monthlyGoal || 1)) * 100, 100)}%` }}
                                 ></div>
                             </div>
                             <p className="text-[10px] text-slate-400 mt-2 text-center font-medium">
-                                {profitThisMonth >= monthlyGoal ? '¡Meta Cumplida! 🎉' : `Faltan RD$${(monthlyGoal - profitThisMonth).toLocaleString('en-US')} para la meta.`}
+                                {monthlyGoal > 0 ? (
+                                    profitThisMonth >= monthlyGoal ? '¡Meta Cumplida! 🎉' : `Faltan RD$${(monthlyGoal - profitThisMonth).toLocaleString('en-US')} para la meta.`
+                                ) : 'Cargando meta...'}
                             </p>
                         </div>
                         <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
@@ -641,7 +441,7 @@ export default function StatsPage() {
 
                                                 <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-slate-200">
                                                     {p.image ? (
-                                                        <img src={p.image} className="w-full h-full object-cover" />
+                                                        <img src={p.image} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                                     ) : (
                                                         <div className="w-full h-full flex items-center justify-center text-slate-300"><Layers size={16} /></div>
                                                     )}
@@ -704,7 +504,7 @@ export default function StatsPage() {
                                 {staleItems.slice(0, 3).map(p => (
                                     <div key={p.id} className="flex gap-3 items-center bg-white p-2 rounded-lg border border-orange-100 shadow-sm">
                                         <div className="w-8 h-8 bg-slate-100 rounded flex items-center justify-center shrink-0 text-slate-300">
-                                            {p.image_url ? <img src={p.image_url} className="w-full h-full object-cover rounded" /> : <Package size={12} />}
+                                            {p.image_url ? <img src={p.image_url} className="w-full h-full object-cover rounded" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : <Package size={12} />}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-xs font-bold text-slate-700 truncate">{p.name || 'Sin nombre'}</div>
@@ -716,8 +516,8 @@ export default function StatsPage() {
                                     </div>
                                 ))}
                                 {staleItems.length > 3 && (
-                                    <div className="text-center text-[10px] text-orange-600 font-bold cursor-pointer mt-2">
-                                        Ver {staleItems.length - 3} más...
+                                    <div className="text-center text-[10px] text-orange-600 font-bold mt-2">
+                                        Ver {staleItems.length - 3} más en inventario...
                                     </div>
                                 )}
                             </div>

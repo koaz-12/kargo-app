@@ -20,6 +20,7 @@ export default function PublicProductCard({ product }: PublicProductCardProps) {
                         alt={product.name}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                 ) : (
                     <Package size={32} className="text-slate-300" />

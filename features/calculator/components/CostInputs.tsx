@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Calculator, Zap, CheckCircle, Loader2, ScanBarcode, Wand2 } from 'lucide-react';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
 import { FormState, FormSetters } from '../../../types';
@@ -14,9 +15,19 @@ interface CostInputsProps {
 
 export default function CostInputs({ formState, setters, onApplyDiscount, selectedPlatformName, courierDiscount = 0 }: CostInputsProps) {
     const [showSuccess, setShowSuccess] = useState(false);
+    const [activeScanner, setActiveScanner] = useState<'SKU' | 'TRACKING_USA' | 'TRACKING_RD' | null>(null);
     const [isDiscountApplied, setIsDiscountApplied] = useState(false);
-    const [showScanner, setShowScanner] = useState(false);
     const [showSkuDropdown, setShowSkuDropdown] = useState(false);
+    
+    // Weight Calculation States
+    const [weightLbs, setWeightLbs] = useState<string>('');
+    const [ratePerLb, setRatePerLb] = useState<string>(formState.defaultPoundRate || '280');
+
+    useEffect(() => {
+        if (formState.defaultPoundRate) {
+            setRatePerLb(formState.defaultPoundRate);
+        }
+    }, [formState.defaultPoundRate]);
 
     // Fetch historical SKUs based on the current product name
     const { data: historicalSkus = [], isLoading: isLoadingSkus } = useHistoricalSkus(formState.name);
@@ -97,7 +108,7 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                 setTimeout(() => setShowSuccess(false), 2000);
             }
         } else {
-            alert('No veo un link válido. Asegúrate que empiece con http...');
+            toast.error('No veo un link válido. Asegúrate que empiece con http...');
         }
     };
 
@@ -106,10 +117,12 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
         : "Pega link de Amazon/Shein...";
 
     return (
-        <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
-            <div className="flex items-center gap-2 mb-2">
-                <Calculator size={14} className="text-blue-500" />
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Estructura de Costos</p>
+        <section className="bg-white p-4 rounded-2xl shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-slate-100 mt-4">
+            <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+                    <Calculator size={14} strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estructura de Costos</p>
             </div>
 
             <div className="space-y-3">
@@ -141,18 +154,18 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                 </div>
 
                 {/* 1. Purchase Price */}
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                     <div className="flex-1">
-                        <label className="text-[10px] text-slate-400 block mb-0.5">Precio Compra</label>
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-                            <span className="text-slate-400 text-sm mr-2">
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1">Precio Compra</label>
+                        <div className="flex items-center bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2.5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                            <span className="text-slate-400 text-sm mr-2 font-bold">
                                 {formState.currency === 'DOP' ? 'RD$' : '$'}
                             </span>
                             <input
                                 type="number"
                                 value={formState.buyPrice || ''}
                                 onChange={(e) => setters.setBuyPrice(Number(e.target.value))}
-                                className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none"
+                                className="w-full bg-transparent text-sm font-black text-slate-800 outline-none placeholder:font-medium placeholder:text-slate-300"
                                 placeholder="0.00"
                             />
                         </div>
@@ -160,18 +173,18 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
 
                     {/* 2. Shipping */}
                     <div className="flex-1">
-                        <label className="text-[10px] text-slate-400 block mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1 whitespace-nowrap overflow-hidden text-ellipsis">
                             Envío {formState.currency === 'USD' ? '(USA)' : ''}
                         </label>
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
-                            <span className="text-slate-400 text-sm mr-2">
+                        <div className="flex items-center bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2.5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                            <span className="text-slate-400 text-sm mr-2 font-bold">
                                 {formState.currency === 'DOP' ? 'RD$' : '$'}
                             </span>
                             <input
                                 type="number"
                                 value={formState.shippingCost || ''}
                                 onChange={(e) => setters.setShippingCost(Number(e.target.value))}
-                                className="w-full bg-transparent text-sm text-slate-700 outline-none"
+                                className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:font-medium placeholder:text-slate-300"
                                 placeholder="0.00"
                             />
                         </div>
@@ -276,8 +289,8 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                                 <Wand2 size={16} />
                             </button>
                             <button
-                                onClick={() => setShowScanner(!showScanner)}
-                                className={`px-3 py-2 border-l border-slate-200 transition-colors flex items-center justify-center shrink-0 ${showScanner ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500 hover:text-blue-600 hover:bg-blue-50'}`}
+                                onClick={() => setActiveScanner(activeScanner === 'SKU' ? null : 'SKU')}
+                                className={`px-3 py-2 border-l border-slate-200 transition-colors flex items-center justify-center shrink-0 ${activeScanner === 'SKU' ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500 hover:text-blue-600 hover:bg-blue-50'}`}
                                 title="Escanear Código de Barras"
                                 type="button"
                             >
@@ -317,38 +330,56 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                             </div>
                         )}
                     </div>
-                    {showScanner && (
+                    {activeScanner && (
                         <div className="mb-2 overflow-hidden rounded-lg border border-slate-200">
                             <BarcodeScanner
                                 onScan={(code) => {
-                                    setters.setSku(code);
-                                    setShowScanner(false);
+                                    if (activeScanner === 'SKU') setters.setSku(code);
+                                    else if (activeScanner === 'TRACKING_USA') setters.setTrackingNumber(code);
+                                    else if (activeScanner === 'TRACKING_RD') setters.setCourierTracking(code);
+                                    setActiveScanner(null);
                                 }}
-                                onClose={() => setShowScanner(false)}
+                                onClose={() => setActiveScanner(null)}
                             />
                         </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-2">
-                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors overflow-hidden relative">
                             <span className="text-slate-400 text-xs shrink-0">📦</span>
                             <input
                                 type="text"
-                                placeholder="Tracking Tienda / USA"
+                                placeholder="Tracking USA"
                                 value={formState.trackingNumber || ''}
                                 onChange={(e) => setters.setTrackingNumber(e.target.value)}
                                 className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400 font-medium"
                             />
+                            <button
+                                onClick={() => setActiveScanner(activeScanner === 'TRACKING_USA' ? null : 'TRACKING_USA')}
+                                className={`absolute right-0 top-0 bottom-0 px-2 border-l border-slate-200 transition-colors flex items-center justify-center ${activeScanner === 'TRACKING_USA' ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
+                                type="button"
+                                title="Escanear Tracking"
+                            >
+                                <ScanBarcode size={14} />
+                            </button>
                         </div>
-                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors">
+                        <div className="flex items-center bg-white border border-slate-200 rounded-lg focus-within:border-blue-500 px-3 py-1.5 transition-colors overflow-hidden relative">
                             <span className="text-slate-400 text-xs shrink-0">🚚</span>
                             <input
                                 type="text"
-                                placeholder="Tracking Courier (RD)"
+                                placeholder="Tracking Local"
                                 value={formState.courierTracking || ''}
                                 onChange={(e) => setters.setCourierTracking(e.target.value)}
                                 className="w-full text-xs bg-transparent outline-none ml-2 text-slate-700 placeholder:text-slate-400 font-medium"
                             />
+                            <button
+                                onClick={() => setActiveScanner(activeScanner === 'TRACKING_RD' ? null : 'TRACKING_RD')}
+                                className={`absolute right-0 top-0 bottom-0 px-2 border-l border-slate-200 transition-colors flex items-center justify-center ${activeScanner === 'TRACKING_RD' ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
+                                type="button"
+                                title="Escanear Tracking"
+                            >
+                                <ScanBarcode size={14} />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -380,25 +411,68 @@ export default function CostInputs({ formState, setters, onApplyDiscount, select
                             )}
                         </div>
                     </div>
-                    <div className={`flex items-center bg-slate-50 border rounded-lg px-3 py-2.5 transition-all ${isDiscountApplied ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200 focus-within:border-blue-400'}`}>
-                        <span className="text-slate-400 text-sm font-bold mr-2">RD$</span>
-                        <input
-                            type="number"
-                            value={formState.taxCost || ''}
-                            onChange={(e) => {
-                                setters.setTaxCost(Number(e.target.value));
-                                setIsDiscountApplied(false);
-                            }}
-                            onBlur={() => {
-                                if (courierDiscount > 0 && formState.taxCost > 0 && !isDiscountApplied) {
-                                    const discounted = formState.taxCost * (1 - (courierDiscount / 100));
-                                    setters.setTaxCost(Math.round(discounted));
-                                    setIsDiscountApplied(true);
-                                }
-                            }}
-                            className="w-full bg-transparent text-sm text-slate-700 outline-none"
-                            placeholder="0.00"
-                        />
+                    <div className="flex gap-2">
+                        {/* Libras */}
+                        <div className="flex-1 flex items-center bg-slate-50 border border-slate-200/60 rounded-xl px-2 py-2.5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                            <input
+                                type="number"
+                                value={weightLbs}
+                                onChange={(e) => {
+                                    const w = e.target.value;
+                                    setWeightLbs(w);
+                                    if(w && ratePerLb) {
+                                        setters.setTaxCost(Math.round(Number(w) * Number(ratePerLb)));
+                                        setIsDiscountApplied(false);
+                                    }
+                                }}
+                                className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none"
+                                placeholder="Lbs"
+                                step="0.1"
+                            />
+                            <span className="text-slate-400 font-bold text-[10px] ml-1">LBS</span>
+                        </div>
+                        {/* Rate */}
+                        <div className="flex-1 flex items-center bg-slate-50 border border-slate-200/60 rounded-xl px-2 py-2.5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                            <span className="text-slate-400 font-bold text-[10px] mr-1">TASA</span>
+                            <input
+                                type="number"
+                                value={ratePerLb}
+                                onChange={(e) => {
+                                    const r = e.target.value;
+                                    setRatePerLb(r);
+                                    if(weightLbs && r) {
+                                        setters.setTaxCost(Math.round(Number(weightLbs) * Number(r)));
+                                        setIsDiscountApplied(false);
+                                    }
+                                }}
+                                className="w-full bg-transparent text-sm text-slate-700 outline-none"
+                                placeholder="280"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-slate-400 text-xs">Total:</span>
+                        <div className={`flex-1 flex items-center bg-white border rounded-lg px-3 py-1.5 transition-all ${isDiscountApplied ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200 focus-within:border-blue-400'}`}>
+                            <span className="text-slate-400 text-sm font-bold mr-2">RD$</span>
+                            <input
+                                type="number"
+                                value={formState.taxCost || ''}
+                                onChange={(e) => {
+                                    setters.setTaxCost(Number(e.target.value));
+                                    setIsDiscountApplied(false);
+                                    setWeightLbs(''); // Clear weight if manually overridden
+                                }}
+                                onBlur={() => {
+                                    if (courierDiscount > 0 && formState.taxCost > 0 && !isDiscountApplied) {
+                                        const discounted = formState.taxCost * (1 - (courierDiscount / 100));
+                                        setters.setTaxCost(Math.round(discounted));
+                                        setIsDiscountApplied(true);
+                                    }
+                                }}
+                                className="w-full bg-transparent text-sm text-slate-700 font-bold outline-none"
+                                placeholder="0.00"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -58,6 +58,7 @@ export interface Product {
   exchange_rate: number; // USD -> DOP
   currency: string;
   image_url?: string;
+  images?: string[];
   product_url?: string;
   tracking_number?: string; // Store Tracking (Amazon/Shein)
   courier_tracking?: string; // Local Courier (EPS/BM)
@@ -84,6 +85,17 @@ export interface ProductImage {
   product_id: string;
   storage_path: string;
   display_order: number;
+  created_at: string;
+}
+
+export interface MarketplaceListing {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  price: number;
+  tags: string[];
+  image_urls: string[];
   created_at: string;
 }
 
@@ -133,6 +145,7 @@ export interface FormState {
   trackingNumber?: string;
   courierTracking?: string;
   storageLocationId?: string; // Storage location reference
+  defaultPoundRate?: string;
 }
 
 export interface FormSetters {

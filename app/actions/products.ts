@@ -82,9 +82,9 @@ export async function createProductAction(
         return { success: true, data };
     } catch (error) {
         if (error instanceof z.ZodError) {
-            // Return validation errors
+            // Return validation errors (Zod v4 uses .issues)
             const fieldErrors: Record<string, string[]> = {};
-            error.errors.forEach(err => {
+            error.issues.forEach(err => {
                 const path = err.path.join('.');
                 if (!fieldErrors[path]) {
                     fieldErrors[path] = [];
@@ -141,10 +141,13 @@ export async function updateProductAction(
             }
         });
 
+        // Validate with partial schema
+        const validatedUpdates = productSchema.partial().parse(updates);
+
         // Update in database (RLS will ensure user owns this product)
         const { data, error } = await supabase
             .from('products')
-            .update(updates)
+            .update(validatedUpdates)
             .eq('id', productId)
             .select()
             .single();
@@ -164,46 +167,21 @@ export async function updateProductAction(
 
         return { success: true, data };
     } catch (error) {
-        console.error('Unexpected error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Error inesperado'
-        };
-    }
-}
-
-export async function deleteProductAction(
-    productId: string
-): Promise<ActionResult> {
-    try {
-        const supabase = await createClient();
-
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return { success: false, error: 'No autenticado' };
-        }
-
-        // Delete (RLS ensures user owns this)
-        const { error } = await supabase
-            .from('products')
-            .delete()
-            .eq('id', productId);
-
-        if (error) {
-            console.error('Database error:', error);
+        if (error instanceof z.ZodError) {
+            const fieldErrors: Record<string, string[]> = {};
+            error.issues.forEach(err => {
+                const path = err.path.join('.');
+                if (!fieldErrors[path]) {
+                    fieldErrors[path] = [];
+                }
+                fieldErrors[path].push(err.message);
+            });
             return {
                 success: false,
-                error: 'Error al eliminar producto'
+                error: 'Errores de validación',
+                errors: fieldErrors
             };
         }
-
-        // Revalidate
-        revalidatePath('/');
-        revalidatePath('/inventory');
-
-        return { success: true };
-    } catch (error) {
         console.error('Unexpected error:', error);
         return {
             success: false,
@@ -212,45 +190,4 @@ export async function deleteProductAction(
     }
 }
 
-// ============================================
-// PLATFORM ACTIONS
-// ============================================
 
-export async function createPlatformAction(
-    formData: FormData
-): Promise<ActionResult> {
-    try {
-        const supabase = await createClient();
-
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return { success: false, error: 'No autenticado' };
-        }
-
-        const name = formData.get('name') as string;
-        const type = formData.get('type') as string;
-
-        const { data, error } = await supabase
-            .from('platforms')
-            .insert({
-                name,
-                type,
-                user_id: user.id,
-            })
-            .select()
-            .single();
-
-        if (error) {
-            return { success: false, error: 'Error al crear plataforma' };
-        }
-
-        revalidatePath('/calculator');
-
-        return { success: true, data };
-    } catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Error inesperado'
-        };
-    }
-}

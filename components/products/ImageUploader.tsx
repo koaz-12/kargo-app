@@ -4,6 +4,8 @@ import React, { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { Upload, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
 import { getPublicUrl } from '@/utils/imageUrl';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { toast } from 'sonner';
 
 
 interface ImageUploaderProps {
@@ -15,6 +17,7 @@ interface ImageUploaderProps {
 export default function ImageUploader({ images, setImages, productId }: ImageUploaderProps) {
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
@@ -25,6 +28,16 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
 
         try {
             for (const file of files) {
+                // Validation
+                if (!file.type.startsWith('image/')) {
+                    toast.error(`"${file.name}" no es una imagen válida`);
+                    continue;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    toast.error(`"${file.name}" excede el límite de 5MB`);
+                    continue;
+                }
+
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                 const filePath = `${productId || 'temp'}/${fileName}`;
@@ -45,7 +58,7 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
             setImages([...images, ...newPaths]);
         } catch (error) {
             console.error('Error handling files:', error);
-            alert('Error al subir imágenes');
+            toast.error('Error al subir imágenes');
         } finally {
             setUploading(false);
             // Reset input
@@ -53,12 +66,13 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
         }
     };
 
-    const handleDelete = async (path: string) => {
-        if (!confirm('¿Eliminar imagen?')) return;
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
 
         // Remove from local state immediately
-        const newImages = images.filter(img => img !== path);
+        const newImages = images.filter(img => img !== itemToDelete);
         setImages(newImages);
+        setItemToDelete(null);
 
         // If it's not a temp image (has productId), maybe delete from storage?
         // For simplicity, we just remove reference. Storage cleanup is a separate task.
@@ -81,7 +95,7 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
                             className="w-full h-full object-cover"
                         />
                         <button
-                            onClick={() => handleDelete(img)}
+                            onClick={(e) => { e.preventDefault(); setItemToDelete(img); }}
                             className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                         >
                             <X size={12} />
@@ -119,6 +133,15 @@ export default function ImageUploader({ images, setImages, productId }: ImageUpl
                 accept="image/*"
                 onChange={handleFileSelect}
             />
+
+            {itemToDelete && (
+                <ConfirmModal 
+                    title="Eliminar Imagen"
+                    message="¿Estás seguro de que quieres quitar esta imagen?"
+                    onConfirm={handleDelete}
+                    onCancel={() => setItemToDelete(null)}
+                />
+            )}
         </div>
     );
 }

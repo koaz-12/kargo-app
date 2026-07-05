@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -25,7 +26,7 @@ export default function LoginPage() {
                     password,
                 });
                 if (error) throw error;
-                alert('¡Cuenta creada! Revisa tu correo o inicia sesión.');
+                toast.success('¡Cuenta creada! Revisa tu correo o inicia sesión.');
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,

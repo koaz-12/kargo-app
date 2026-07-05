@@ -5,7 +5,7 @@ export default function CalculatorPage({ searchParams }: { searchParams: { edit?
     const editingId = searchParams.edit;
 
     return (
-        <main className="min-h-screen bg-slate-50 pb-40 max-w-md mx-auto shadow-2xl shadow-slate-200">
+        <main className="min-h-screen bg-slate-50/50 pb-40 max-w-md mx-auto relative">
             <ProductForm editingId={editingId} />
         </main>
     );

@@ -154,6 +154,26 @@ export function useProductList() {
         }
     };
 
+    const handleMassDelete = async (productIds: string[]) => {
+        if (!productIds.length) return;
+        setIsMassActing(true);
+        try {
+            const { error } = await supabase
+                .from('products')
+                .delete()
+                .in('id', productIds);
+
+            if (error) throw error;
+            toast.success(`✅ ${productIds.length} productos eliminados`);
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+        } catch (error: any) {
+            console.error('Error mass deleting:', error);
+            toast.error('❌ Error al eliminar productos masivamente');
+        } finally {
+            setIsMassActing(false);
+        }
+    };
+
     const handleMassGenerateSKU = async (productIds: string[]) => {
         if (!productIds.length) return;
         setIsMassActing(true);
@@ -234,8 +254,10 @@ export function useProductList() {
         statusFilter, setStatusFilter: handleSetStatusFilter,
         sortOption, setSortOption: handleSetSortOption,
         handleDelete,
+        itemsPerPage: ITEMS_PER_PAGE,
         handleMassUpdateStatus,
         handleMassGenerateSKU,
+        handleMassDelete,
         isMassActing,
         // Advanced filters
         selectedPlatforms,

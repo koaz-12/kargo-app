@@ -43,7 +43,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             persistOptions={{ persister }}
         >
             {children}
-            <ReactQueryDevtools initialIsOpen={false} position="bottom" />
+            {process.env.NODE_ENV === 'development' && (
+                <ReactQueryDevtools initialIsOpen={false} position="bottom" />
+            )}
         </PersistQueryClientProvider>
     );
 }

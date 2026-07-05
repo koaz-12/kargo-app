@@ -28,13 +28,16 @@ export default function SetupSection({
     const { data: storageLocations = [] } = useStorageLocations();
 
     return (
-        <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
-            <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wide">Configuración</p>
-            <div className="grid grid-cols-2 gap-3 mb-3">
+        <section className="bg-white p-4 rounded-2xl shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-slate-100">
+            <p className="text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                Configuración
+            </p>
+            <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label className="text-[10px] text-slate-400 block mb-0.5">Plataforma</label>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1">Plataforma</label>
                     <select
-                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-slate-700 outline-none focus:border-slate-400 transition-colors"
+                        className="w-full text-sm font-semibold bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2.5 text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                         value={formState.platformId}
                         onChange={(e) => setters.setPlatformId(e.target.value)}
                     >
@@ -45,9 +48,9 @@ export default function SetupSection({
                     </select>
                 </div>
                 <div>
-                    <label className="text-[10px] text-slate-400 block mb-0.5">Cuenta de Compra</label>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1">Cuenta de Compra</label>
                     <select
-                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-slate-700 outline-none focus:border-slate-400 transition-colors"
+                        className="w-full text-sm font-semibold bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2.5 text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                         value={formState.purchaseAccountId || ''}
                         onChange={(e) => setters.setPurchaseAccountId(e.target.value)}
                     >
@@ -61,13 +64,13 @@ export default function SetupSection({
 
             {/* Storage Location Dropdown */}
             {storageLocations.length > 0 && (
-                <div className="mb-3">
-                    <label className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
-                        <MapPin size={10} />
+                <div className="mb-4">
+                    <label className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 mb-1">
+                        <MapPin size={12} className="text-slate-400" />
                         Ubicación / Almacén
                     </label>
                     <select
-                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-slate-700 outline-none focus:border-indigo-400 transition-colors"
+                        className="w-full text-sm font-semibold bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2.5 text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                         value={(formState as any).storageLocationId || ''}
                         onChange={(e) => (setters as any).setStorageLocationId?.(e.target.value)}
                     >
@@ -85,25 +88,22 @@ export default function SetupSection({
                     value={formState.name}
                     onChange={setters.setName}
                     onSelectHistory={(product) => {
-                        // Smart Fill Logic (User Request: Name + Buy Price + Image)
+                        // Smart Fill Logic (User Request: Name + Buy Price + Image + SKU)
                         setters.setName(product.name);
                         setters.setBuyPrice(product.buy_price);
+                        
+                        if (product.sku) {
+                            setters.setSku(product.sku);
+                        }
 
                         // Autofill Image if available
                         if (product.image_url) {
                             setters.setImages([product.image_url]);
                         } else if (product.images && product.images.length > 0) {
                             // Map ProductImage[] ({ storage_path }) to string[]
-                            const paths = product.images.map(img => img.storage_path);
+                            const paths = product.images.map((img: any) => img.storage_path);
                             setters.setImages(paths);
                         }
-
-                        // Explicitly NOT filling other variable costs as they change per shipment
-                        // setters.setShippingCost(product.shipping_cost);
-                        // setters.setTaxCost(product.tax_cost || 0);
-                        // setters.setLocalShipping(product.local_shipping_cost || 0);
-                        // setters.setSalePrice(product.sale_price || 0);
-                        // setters.setOriginTax(product.origin_tax || 0);
                     }}
                 />
             </div>

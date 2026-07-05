@@ -86,18 +86,15 @@ export const UtilitiesMenu = () => {
                                 </button>
 
                                 <button
-                                    onClick={() => {
-                                        setIsOpen(false);
-                                        // TODO: Implementar búsqueda global
-                                    }}
-                                    className="w-full px-4 py-3 hover:bg-slate-50 transition-colors flex items-center gap-3 text-left"
+                                    disabled
+                                    className="w-full px-4 py-3 bg-slate-50 opacity-60 flex items-center gap-3 text-left cursor-not-allowed"
                                 >
-                                    <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                        <Search size={18} className="text-emerald-600" />
+                                    <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center">
+                                        <Search size={18} className="text-slate-400" />
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-800">Buscar Tracking</p>
-                                        <p className="text-xs text-slate-500">Próximamente</p>
+                                        <p className="text-[10px] font-bold text-emerald-600 bg-emerald-100 inline-block px-1.5 rounded">PRÓXIMAMENTE</p>
                                     </div>
                                 </button>
                             </div>

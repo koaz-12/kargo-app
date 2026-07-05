@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Product, FinancialAdjustment, PlatformType, Transaction, Platform } from '../types';
 import { calculateProfit } from '../utils/calculateProfit';
+import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient'; // Fix lint error
 
 interface UseProfitCalculatorProps {
@@ -11,7 +12,7 @@ interface UseProfitCalculatorProps {
 export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfitCalculatorProps = {}) => {
     // Form State
     const [platformId, setPlatformId] = useState<string>(initialProduct?.platform_id || '');
-    const [purchaseAccountId, setPurchaseAccountId] = useState<string>((initialProduct as any)?.purchase_account_id || '');
+    const [purchaseAccountId, setPurchaseAccountId] = useState<string>(initialProduct?.purchase_account_id || '');
     const [name, setName] = useState<string>(initialProduct?.name || ''); // New Name State
     const [sku, setSku] = useState<string>(initialProduct?.sku || ''); // NEW: SKU State
     const [storageLocationId, setStorageLocationId] = useState<string>(initialProduct?.storage_location_id || ''); // NEW: Storage Location State
@@ -26,20 +27,21 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
     // New Metadata State
     const [productUrl, setProductUrl] = useState<string>(initialProduct?.product_url || '');
     const [imageUrl, setImageUrl] = useState<string>(initialProduct?.image_url || '');
-    const [images, setImages] = useState<any[]>(initialProduct?.images || []);
+    const [images, setImages] = useState<string[]>(initialProduct?.images || []);
     const [isScraping, setIsScraping] = useState(false);
 
     // Logistics State
     const [trackingNumber, setTrackingNumber] = useState<string>(initialProduct?.tracking_number || '');
     const [courierTracking, setCourierTracking] = useState<string>(initialProduct?.courier_tracking || '');
 
-    // NEW: Currency and Tax State
+    // Currency and Tax State
     const [currency, setCurrency] = useState<'USD' | 'DOP'>(
         initialProduct?.exchange_rate === 1 ? 'DOP' : 'USD'
     );
     const [applyUSATax, setApplyUSATax] = useState<boolean>(false);
 
     const [courierDiscount, setCourierDiscount] = useState<number>(0);
+    const [defaultPoundRate, setDefaultPoundRate] = useState<string>('280');
     const [isRateLoaded, setIsRateLoaded] = useState(false);
 
     // Memory for USD Rate when switching to DOP
@@ -63,25 +65,11 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
 
     // Persistence: Save Exchange Rate
     useEffect(() => {
-        if (isRateLoaded && exchangeRate > 0) {
+        // DO NOT save the rate if we are in DOP mode (which forces rate to 1)
+        if (isRateLoaded && exchangeRate > 1 && currency !== 'DOP') {
             localStorage.setItem('ecom_exchange_rate', exchangeRate.toString());
-
-            // AUTO-SAVE PREFERENCE only if adding new product (Learning Mode)
-            if (!initialProduct?.id && exchangeRate > 0) {
-                const saveRate = async () => {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) {
-                        await supabase.from('user_preferences').upsert({
-                            user_id: user.id,
-                            default_exchange_rate: exchangeRate
-                        });
-                    }
-                };
-                // Debounce? For now direct save is okay as rate doesn't change 50 times/sec
-                saveRate();
-            }
         }
-    }, [exchangeRate, isRateLoaded, initialProduct?.id]);
+    }, [exchangeRate, isRateLoaded, currency]);
 
     // FEATURE: Load Default Settings (Platform)
     useEffect(() => {
@@ -91,21 +79,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setPlatformId(defaultPlatform);
             }
         }
-
-        // AUTO-SAVE Platform Preference (Learning Mode)
-        if (!initialProduct?.id && platformId) {
-            const savePlatform = async () => {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    await supabase.from('user_preferences').upsert({
-                        user_id: user.id,
-                        default_platform_id: platformId
-                    });
-                }
-            };
-            savePlatform();
-        }
-    }, [initialProduct?.platform_id, platforms, platformId]);
+    }, [initialProduct?.platform_id, platformId]);
 
     // Derived State: Selected Platform
     const selectedPlatform = useMemo(() =>
@@ -127,7 +101,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
         };
 
         return calculateProfit(transaction, salePrice, localShipping);
-    }, [buyPrice, shippingCost, taxCost, adjustments, salePrice, localShipping, exchangeRate, currency]);
+    }, [buyPrice, shippingCost, originTax, taxCost, adjustments, salePrice, localShipping, exchangeRate, currency]);
 
     // State for Preferences
     const [preferences, setPreferences] = useState<Record<string, number>>({});
@@ -162,7 +136,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
 
             const { data } = await supabase
                 .from('user_preferences')
-                .select('adjustment_defaults, default_platform_id, default_exchange_rate, display_name, default_courier_discount, default_local_shipping')
+                .select('adjustment_defaults, default_platform_id, default_exchange_rate, display_name, default_courier_discount, default_local_shipping, default_pound_rate')
                 .eq('user_id', user.id)
                 .single();
 
@@ -170,6 +144,9 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             if (data) {
                 if (data.default_courier_discount) {
                     setCourierDiscount(Number(data.default_courier_discount));
+                }
+                if (data.default_pound_rate) {
+                    setDefaultPoundRate(data.default_pound_rate.toString());
                 }
                 if (data.display_name) {
                     // console.log('Loaded Display Name:', data.display_name);
@@ -233,7 +210,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             const data = await res.json();
 
             if (data.error) {
-                alert('No se pudo obtener la imagen (Bloqueo de sitio o URL inválida). Intenta otra URL.');
+                toast.error('No se pudo obtener la imagen (Bloqueo de sitio o URL inválida). Intenta otra URL.');
                 console.warn(data.error);
                 return false;
             }
@@ -253,13 +230,13 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 // Success! (No alert, return true for UI feedback)
                 return true;
             } else {
-                alert('No se encontró ninguna imagen en esa página.');
+                toast.error('No se encontró ninguna imagen en esa página.');
                 return false;
             }
 
         } catch (e) {
             console.error('Scrape failed', e);
-            alert('Error de conexión al buscar la imagen.');
+            toast.error('Error de conexión al buscar la imagen.');
             return false;
         } finally {
             setIsScraping(false);
@@ -292,7 +269,8 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             images, // New
             courierDiscount, // New
             trackingNumber,
-            courierTracking
+            courierTracking,
+            defaultPoundRate // New
         },
         setters: {
             setPlatformId,
@@ -330,7 +308,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
             setCourierTracking,
             // Logic Helpers
             setIsScraping,
-            loadProduct: (p: any) => {
+            loadProduct: (p: Partial<Product>) => {
                 setPlatformId(p.platform_id || '');
                 setPurchaseAccountId(p.purchase_account_id || '');
                 setName(p.name || '');
@@ -342,7 +320,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setTaxCost(p.tax_cost || 0);
                 setExchangeRate(p.exchange_rate || 60);
 
-                // Initialize currency and memory
+                // Initialize currency
                 const isDop = p.exchange_rate === 1;
                 setCurrency(isDop ? 'DOP' : 'USD');
                 if (!isDop && p.exchange_rate > 1) {
@@ -373,7 +351,7 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 const defaultAdj: FinancialAdjustment = {
                     id: crypto.randomUUID(),
                     product_id: '',
-                    type: type as any,
+                    type: type as AdjustmentType,
                     amount: 0,
                     percentage: prefPct,
                     date: new Date().toISOString(),
@@ -402,13 +380,13 @@ export const useProfitCalculator = ({ initialProduct, platforms = [] }: UseProfi
                 setTrackingNumber('');
                 setCourierTracking('');
             },
-            addAdjustment: (type: any, amount: number) => {
+            addAdjustment: (type: AdjustmentType, amount: number) => {
                 setAdjustments([...adjustments, { id: crypto.randomUUID(), product_id: '', type, amount, percentage: 0, date: new Date().toISOString() }]);
             },
             removeAdjustment: (id: string) => {
                 setAdjustments(prev => prev.filter(a => a.id !== id));
             },
-            updateAdjustment: (id: string, field: string, value: any) => {
+            updateAdjustment: (id: string, field: string, value: string | number) => {
                 setAdjustments(prev => prev.map(a => {
                     if (a.id !== id) return a;
 

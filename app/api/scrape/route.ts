@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'URL Missing' }, { status: 400 });
         }
 
-        console.log('Hybrid Scraper: Launching Puppeteer for:', url);
+        // Hybrid Scraper: Launching Puppeteer for url
 
         let browser;
         try {
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
                     const topGalleryUrl = urlObj.searchParams.get('top_gallery_url');
                     if (topGalleryUrl) {
                         image = decodeURIComponent(topGalleryUrl);
-                        console.log('Extracted image from URL params:', image);
+                        // Extracted image from URL params
                     }
                 } catch (e) {
                     console.error('Error parsing final URL for image:', e);

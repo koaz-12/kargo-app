@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import type { ShipmentTracking } from '../../types/shipment';
 import { detectCourier, COURIER_OPTIONS } from '../../utils/courierDetection';
 import { BarcodeScanner } from '../ui/BarcodeScanner';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface ShipmentTrackerProps {
     onClose: () => void;
@@ -40,6 +41,9 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
     // Pagination for trackings list
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 8; // Aumentado para ver más de un vistazo
+    
+    // Delete Confirmation
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     // Load courier presets and trackings
     useEffect(() => {
@@ -301,14 +305,14 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('¿Eliminar este tracking?')) return;
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
 
         try {
             const { error } = await supabase
                 .from('shipment_tracking')
                 .delete()
-                .eq('id', id);
+                .eq('id', itemToDelete);
 
             if (error) throw error;
 
@@ -317,6 +321,8 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
         } catch (error) {
             console.error('Error deleting:', error);
             toast.error('Error al eliminar');
+        } finally {
+            setItemToDelete(null);
         }
     };
 
@@ -703,8 +709,8 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                                                             </svg>
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDelete(tracking.id)}
-                                                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
+                                                            onClick={() => setItemToDelete(tracking.id)}
+                                                            className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded transition-colors ml-2"
                                                             title="Eliminar"
                                                         >
                                                             <Trash2 size={14} />
@@ -745,6 +751,15 @@ export const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ onClose }) => 
                         )}
                     </div>
                 </div>
+
+                {itemToDelete && (
+                    <ConfirmModal 
+                        title="Eliminar Tracking"
+                        message="¿Estás seguro de que deseas eliminar este registro de tracking? Esta acción no se puede deshacer."
+                        onConfirm={handleDelete}
+                        onCancel={() => setItemToDelete(null)}
+                    />
+                )}
             </div>
         </div>
     );

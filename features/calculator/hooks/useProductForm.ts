@@ -17,6 +17,7 @@ export const useProductForm = (editingId: string | null) => {
     const [saving, setSaving] = useState(false);
     const [statusMsg, setStatusMsg] = useState('');
     const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+    const [queue, setQueue] = useState<FormState[]>([]); // NEW: Queue State
 
     // Load Initial Data (Platforms, Accounts, Edit Product)
     useEffect(() => {
@@ -154,11 +155,20 @@ export const useProductForm = (editingId: string | null) => {
             let result;
             let targetId = editingId;
 
+            // NEW: If cloneMode, just push to Queue and return
+            if (cloneMode) {
+                setQueue(prev => [...prev, { ...formState, sku: '' }]);
+                toast.success('Clon agregado a la cola');
+                setStatusMsg('¡Clonado a la cola! 🛒');
+                setSaving(false);
+                return;
+            }
+
             if (editingId && !cloneMode) {
                 // UPDATE with Server Action
                 result = await updateProductAction(editingId, formData);
             } else {
-                // CREATE (or Clone) with Server Action
+                // CREATE with Server Action
                 result = await createProductAction(formData);
                 if (result.success && result.data) {
                     targetId = result.data.id;
@@ -219,15 +229,10 @@ export const useProductForm = (editingId: string | null) => {
                 setTimeout(() => router.push('/inventory'), 1000);
                 setStatusMsg('¡Editado Exitosamente!');
             } else {
-                if (cloneMode) {
-                    toast.success('¡Producto clonado!');
-                    setStatusMsg('¡Clonado! Listo para el siguiente 👯');
-                } else {
-                    toast.success('¡Producto guardado!');
-                    setStatusMsg('¡Producto Guardado!');
-                    setters.resetForm();
-                    setTimeout(() => setStatusMsg(''), 3000);
-                }
+                toast.success('¡Producto guardado!');
+                setStatusMsg('¡Producto Guardado!');
+                setters.resetForm();
+                setTimeout(() => setStatusMsg(''), 3000);
             }
 
         } catch (error) {
@@ -240,7 +245,101 @@ export const useProductForm = (editingId: string | null) => {
     };
 
     const handleAddToQueue = () => {
-        toast.info('Agregado a cola (próximamente)');
+        setValidationErrors({});
+        if (!formState.name) { toast.error('El nombre es requerido'); return; }
+        if (!formState.buyPrice) { toast.error('El precio de compra es requerido'); return; }
+
+        setQueue(prev => [...prev, { ...formState }]);
+        toast.success('Producto agregado a la cola');
+        setters.resetForm(); // Limpiar para el siguiente
+    };
+
+    const handleSaveAllQueue = async () => {
+        if (queue.length === 0) return;
+        setSaving(true);
+        setStatusMsg('Guardando lote...');
+        
+        try {
+            let successCount = 0;
+            
+            for (const item of queue) {
+                // Determine status
+                let productStatus: ProductStatus = 'ORDERED';
+                if (item.salePrice > 0) productStatus = 'SOLD';
+                else if (item.shippingCost > 0 || item.localShipping > 0 || item.taxCost > 0) productStatus = 'RECEIVED';
+
+                const isDOP = item.currency === 'DOP';
+                const savedExchangeRate = isDOP ? 1 : item.exchangeRate;
+
+                const formData = new FormData();
+                formData.append('platform_id', item.platformId);
+                if (item.purchaseAccountId) formData.append('purchase_account_id', item.purchaseAccountId);
+                formData.append('name', item.name);
+                formData.append('buy_price', item.buyPrice.toFixed(4));
+                formData.append('shipping_cost', item.shippingCost.toFixed(4));
+                formData.append('origin_tax', (item.originTax || 0).toString());
+                formData.append('tax_cost', item.taxCost.toString());
+                if (item.salePrice) formData.append('sale_price', item.salePrice.toString());
+                formData.append('local_shipping_cost', item.localShipping.toString());
+                formData.append('exchange_rate', savedExchangeRate.toString());
+                formData.append('status', productStatus);
+
+                if (item.sku) formData.append('sku', item.sku);
+                if (item.storageLocationId) formData.append('storage_location_id', item.storageLocationId);
+                if (item.productUrl) formData.append('product_url', item.productUrl);
+                if (item.imageUrl) formData.append('image_url', item.imageUrl);
+                if (item.trackingNumber) formData.append('tracking_number', item.trackingNumber);
+                if (item.courierTracking) formData.append('courier_tracking', item.courierTracking);
+
+                const result = await createProductAction(formData);
+                
+                if (result.success && result.data?.id) {
+                    const targetId = result.data.id;
+                    
+                    // Adjustments
+                    if (item.adjustments && item.adjustments.length > 0) {
+                        const adjs = item.adjustments.map(a => ({
+                            product_id: targetId,
+                            type: a.type,
+                            amount: a.amount || 0,
+                            percentage: a.percentage || 0
+                        }));
+                        await supabase.from('financial_adjustments').insert(adjs);
+                    }
+                    
+                    // Images
+                    if (item.images && item.images.length > 0) {
+                        const imgs = item.images.map((img: any, idx: number) => ({
+                            product_id: targetId,
+                            storage_path: typeof img === 'string' ? img : img.storage_path,
+                            display_order: idx
+                        }));
+                        await supabase.from('product_images').insert(imgs);
+                        
+                        const primaryImage = imgs[0]?.storage_path;
+                        if (primaryImage) {
+                            await supabase.from('products').update({ image_url: primaryImage }).eq('id', targetId);
+                        }
+                    }
+                    successCount++;
+                } else {
+                    console.error('Failed to insert item from queue', item.name, result.error);
+                }
+            }
+
+            toast.success(`Se guardaron ${successCount} productos correctamente`);
+            setQueue([]); // Limpiar cola
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            if(successCount > 0) {
+                setTimeout(() => router.push('/inventory'), 1000);
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error('Ocurrió un error guardando la cola');
+        } finally {
+            setSaving(false);
+            setStatusMsg('');
+        }
     };
 
     const smartFetchMetadata = async (url: string) => {
@@ -276,6 +375,9 @@ export const useProductForm = (editingId: string | null) => {
         validationErrors, // NEW: expose validation errors
         handleSave,
         handleAddToQueue,
+        handleSaveAllQueue, // NEW
+        queue, // NEW
+        setQueue, // NEW
         courierDiscount
     };
 }

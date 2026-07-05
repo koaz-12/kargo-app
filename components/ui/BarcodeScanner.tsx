@@ -66,7 +66,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScan, onClose 
         if (processingScan.current) return;
         processingScan.current = true;
 
-        console.log("Scanned:", decodedText);
+        // Log decodedText if needed in debug
         playBeep();
         vibrate();
 
@@ -91,20 +91,29 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScan, onClose 
     }, [onScan, onClose, playBeep, vibrate]);
 
 
-    // Initialize Tesseract Worker
+    // Initialize Tesseract Worker ONLY when needed
     useEffect(() => {
+        if (scanMode !== 'TEXT') return;
+
+        let active = true;
         const initWorker = async () => {
             const worker = await createWorker('eng');
-            workerRef.current = worker;
+            if (active) {
+                workerRef.current = worker;
+            } else {
+                worker.terminate();
+            }
         };
         initWorker();
 
         return () => {
+            active = false;
             if (workerRef.current) {
                 workerRef.current.terminate();
+                workerRef.current = null; // Clear reference
             }
         };
-    }, []);
+    }, [scanMode]);
 
     // Initialize Camera
     useEffect(() => {
@@ -234,7 +243,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScan, onClose 
 
             // Filter text: looking for uppercase alphanumeric strings >= 5 chars
             const rawText = result.data.text;
-            console.log("OCR Raw:", rawText);
+            // OCR Raw parsing
 
             // Heuristic cleanup
             const lines = rawText.split('\n');

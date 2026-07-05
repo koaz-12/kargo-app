@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { Search, History } from 'lucide-react';
 import { Product } from '../../types';
+import { sanitizeSearchTerm } from '../../hooks/useProducts';
+import { getPublicUrl } from '../../utils/imageUrl';
 
 interface ProductNameInputProps {
     value: string;
@@ -37,17 +39,29 @@ export default function ProductNameInput({ value, onChange, onSelectHistory }: P
 
             setLoading(true);
             try {
+                const safe = sanitizeSearchTerm(value);
                 const { data, error } = await supabase
                     .from('products')
                     .select('*, product_images(*)') // Include images for autocomplete
-                    .or(`name.ilike.%${value}%,sku.ilike.%${value}%`)
+                    .or(`name.ilike.%${safe}%,sku.ilike.%${safe}%`)
                     .order('created_at', { ascending: false })
-                    .limit(5);
+                    .limit(20);
 
                 if (error) {
                     console.error("Error fetching history:", error);
                 } else if (data) {
-                    setSuggestions(data as Product[]);
+                    // Filter duplicates by SKU or Name to show distinct results
+                    const unique: Product[] = [];
+                    const seen = new Set();
+                    for (const item of data) {
+                        const key = item.sku ? item.sku : item.name.toLowerCase();
+                        if (!seen.has(key)) {
+                            seen.add(key);
+                            unique.push(item as Product);
+                            if (unique.length >= 5) break; // Only show up to 5 unique
+                        }
+                    }
+                    setSuggestions(unique);
                 }
             } catch (err) {
                 console.error(err);
@@ -107,22 +121,34 @@ export default function ProductNameInput({ value, onChange, onSelectHistory }: P
                         </div>
                     )}
 
-                    {suggestions.map((product) => (
+                    {suggestions.map((product: any) => (
                         <button
                             key={product.id}
                             onClick={() => handleSelect(product)}
-                            className="w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors flex flex-col border-b border-slate-50 last:border-none group"
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-slate-50 last:border-none group"
                         >
-                            <span className="font-bold text-slate-700 text-xs group-hover:text-blue-700">{product.name}</span>
-                            <div className="flex items-center justify-between mt-0.5">
-                                <span className="text-[10px] text-slate-400">
-                                    ${product.buy_price} • {product.created_at?.substring(0, 10)}
-                                </span>
-                                {product.sku && (
-                                    <span className="text-[9px] font-mono bg-slate-100/80 px-1 py-0.5 rounded text-slate-500">
-                                        {product.sku}
-                                    </span>
+                            <div className="w-10 h-10 shrink-0 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center border border-slate-200">
+                                {product.image_url ? (
+                                    <img src={getPublicUrl(product.image_url)} alt="" className="w-full h-full object-cover" />
+                                ) : product.product_images && product.product_images.length > 0 ? (
+                                    <img src={getPublicUrl(product.product_images[0].storage_path)} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-slate-300 text-xs">📦</span>
                                 )}
+                            </div>
+                            <div className="flex flex-col flex-1 overflow-hidden">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="font-bold text-slate-700 text-xs group-hover:text-blue-700 truncate">{product.name}</span>
+                                    {product.sku && (
+                                        <span className="text-[9px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 shrink-0 border border-slate-200">
+                                            {product.sku}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center text-[10px] text-slate-400">
+                                    <span className="font-medium text-slate-500 mr-2">${product.buy_price}</span>
+                                    <span>{product.created_at?.substring(0, 10)}</span>
+                                </div>
                             </div>
                         </button>
                     ))}

@@ -3,8 +3,10 @@ import { useRouter } from 'next/navigation';
 import { useProducts } from '../../../hooks/useProducts';
 import { useStorageLocations } from '../../../hooks/useStorageLocations';
 import { ArrowLeft, MapPin, FileDown, CheckCircle2, Search, Package, ChevronDown, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 import { getThumbnailUrl } from '../../../utils/imageUrl';
+import { Pagination } from '../../../components/ui/Pagination';
 
 export default function InventoryReviewPage() {
     const router = useRouter();
@@ -53,8 +55,8 @@ export default function InventoryReviewPage() {
             image_url: g.image_url,
             totalCount: g.totalCount,
             skus: Array.from(g.skus.entries())
-                .map(([sku, count]) => ({ sku, count }))
-                .sort((a, b) => b.count - a.count)
+                .map(([sku, count]: any) => ({ sku, count }))
+                .sort((a: any, b: any) => b.count - a.count)
         })).sort((a, b) => b.totalCount - a.totalCount);
     };
 
@@ -71,9 +73,53 @@ export default function InventoryReviewPage() {
     const unassignedGrouped = groupItemsByNameAndSku(unassignedItems);
     const unassignedVisibleCount = unassignedGrouped.reduce((acc, g) => acc + g.totalCount, 0);
 
+    // Flatten logic for pagination
+    const allFlatGroups: any[] = [];
+    storageStats.forEach(loc => {
+        loc.grouped.forEach((g: any) => {
+            allFlatGroups.push({ location: loc, group: g, visibleCount: loc.visibleCount });
+        });
+    });
+    if (unassignedVisibleCount > 0) {
+        unassignedGrouped.forEach((g: any) => {
+            allFlatGroups.push({ 
+                location: { id: 'unassigned', name: 'Sin Asignar' }, 
+                group: g, 
+                visibleCount: unassignedVisibleCount 
+            });
+        });
+    }
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+    const totalItems = allFlatGroups.length;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, products]);
+
+    const paginatedFlatGroups = allFlatGroups.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    // Regroup the current page for rendering
+    const renderedLocations = new Map();
+    paginatedFlatGroups.forEach(({ location, group, visibleCount }) => {
+        if (!renderedLocations.has(location.id)) {
+            renderedLocations.set(location.id, {
+                id: location.id,
+                name: location.name,
+                visibleCount: visibleCount,
+                groups: []
+            });
+        }
+        renderedLocations.get(location.id).groups.push(group);
+    });
+    const renderedLocationsArray = Array.from(renderedLocations.values());
+
     const handleQuickExport = () => {
         if (receivedProducts.length === 0) {
-            alert("No hay artículos en estado RECIBIDO para exportar.");
+            toast.info("No hay artículos en estado RECIBIDO para exportar.");
             return;
         }
 
@@ -120,7 +166,7 @@ export default function InventoryReviewPage() {
                             >
                                 <div className="w-10 h-10 rounded border border-slate-200 bg-slate-100 shrink-0 overflow-hidden relative">
                                     {group.image_url ? (
-                                        <img src={getThumbnailUrl(group.image_url)} alt="" className="w-full h-full object-cover" />
+                                        <img src={getThumbnailUrl(group.image_url)} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                     ) : (
                                         <div className="w-full h-full flex justify-center items-center text-slate-400">
                                             <Package size={16} />
@@ -222,38 +268,31 @@ export default function InventoryReviewPage() {
                             <p className="text-center text-sm text-slate-500 py-8 italic">No hay artículos para mostrar con esa búsqueda.</p>
                         )}
 
-                        {storageStats.map(loc => (
+                        {renderedLocationsArray.map(loc => (
                             <div key={loc.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                                <div className={`px-4 py-3 border-b flex items-center justify-between ${loc.id === 'unassigned' ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
                                     <div className="flex items-center gap-2">
-                                        <MapPin size={16} className="text-indigo-500" />
+                                        <MapPin size={16} className={loc.id === 'unassigned' ? 'text-amber-500' : 'text-indigo-500'} />
                                         <h3 className="font-black text-slate-800 uppercase text-xs tracking-wide">{loc.name}</h3>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${loc.id === 'unassigned' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-indigo-100 text-indigo-700 border-indigo-200'}`}>
                                             {loc.visibleCount} Artículos
                                         </span>
                                     </div>
                                 </div>
-                                {renderGroupedList(loc.grouped, loc.id)}
+                                {renderGroupedList(loc.groups, loc.id)}
                             </div>
                         ))}
 
-                        {/* Unassigned Items */}
-                        {unassignedVisibleCount > 0 && (
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div className="bg-amber-50/50 px-4 py-3 border-b border-amber-200 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <MapPin size={16} className="text-amber-500" />
-                                        <h3 className="font-black text-slate-800 uppercase text-xs tracking-wide">Sin Asignar</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded border border-amber-200">
-                                            {unassignedVisibleCount} Artículos
-                                        </span>
-                                    </div>
-                                </div>
-                                {renderGroupedList(unassignedGrouped, 'unassigned')}
+                        {totalItems > ITEMS_PER_PAGE && (
+                            <div className="pt-4">
+                                <Pagination 
+                                    currentPage={currentPage}
+                                    onPageChange={setCurrentPage}
+                                    totalItems={totalItems}
+                                    itemsPerPage={ITEMS_PER_PAGE}
+                                />
                             </div>
                         )}
                     </div>

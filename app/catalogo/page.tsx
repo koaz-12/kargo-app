@@ -16,8 +16,10 @@ export default async function CatalogoPage() {
         .eq('status', 'RECEIVED')
         .order('created_at', { ascending: false });
 
+    let errorMessage = null;
     if (error) {
         console.error("Error fetching catalog:", error);
+        errorMessage = "Lo sentimos, hubo un problema técnico al cargar el catálogo. Por favor, intenta más tarde.";
     }
 
     const availableProducts = products || [];
@@ -37,7 +39,17 @@ export default async function CatalogoPage() {
 
             {/* Content */}
             <div className="p-4">
-                {availableProducts.length === 0 ? (
+                {errorMessage ? (
+                    <div className="py-20 flex flex-col items-center justify-center text-center px-4">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-400">
+                            <PackageOpen size={32} />
+                        </div>
+                        <h2 className="text-lg font-bold text-slate-700">Error de conexión</h2>
+                        <p className="text-sm text-red-500 mt-2 max-w-[250px]">
+                            {errorMessage}
+                        </p>
+                    </div>
+                ) : availableProducts.length === 0 ? (
                     <div className="py-20 flex flex-col items-center justify-center text-center px-4">
                         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-300">
                             <PackageOpen size={32} />
@@ -63,10 +75,10 @@ export default async function CatalogoPage() {
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Stock Actual</p>
                         <p className="text-sm font-bold">{availableProducts.length} Artículos</p>
                     </div>
-                    {/* Placeholder for future WhatsApp link */}
-                    <button className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-emerald-500/30">
+                    {/* WhatsApp link */}
+                    <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-emerald-500/30">
                         Contactar
-                    </button>
+                    </a>
                 </div>
             </div>
         </main>

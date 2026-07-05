@@ -1,0 +1,188 @@
+'use client';
+
+import { useState } from 'react';
+import { MarketplaceListing } from '../../types';
+import { X, Save, Sparkles, Copy, Check, UploadCloud } from 'lucide-react';
+import ImageUploader from '../products/ImageUploader';
+import { toast } from 'sonner';
+
+interface BatchImportModalProps {
+    onClose: () => void;
+    onSave: (data: Omit<MarketplaceListing, 'id' | 'user_id' | 'created_at'>[]) => Promise<void>;
+}
+
+export default function BatchImportModal({ onClose, onSave }: BatchImportModalProps) {
+    const [jsonText, setJsonText] = useState('');
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [previewListings, setPreviewListings] = useState<any[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+    const promptText = `Actúa como experto en ventas para FB Marketplace. Genera 3 variaciones de plantillas de ventas para este producto: [ESCRIBE TU PRODUCTO]. 
+Devuelve el resultado ESTRICTAMENTE en formato JSON, usando esta estructura exacta (un array de objetos):
+[
+  {
+    "title": "Smartwatch Serie 8 Negro Deportivo",
+    "price": 1500,
+    "description": "Reloj inteligente nuevo...",
+    "tags": ["smartwatch", "reloj", "negro"]
+  }
+]
+No añadas texto adicional fuera del JSON.`;
+
+    const handleCopyPrompt = async () => {
+        await navigator.clipboard.writeText(promptText);
+        setCopiedPrompt(true);
+        toast.success("Prompt copiado. Pégalo en Gemini.");
+        setTimeout(() => setCopiedPrompt(false), 2000);
+    };
+
+    const handleParseJson = () => {
+        if (!jsonText.trim()) return toast.error("Pega el texto de Gemini primero");
+        
+        try {
+            // Find JSON array in the text in case there is some markdown wrapping it like ```json ... ```
+            const jsonMatch = jsonText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            const textToParse = jsonMatch ? jsonMatch[0] : jsonText;
+
+            const parsed = JSON.parse(textToParse);
+            if (!Array.isArray(parsed)) throw new Error("Not an array");
+            
+            // Validate and clean each object
+            const cleaned = parsed.map(item => ({
+                title: item.title || 'Sin Título',
+                price: Number(item.price) || 0,
+                description: item.description || '',
+                tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').toString().split(',').map((t: string) => t.trim())
+            }));
+
+            setPreviewListings(cleaned);
+            toast.success(`¡Se detectaron ${cleaned.length} plantillas!`);
+        } catch(e) {
+            console.error(e);
+            toast.error("Error al leer el texto. Asegúrate de que es un JSON válido.");
+        }
+    };
+
+    const handleSaveAll = async () => {
+        if (previewListings.length === 0) return toast.error("No hay plantillas para guardar");
+        
+        setIsSaving(true);
+        try {
+            // Attach shared images to all listings
+            const finalData = previewListings.map(listing => ({
+                ...listing,
+                image_urls: imageUrls,
+                // Ensure tags are limited to 20
+                tags: listing.tags.slice(0, 20)
+            }));
+
+            await onSave(finalData);
+            onClose();
+            toast.success(`¡${finalData.length} plantillas guardadas!`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error al guardar las plantillas");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                <div className="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 className="font-black text-lg flex items-center gap-2">
+                            <Sparkles size={20} /> Importación Masiva (IA)
+                        </h3>
+                        <p className="text-indigo-200 text-xs mt-1">Crea docenas de versiones en segundos</p>
+                    </div>
+                    <button onClick={onClose} className="text-indigo-100 hover:text-white transition-colors bg-black/10 p-1.5 rounded-full">
+                        <X size={16} />
+                    </button>
+                </div>
+                
+                <div className="p-5 overflow-y-auto flex-1 space-y-5">
+                    {/* Step 1: Prompt */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
+                            <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">1</span> 
+                            Instruye a la Inteligencia Artificial
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-3">Copia el siguiente mensaje y pégalo en Gemini o ChatGPT. Recuerda cambiar [ESCRIBE TU PRODUCTO] por lo que vayas a vender.</p>
+                        <button 
+                            type="button"
+                            onClick={handleCopyPrompt}
+                            className="w-full bg-white border border-slate-300 text-slate-700 rounded-lg p-2.5 text-xs font-bold flex justify-center items-center gap-2 hover:bg-slate-100 transition-colors shadow-sm"
+                        >
+                            {copiedPrompt ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />} 
+                            {copiedPrompt ? 'Copiado al portapapeles' : 'Copiar "Mega Prompt"'}
+                        </button>
+                    </div>
+
+                    {/* Step 2: Shared Images */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
+                            <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">2</span> 
+                            Imágenes Compartidas
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-3">Sube las fotos de tu producto. Todas las plantillas importadas usarán estas mismas fotos.</p>
+                        <ImageUploader 
+                            images={imageUrls} 
+                            setImages={setImageUrls} 
+                            productId={'marketplace_batch_temp'} 
+                        />
+                    </div>
+
+                    {/* Step 3: Parse JSON */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
+                            <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">3</span> 
+                            Pega la Respuesta (JSON)
+                        </h4>
+                        <textarea 
+                            value={jsonText}
+                            onChange={(e) => setJsonText(e.target.value)}
+                            className="w-full border border-slate-300 rounded-lg p-3 text-xs outline-none focus:border-indigo-500 h-28 font-mono bg-white shadow-inner"
+                            placeholder='[&#10;  {&#10;    "title": "...",&#10;    "price": 1500,&#10;    ...&#10;  }&#10;]'
+                        />
+                        <button 
+                            type="button"
+                            onClick={handleParseJson}
+                            className="w-full mt-3 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg p-2.5 text-xs font-bold flex justify-center items-center gap-2 hover:bg-indigo-200 transition-colors"
+                        >
+                            <Sparkles size={14} /> Analizar y Previsualizar
+                        </button>
+                    </div>
+
+                    {/* Step 4: Preview & Save */}
+                    {previewListings.length > 0 && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 animate-in slide-in-from-bottom-2">
+                            <h4 className="font-bold text-emerald-800 text-sm mb-3 flex items-center gap-2">
+                                <Check size={16} /> ¡Todo listo! Se detectaron {previewListings.length} plantillas:
+                            </h4>
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1 mb-4">
+                                {previewListings.map((item, idx) => (
+                                    <div key={idx} className="bg-white p-2 rounded border border-emerald-100 text-xs">
+                                        <div className="font-bold text-slate-800 truncate">{item.title}</div>
+                                        <div className="text-emerald-600 font-bold">RD$ {item.price.toLocaleString()}</div>
+                                        <div className="text-slate-500 mt-1 truncate">{item.tags.join(', ')}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <button 
+                                onClick={handleSaveAll}
+                                disabled={isSaving}
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-black py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                            >
+                                <UploadCloud size={18} />
+                                {isSaving ? 'Guardando...' : `Guardar las ${previewListings.length} Plantillas`}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}

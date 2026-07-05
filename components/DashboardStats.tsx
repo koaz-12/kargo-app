@@ -80,49 +80,48 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
         <div className="grid grid-cols-2 gap-3 mb-6 animate-in fade-in slide-in-from-top-4">
 
             {/* Active Investment (Capital Activo) */}
-            <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-1 opacity-5">
-                    <DollarSign size={32} />
+            <div className="bg-white p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:-translate-y-0.5 transition-transform">
+                <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover:scale-110 transition-transform">
+                    <DollarSign size={64} strokeWidth={3} />
                 </div>
-                <p className="text-[9px] uppercase font-bold text-slate-400">Capital Activo</p>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-semibold text-slate-500">RD$</span>
+                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-1">Capital Activo</p>
+                <div className="flex items-baseline gap-1 relative z-10">
+                    <span className="text-sm font-bold text-slate-400">RD$</span>
                     {isLoadingTypes ? (
-                        <div className="h-6 w-24 bg-slate-100 rounded animate-pulse mt-0.5" />
+                        <div className="h-8 w-24 bg-slate-100 rounded animate-pulse" />
                     ) : (
-                        <span className="text-lg font-bold text-slate-800">{Math.round(activeInvestment).toLocaleString()}</span>
+                        <span className="text-2xl font-black text-slate-800 tracking-tight">{Math.round(activeInvestment).toLocaleString()}</span>
                     )}
                 </div>
-                <div className="flex gap-2 mt-2">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] text-slate-400 font-bold">Por Recibir</span>
-                        <span className="text-xs font-bold text-blue-600">{orderedCount}</span>
+                <div className="flex gap-3 mt-4 relative z-10">
+                    <div className="flex flex-col bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100/50 flex-1">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">Por Recibir</span>
+                        <span className="text-sm font-black text-blue-600">{orderedCount}</span>
                     </div>
-                    <div className="w-px h-full bg-slate-100"></div>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] text-slate-400 font-bold">En Stock</span>
-                        <span className="text-xs font-bold text-emerald-600">{receivedCount}</span>
+                    <div className="flex flex-col bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-100/50 flex-1">
+                        <span className="text-[9px] text-emerald-600/70 font-bold uppercase tracking-wide">En Stock</span>
+                        <span className="text-sm font-black text-emerald-600">{receivedCount}</span>
                     </div>
                 </div>
             </div>
 
             {/* Realized Profit */}
-            <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-1 opacity-10 text-emerald-500">
-                    <TrendingUp size={32} />
+            <div className="bg-gradient-to-br from-emerald-400 to-emerald-600 p-4 rounded-2xl shadow-lg shadow-emerald-200/50 relative overflow-hidden group hover:-translate-y-0.5 transition-transform text-white">
+                <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:scale-110 transition-transform">
+                    <TrendingUp size={72} strokeWidth={2.5} />
                 </div>
-                <p className="text-[9px] uppercase font-bold text-emerald-600/70">Ganancia Real (Vendidos)</p>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-semibold text-emerald-600">RD$</span>
+                <p className="text-[10px] uppercase font-bold text-emerald-50 tracking-widest mb-1">Beneficio Total</p>
+                <div className="flex items-baseline gap-1 relative z-10">
+                    <span className="text-sm font-bold text-emerald-100">RD$</span>
                     {isLoadingTypes ? (
-                        <div className="h-6 w-24 bg-emerald-50 rounded animate-pulse mt-0.5" />
+                        <div className="h-8 w-24 bg-emerald-500 rounded animate-pulse" />
                     ) : (
-                        <span className="text-lg font-bold text-emerald-700">{Math.round(realizedProfit).toLocaleString()}</span>
+                        <span className="text-2xl font-black text-white tracking-tight">{Math.round(realizedProfit).toLocaleString()}</span>
                     )}
                 </div>
-                <div className="mt-2 text-xs font-bold text-slate-400 flex items-center gap-1">
-                    <Package size={12} />
-                    <span>{soldCount} Vendidos</span>
+                <div className="mt-4 inline-flex items-center gap-1.5 bg-black/10 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10 relative z-10">
+                    <Package size={14} className="text-emerald-100" />
+                    <span className="text-xs font-bold text-white">{soldCount} Vendidos</span>
                 </div>
             </div>
         </div>
