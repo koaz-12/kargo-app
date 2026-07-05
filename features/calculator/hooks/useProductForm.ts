@@ -27,6 +27,20 @@ export const useProductForm = (editingId: string | null) => {
 
             const { data: accountsData } = await supabase.from('purchase_accounts').select('*').order('name');
             if (accountsData) setAccounts(accountsData);
+
+            if (!editingId) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: prefs } = await supabase.from('user_preferences')
+                        .select('default_platform, default_expected_margin')
+                        .eq('user_id', user.id)
+                        .single();
+                    if (prefs) {
+                        if (prefs.default_platform) setters.setPlatform(prefs.default_platform);
+                        if (prefs.default_expected_margin) setters.setExpectedMargin(prefs.default_expected_margin.toString());
+                    }
+                }
+            }
         };
         loadDependencies();
 

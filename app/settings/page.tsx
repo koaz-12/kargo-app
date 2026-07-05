@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings as SettingsIcon, Loader2, Wallet, Box, Tags, User, Camera } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Loader2, Wallet, Box, Tags, User, Camera, Database } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Extracted sub-components
@@ -14,6 +14,7 @@ import AdjustmentTypeSettings from '../../components/settings/AdjustmentTypeSett
 import AccountSettings from '../../components/settings/AccountSettings';
 import FinancialDefaults from '../../components/settings/FinancialDefaults';
 import ThemeToggle from '../../components/settings/ThemeToggle';
+import DataExportSettings from '../../components/settings/DataExportSettings';
 
 export default function SettingsPage() {
     const [email, setEmail] = useState('');
@@ -192,6 +193,12 @@ export default function SettingsPage() {
                         >
                             <Tags size={16} /> Catálogo
                         </button>
+                        <button
+                            onClick={() => setActiveTab('data')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'data' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Database size={16} /> Datos
+                        </button>
                     </div>
 
                     {/* Tab Content */}
@@ -213,6 +220,11 @@ export default function SettingsPage() {
                         {activeTab === 'catalog' && (
                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <PlatformSettings />
+                            </div>
+                        )}
+                        {activeTab === 'data' && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <DataExportSettings />
                             </div>
                         )}
                     </div>
