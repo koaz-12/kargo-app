@@ -97,10 +97,13 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
                     setters={setters}
                     isVisible={!!editingId || showFullForm}
                 />
+            </div>
 
-                {/* 7. Footer (Actions) - Moved inside container */}
-                <div className="pt-2 border-t border-slate-100">
-                    <div className="flex items-center justify-between">
+            {/* 7. Footer (Actions) - Fixed Floating */}
+            <div className="fixed left-0 right-0 z-[90] pointer-events-none px-4" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}>
+                {/* Wrapper allows click-through, inner container captures clicks */}
+                <div className="max-w-md mx-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800 rounded-2xl p-2.5 shadow-[0_4px_20px_rgb(0,0,0,0.08)] pointer-events-auto flex items-center justify-between">
+
                         {/* 1. Stats (Compact Left) */}
                         <div className="flex flex-col">
                             <div className="flex items-baseline gap-2">
@@ -163,7 +166,6 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
                     </div>
                 </div>
             </div>
-        </div>
             
         {/* Status Toast (Simple) */}
             {statusMsg && (
