@@ -13,6 +13,10 @@ import { ThemeProvider } from './providers/ThemeProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport = {
+  themeColor: '#f8fafc',
+};
+
 export const metadata: Metadata = {
   title: "Kargo",
   description: "Gestión Inteligente de Importaciones",
