@@ -161,11 +161,10 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
                             <span>Guardar</span>
                         </button>
                     </div>
-                    </div>
                 </div>
             </div>
         </div>
-
+            
         {/* Status Toast (Simple) */}
             {statusMsg && (
                 <div className="fixed bottom-32 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl animate-in fade-in slide-in-from-bottom-5 z-[100000] flex items-center gap-2">
