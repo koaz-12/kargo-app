@@ -9,11 +9,18 @@ import { DashboardStatsSkeleton } from '../components/ui/Skeleton';
 import { UtilitiesMenu } from '../components/UtilitiesMenu';
 import { useStorageLocations } from '../hooks/useStorageLocations';
 import { MapPin, FileDown, CheckCircle2, Store } from 'lucide-react';
+import FinancialProjections from '../components/dashboard/FinancialProjections';
+import ActivityTimeline from '../components/dashboard/ActivityTimeline';
+import { useActivityLogs } from '../hooks/useActivityLogs';
 
 export default function Home() {
     // Use React Query hook for products
     const { data: products = [], isLoading: loading } = useProducts();
+    const { data: activityLogs = [], isLoading: loadingLogs } = useActivityLogs();
     const { userName } = useUserPreferences();
+
+    // Default goal since we don't have a hook for it yet
+    const monthlyGoal = 50000;
 
     return (
         <main className="min-h-screen bg-slate-50/50 pb-28 max-w-md mx-auto relative">
@@ -95,7 +102,13 @@ export default function Home() {
                     </Link>
                 </div>
 
-                {/* 3. PRODUCT LIST (Search + Filters + Items) (Bottom) */}
+                {/* 3. FINANCIAL PROJECTIONS (New) */}
+                <FinancialProjections products={products} monthlyGoal={monthlyGoal || 50000} />
+
+                {/* 4. ACTIVITY TIMELINE (New) */}
+                <ActivityTimeline logs={activityLogs} loading={loadingLogs} />
+
+                {/* 5. PRODUCT LIST (Search + Filters + Items) (Bottom) */}
                 <div className="relative">
                     <ProductList />
                 </div>
