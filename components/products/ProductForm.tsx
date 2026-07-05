@@ -97,17 +97,14 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
                     setters={setters}
                     isVisible={!!editingId || showFullForm}
                 />
-            </div>
 
-            {/* 6. Footer (Actions) - INLINED */}
-            <div className="fixed bottom-20 left-0 right-0 z-[99999] pointer-events-none px-4">
-                {/* Wrapper allows click-through, inner container captures clicks */}
-                <div className="max-w-md mx-auto bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-3xl p-3 shadow-[0_8px_30px_rgb(0,0,0,0.1)] pointer-events-auto flex items-center justify-between">
-
-                    {/* 1. Stats (Compact Left) */}
-                    <div className="flex flex-col bg-slate-50/50 px-3 py-1.5 rounded-2xl border border-slate-100/50">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-[9px] uppercase text-slate-400 font-bold tracking-widest w-14">Costo</span>
+                {/* 7. Footer (Actions) - Moved inside container */}
+                <div className="pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                        {/* 1. Stats (Compact Left) */}
+                        <div className="flex flex-col">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-[9px] uppercase text-slate-400 font-bold tracking-widest w-14">Costo</span>
                             <span className="text-xs font-bold text-slate-700">RD${Math.round(safeResults.net_cost).toLocaleString()}</span>
                         </div>
                         <div className="flex items-baseline gap-2">
