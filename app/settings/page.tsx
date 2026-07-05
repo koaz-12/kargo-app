@@ -124,12 +124,12 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="max-w-md mx-auto pb-24 bg-gradient-to-br from-slate-50 to-indigo-50/20 min-h-screen">
-            <header className="bg-white/80 backdrop-blur-xl px-5 py-4 sticky top-0 z-20 border-b border-white/40 flex items-center gap-3 shadow-[0_2px_20px_rgb(0,0,0,0.02)] mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 shadow-inner">
+        <div className="max-w-md mx-auto pb-24 bg-slate-50 dark:bg-slate-950 min-h-screen">
+            <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-5 py-4 sticky top-0 z-20 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center gap-3 shadow-[0_2px_20px_rgb(0,0,0,0.02)] mb-6">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                     <SettingsIcon size={20} strokeWidth={2.5} />
                 </div>
-                <h1 className="text-xl font-black text-slate-800 tracking-tight">Ajustes Generales</h1>
+                <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Ajustes Generales</h1>
             </header>
 
             {isLoading ? (

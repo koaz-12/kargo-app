@@ -38,9 +38,9 @@ export default function BottomNav() {
     };
 
     return (
-        <div className="fixed bottom-4 left-0 right-0 z-50 px-4 w-full max-w-md mx-auto pointer-events-none">
-            <nav role="navigation" aria-label="Navegación Principal" className="pointer-events-auto bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl safe-area-bottom">
-                <div className="flex justify-around items-center h-16 w-full px-2">
+        <div className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-md mx-auto pointer-events-none">
+            <nav role="navigation" aria-label="Navegación Principal" className="pointer-events-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800/50 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] pb-safe">
+                <div className="flex justify-around items-center h-[68px] w-full px-2">
                     <NavItem href="/" icon={LayoutDashboard} label="Inicio" />
                     <NavItem href="/stats" icon={BarChart3} label="Data" />
                     <NavItem href="/calculator" icon={PlusCircle} label="Añadir" />
