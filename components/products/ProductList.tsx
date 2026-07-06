@@ -7,7 +7,7 @@ import { useProductList } from '../../features/inventory/hooks/useProductList';
 import InventoryFilterBar from '../../features/inventory/components/InventoryFilterBar';
 import InventoryCard from '../../features/inventory/components/InventoryCard';
 import { Pagination } from '../ui/Pagination';
-
+import { CreateOrderModal } from '../modals/CreateOrderModal';
 // Inline Modal for guaranteed visibility
 function DeleteModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: () => void }) {
     const [mounted, setMounted] = useState(false);
@@ -83,6 +83,7 @@ export default function ProductList() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [isMassDeleting, setIsMassDeleting] = useState(false);
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
     const executeDelete = async () => {
         if (isMassDeleting && selectedProductIds.length > 0) {
@@ -249,6 +250,18 @@ export default function ProductList() {
                     <div className="w-px h-6 sm:h-8 bg-slate-700 shrink-0"></div>
 
                     <button
+                        onClick={() => setIsOrderModalOpen(true)}
+                        disabled={isMassActing}
+                        className={`p-1.5 sm:p-2 rounded-xl transition-colors flex flex-col items-center gap-1 flex-1 md:min-w-[60px] ${isMassActing ? 'opacity-50 cursor-not-allowed text-slate-500' : 'hover:bg-slate-800 text-indigo-400'}`}
+                        title="Crear Pedido"
+                    >
+                        <span className="text-lg sm:text-xl leading-none">🛍️</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider">Pedido</span>
+                    </button>
+
+                    <div className="w-px h-6 sm:h-8 bg-slate-700 shrink-0"></div>
+
+                    <button
                         onClick={() => { setIsMassDeleting(true); setDeletingId('mass'); }}
                         className="p-1.5 sm:p-2 hover:bg-red-950/50 rounded-xl transition-colors text-red-400 flex flex-col items-center gap-1 flex-1 md:min-w-[60px]" title="Eliminar"
                     >
@@ -267,6 +280,17 @@ export default function ProductList() {
                 isOpen={!!deletingId}
                 onClose={() => { setDeletingId(null); setIsMassDeleting(false); }}
                 onConfirm={executeDelete}
+            />
+
+            <CreateOrderModal 
+                isOpen={isOrderModalOpen} 
+                onClose={() => setIsOrderModalOpen(false)} 
+                selectedProductIds={selectedProductIds}
+                onOrderCreated={() => {
+                    setSelectedProductIds([]);
+                    // Optional: refresh data by triggering a refetch in useProductList
+                    window.location.reload(); // Simple reload for MVP to see the status change
+                }}
             />
         </div>
     );

@@ -1,7 +1,8 @@
 'use client';
-import React, { useMemo } from 'react';
-import { Product } from '../types';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Product, OperatingExpense } from '../types';
 import { Package, DollarSign, TrendingUp } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 import { useAdjustmentTypes } from '../hooks/useAdjustmentTypes';
 
 interface DashboardStatsProps {
@@ -11,6 +12,20 @@ interface DashboardStatsProps {
 export default function DashboardStats({ products }: DashboardStatsProps) {
     // Load user's adjustment types to dynamically resolve affects_cost
     const { types: adjTypes, loading: isLoadingTypes } = useAdjustmentTypes();
+
+    const [opex, setOpex] = useState<number>(0);
+    const [isLoadingOpex, setIsLoadingOpex] = useState(true);
+
+    useEffect(() => {
+        async function fetchOpex() {
+            setIsLoadingOpex(true);
+            const { data } = await supabase.from('operating_expenses').select('amount');
+            const total = (data || []).reduce((acc, curr) => acc + Number(curr.amount), 0);
+            setOpex(total);
+            setIsLoadingOpex(false);
+        }
+        fetchOpex();
+    }, []);
 
     // Build a lookup map: type key → category ('CREDIT' | 'DISCOUNT')
     // DISCOUNT = deducts from capital (ya se pagó menos)
@@ -76,6 +91,8 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
         return acc + ((p.sale_price || 0) - dopCost + adjustmentsDOP);
     }, 0);
 
+    const netProfit = realizedProfit - opex;
+
     return (
         <div className="grid grid-cols-2 gap-3 mb-6 animate-in fade-in slide-in-from-top-4">
 
@@ -90,7 +107,7 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
                     {isLoadingTypes ? (
                         <div className="h-8 w-24 bg-slate-100 rounded animate-pulse" />
                     ) : (
-                        <span className="text-2xl font-black text-slate-800 tracking-tight">{Math.round(activeInvestment).toLocaleString()}</span>
+                        <span suppressHydrationWarning className="text-2xl font-black text-slate-800 tracking-tight">{Math.round(activeInvestment).toLocaleString()}</span>
                     )}
                 </div>
                 <div className="flex gap-3 mt-4 relative z-10">
@@ -110,13 +127,27 @@ export default function DashboardStats({ products }: DashboardStatsProps) {
                 <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:scale-110 transition-transform">
                     <TrendingUp size={72} strokeWidth={2.5} />
                 </div>
-                <p className="text-[10px] uppercase font-bold text-emerald-50 tracking-widest mb-1">Beneficio Total</p>
+                <p className="text-[10px] uppercase font-bold text-emerald-50 tracking-widest mb-1">Beneficio Bruto</p>
                 <div className="flex items-baseline gap-1 relative z-10">
                     <span className="text-sm font-bold text-emerald-100">RD$</span>
                     {isLoadingTypes ? (
                         <div className="h-8 w-24 bg-emerald-500 rounded animate-pulse" />
                     ) : (
-                        <span className="text-2xl font-black text-white tracking-tight">{Math.round(realizedProfit).toLocaleString()}</span>
+                        <span suppressHydrationWarning className="text-2xl font-black text-white tracking-tight">{Math.round(realizedProfit).toLocaleString()}</span>
+                    )}
+                </div>
+                
+                <div className="mt-4 pt-3 border-t border-emerald-400/30 relative z-10 flex justify-between items-end">
+                    <div>
+                        <span className="text-[9px] text-emerald-100 font-bold uppercase tracking-wide block">Ganancia Neta</span>
+                        <span className="text-[9px] text-emerald-200 block">(Bruto - Gastos Fijos)</span>
+                    </div>
+                    {isLoadingOpex ? (
+                         <div className="h-4 w-12 bg-emerald-500 rounded animate-pulse" />
+                    ) : (
+                        <span suppressHydrationWarning className={`text-sm font-black ${netProfit < 0 ? 'text-red-200' : 'text-white'}`}>
+                            RD$ {Math.round(netProfit).toLocaleString()}
+                        </span>
                     )}
                 </div>
                 <div className="mt-4 inline-flex items-center gap-1.5 bg-black/10 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10 relative z-10">

@@ -8,7 +8,7 @@ import { useUserPreferences } from '../hooks/useUserPreferences';
 import { DashboardStatsSkeleton } from '../components/ui/Skeleton';
 import { UtilitiesMenu } from '../components/UtilitiesMenu';
 import { useStorageLocations } from '../hooks/useStorageLocations';
-import { MapPin, FileDown, CheckCircle2, Store } from 'lucide-react';
+import { MapPin, FileDown, CheckCircle2, Store, Users, TrendingDown, DollarSign } from 'lucide-react';
 import FinancialProjections from '../components/dashboard/FinancialProjections';
 import ActivityTimeline from '../components/dashboard/ActivityTimeline';
 import { useActivityLogs } from '../hooks/useActivityLogs';
@@ -100,9 +100,61 @@ export default function Home() {
                             →
                         </div>
                     </Link>
+
+                    {/* Clients Directory Button */}
+                    <Link href="/clients" className="col-span-2 bg-white border border-slate-100 p-4 rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] flex items-center justify-between active:scale-95 hover:-translate-y-0.5 transition-all group">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-purple-50 w-12 h-12 rounded-2xl flex items-center justify-center text-purple-600 group-hover:bg-purple-100 transition-colors">
+                                <Users size={24} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <span className="font-black text-slate-800 block text-sm">Directorio de Clientes</span>
+                                <span className="text-[11px] text-slate-500 block font-medium">Gestionar base de datos</span>
+                            </div>
+                        </div>
+                        <div className="text-slate-300 font-bold text-xl group-hover:text-slate-400 transition-colors group-hover:translate-x-1">
+                            →
+                        </div>
+                    </Link>
+
+                    {/* Orders History Button */}
+                    <Link href="/orders" className="col-span-2 bg-white border border-slate-100 p-4 rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] flex items-center justify-between active:scale-95 hover:-translate-y-0.5 transition-all group">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-amber-50 w-12 h-12 rounded-2xl flex items-center justify-center text-amber-600 group-hover:bg-amber-100 transition-colors">
+                                <Package size={24} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <span className="font-black text-slate-800 block text-sm">Historial de Pedidos</span>
+                                <span className="text-[11px] text-slate-500 block font-medium">Ventas y Apartados</span>
+                            </div>
+                        </div>
+                        <div className="text-slate-300 font-bold text-xl group-hover:text-slate-400 transition-colors group-hover:translate-x-1">
+                            →
+                        </div>
+                    </Link>
                 </div>
 
                 {/* 3. FINANCIAL PROJECTIONS (New) */}
+                <div className="mb-8">
+                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-2">Finanzas Avanzadas</h2>
+                    <div className="grid grid-cols-2 gap-3">
+                        <Link href="/opex" className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex flex-col items-center text-center hover:-translate-y-0.5 transition-all group">
+                            <div className="bg-rose-50 w-12 h-12 rounded-2xl flex items-center justify-center text-rose-500 group-hover:bg-rose-100 transition-colors mb-3">
+                                <TrendingDown size={24} strokeWidth={2.5} />
+                            </div>
+                            <span className="font-black text-slate-800 block text-sm">Gastos Fijos</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Control de Opex</span>
+                        </Link>
+                        
+                        <Link href="/calculator" className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex flex-col items-center text-center hover:-translate-y-0.5 transition-all group">
+                            <div className="bg-emerald-50 w-12 h-12 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-100 transition-colors mb-3">
+                                <DollarSign size={24} strokeWidth={2.5} />
+                            </div>
+                            <span className="font-black text-slate-800 block text-sm">Simulador</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Calculadora</span>
+                        </Link>
+                    </div>
+                </div>
                 <FinancialProjections products={products} monthlyGoal={monthlyGoal || 50000} />
 
                 {/* 4. ACTIVITY TIMELINE (New) */}

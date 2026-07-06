@@ -213,13 +213,55 @@ export const useUpdateProduct = () => {
             if (error) throw error;
             return data;
         },
-        onSuccess: (_, variables) => {
+        onMutate: async ({ id, updates }) => {
+            // Cancel any outgoing refetches so they don't overwrite our optimistic update
+            await queryClient.cancelQueries({ queryKey: ['products'] });
+
+            // Snapshot the previous value
+            const previousProduct = queryClient.getQueryData(['products', id]);
+
+            // Optimistically update the single product cache
+            queryClient.setQueryData(['products', id], (old: any) => {
+                if (!old) return old;
+                return { ...old, ...updates };
+            });
+
+            // Optimistically update paginated caches and list caches
+            queryClient.setQueriesData({ queryKey: ['products'] }, (oldData: any) => {
+                if (!oldData) return oldData;
+                
+                // If it's a paginated result { products, count }
+                if (oldData.products && Array.isArray(oldData.products)) {
+                    return {
+                        ...oldData,
+                        products: oldData.products.map((p: any) => p.id === id ? { ...p, ...updates } : p)
+                    };
+                }
+                
+                // If it's a flat array result
+                if (Array.isArray(oldData)) {
+                    return oldData.map((p: any) => p.id === id ? { ...p, ...updates } : p);
+                }
+                
+                return oldData;
+            });
+
+            return { previousProduct };
+        },
+        onError: (error: Error, variables, context) => {
+            // If the mutation fails, use the context returned from onMutate to roll back
+            if (context?.previousProduct) {
+                queryClient.setQueryData(['products', variables.id], context.previousProduct);
+            }
+            toast.error('❌ Error al actualizar: ' + error.message);
+        },
+        onSettled: (data, error, variables) => {
+            // Always refetch after error or success to ensure DB sync
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['products', variables.id] });
-            toast.success('✅ Producto actualizado');
         },
-        onError: (error: Error) => {
-            toast.error('❌ Error al actualizar: ' + error.message);
+        onSuccess: () => {
+            toast.success('✅ Producto actualizado');
         },
     });
 };

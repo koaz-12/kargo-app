@@ -31,6 +31,7 @@ export const useUserPreferences = () => {
                     .from('user_preferences')
                     .select('display_name')
                     .eq('user_id', user.id)
+                    .neq('created_at', new Date().toISOString()) // Cache buster
                     .single();
 
                 if (prefs?.display_name) {

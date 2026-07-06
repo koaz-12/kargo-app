@@ -58,17 +58,17 @@ export default function FinancialProjections({ products, monthlyGoal = 50000 }: 
             <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ganancia Actual</p>
-                    <p className="text-xl font-black text-emerald-600">RD${Math.round(currentProfit).toLocaleString()}</p>
+                    <p suppressHydrationWarning className="text-xl font-black text-emerald-600">RD${Math.round(currentProfit).toLocaleString()}</p>
                 </div>
                 <div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Proyección Total</p>
-                    <p className="text-xl font-black text-indigo-600">RD${Math.round(totalExpectedProfit).toLocaleString()}</p>
+                    <p suppressHydrationWarning className="text-xl font-black text-indigo-600">RD${Math.round(totalExpectedProfit).toLocaleString()}</p>
                 </div>
             </div>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                    <div suppressHydrationWarning className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
                         <Target size={14} className="text-slate-400" />
                         Meta Mensual: RD${monthlyGoal.toLocaleString()}
                     </div>

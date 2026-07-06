@@ -41,7 +41,7 @@ export function useStats() {
             const [prodRes, platRes, goalRes] = await Promise.all([
                 supabase.from('products').select('*, adjustments:financial_adjustments(*)'),
                 supabase.from('platforms').select('*'),
-                supabase.from('monthly_goals').select('*').eq('month_key', currentMonthKey).single()
+                supabase.from('monthly_goals').select('*').eq('month_key', currentMonthKey).maybeSingle()
             ]);
 
             if (prodRes.data) setProducts(prodRes.data);

@@ -12,6 +12,7 @@ import CourierSettings from '../../components/settings/CourierSettings';
 import StorageLocationSettings from '../../components/settings/StorageLocationSettings';
 import AdjustmentTypeSettings from '../../components/settings/AdjustmentTypeSettings';
 import AccountSettings from '../../components/settings/AccountSettings';
+import InstallPrompt from '../../components/ui/InstallPrompt';
 import FinancialDefaults from '../../components/settings/FinancialDefaults';
 import ThemeToggle from '../../components/settings/ThemeToggle';
 import DataExportSettings from '../../components/settings/DataExportSettings';
@@ -31,46 +32,56 @@ export default function SettingsPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 if (user.email) setEmail(user.email);
-                const { data } = await supabase.from('user_preferences')
-                    .select('display_name, avatar_url')
+                const { data, error } = await supabase.from('user_preferences')
+                    .select('*')
                     .eq('user_id', user.id)
-                    .single();
-                if (data) {
-                    if (data.display_name) {
-                        setDisplayName(data.display_name);
-                        setDebouncedName(data.display_name);
-                    }
-                    if (data.avatar_url) {
-                        setAvatarUrl(data.avatar_url);
-                    }
+                    .neq('created_at', new Date().toISOString()) // Cache buster
+                    .maybeSingle();
+
+                if (error) {
+                    console.error('Error fetching user preferences in settings:', error);
                 }
+
+                if (data?.display_name) {
+                    setDisplayName(data.display_name);
+                    setDebouncedName(data.display_name);
+                } else if (user.email) {
+                    const fallback = user.email.split('@')[0];
+                    setDisplayName(fallback);
+                    setDebouncedName(fallback);
+                }
+
+                if (data?.avatar_url) {
+                    setAvatarUrl(data.avatar_url);
+                }
+                
                 setIsLoading(false);
             }
         };
         getUser();
     }, []);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (displayName !== debouncedName) {
-                setDebouncedName(displayName);
-                const save = async () => {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) {
-                        await supabase.from('user_preferences').upsert({
-                            user_id: user.id,
-                            display_name: displayName
-                        });
-                    }
-                };
-                save();
-            }
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [displayName, debouncedName]);
-
     const handleDisplayNameChange = (val: string) => {
         setDisplayName(val);
+    };
+
+    const handleSaveName = async () => {
+        if (displayName !== debouncedName) {
+            setDebouncedName(displayName);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { error } = await supabase.from('user_preferences').upsert({
+                    user_id: user.id,
+                    display_name: displayName
+                });
+                if (error) {
+                    console.error('Error guardando nombre:', error);
+                    toast.error('Error al guardar el nombre a mostrar');
+                } else {
+                    router.refresh();
+                }
+            }
+        }
     };
 
     const handleLogout = async () => {
@@ -157,19 +168,38 @@ export default function SettingsPage() {
                                 </label>
                             </div>
                             <div className="flex-1">
-                                <p className="font-black text-slate-800 text-lg">Mi Perfil</p>
+                                <p className="font-black text-slate-800 text-lg">{displayName || 'Mi Perfil'}</p>
                                 <p className="text-sm text-slate-500 font-medium">{email}</p>
                             </div>
                         </div>
                         <div className="mt-2">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 block">Nombre a Mostrar</label>
-                            <input
-                                type="text"
-                                placeholder="Tu Nombre (ej. Boss)"
-                                value={displayName}
-                                onChange={(e) => handleDisplayNameChange(e.target.value)}
-                                className="w-full text-sm font-semibold border border-slate-200/60 bg-slate-50/50 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Tu Nombre (ej. Boss)"
+                                    value={displayName}
+                                    onChange={(e) => handleDisplayNameChange(e.target.value)}
+                                    className="flex-1 text-sm font-semibold border border-slate-200/60 bg-slate-50/50 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                />
+                                <button
+                                    onClick={handleSaveName}
+                                    disabled={displayName === debouncedName}
+                                    className={`px-4 rounded-xl font-bold text-sm transition-all shadow-sm ${displayName !== debouncedName ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-200 text-slate-400'}`}
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2">
+                            <button
+                                onClick={() => router.push('/team')}
+                                className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition-all shadow-sm"
+                            >
+                                <User size={18} />
+                                <span>Gestionar Equipo y Asistentes</span>
+                            </button>
                         </div>
                     </div>
 

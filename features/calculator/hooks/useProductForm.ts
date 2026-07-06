@@ -36,8 +36,8 @@ export const useProductForm = (editingId: string | null) => {
                         .eq('user_id', user.id)
                         .single();
                     if (prefs) {
-                        if (prefs.default_platform) setters.setPlatform(prefs.default_platform);
-                        if (prefs.default_expected_margin) setters.setExpectedMargin(prefs.default_expected_margin.toString());
+                        if (prefs.default_platform && setters.setPlatformId) setters.setPlatformId(prefs.default_platform);
+                        // if (prefs.default_expected_margin) setters.setExpectedMargin(prefs.default_expected_margin.toString()); // setExpectedMargin doesn't exist on useProfitCalculator
                     }
                 }
             }
