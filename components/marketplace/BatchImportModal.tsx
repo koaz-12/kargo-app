@@ -25,6 +25,7 @@ Sigue estas reglas para cada variación:
 1. Título SEO atractivo.
 2. Descripción con viñetas (✅) beneficios y emojis.
 3. Llamado a la acción y estado del producto.
+4. Genera EXACTAMENTE 20 etiquetas (tags) optimizadas para búsqueda.
 
 Devuelve el resultado ESTRICTAMENTE en formato JSON, usando esta estructura exacta (un array de objetos):
 [
@@ -32,7 +33,7 @@ Devuelve el resultado ESTRICTAMENTE en formato JSON, usando esta estructura exac
     "title": "Smartwatch Serie 8 [Título Atractivo]",
     "price": 1500,
     "description": "🔥 ¡OFERTA!\\n\\n✅ Beneficio 1...\\n\\n💬 ¡Escríbeme!",
-    "tags": ["smartwatch", "reloj", "oferta"]
+    "tags": ["smartwatch", "reloj", "oferta", "tecnologia", "barato", ...] // ¡Asegura 20 tags!
   }
 ]
 NO añadas texto adicional fuera del JSON.`;
@@ -76,13 +77,16 @@ NO añadas texto adicional fuera del JSON.`;
         
         setIsSaving(true);
         try {
-            // Attach shared and individual images to all listings
+            // Attach images to all listings
             const finalData = previewListings.map(listing => {
-                // Combine shared images with individual images, avoiding duplicates
-                const combinedImages = Array.from(new Set([...imageUrls, ...(listing.image_urls || [])]));
+                // If they explicitly selected or uploaded individual images, use ONLY those.
+                // If they didn't touch it, fallback to ALL shared imageUrls.
+                const hasIndividualImages = listing.image_urls && listing.image_urls.length > 0;
+                const finalUrls = hasIndividualImages ? listing.image_urls : imageUrls;
+
                 return {
                     ...listing,
-                    image_urls: combinedImages,
+                    image_urls: finalUrls,
                     // Ensure tags are limited to 20
                     tags: listing.tags.slice(0, 20)
                 };
@@ -183,6 +187,36 @@ NO añadas texto adicional fuera del JSON.`;
                                         </div>
                                         <div className="pt-2 border-t border-slate-100">
                                             <p className="text-[10px] text-slate-500 font-bold mb-1">Imágenes de esta publicación (Opcional)</p>
+                                            
+                                            {imageUrls.length > 0 && (
+                                                <div className="mb-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                                    <p className="text-[10px] text-slate-500 font-bold mb-1">Elegir del banco compartido:</p>
+                                                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                                        {imageUrls.map((url, i) => {
+                                                            const isSelected = (item.image_urls || []).includes(url);
+                                                            return (
+                                                                <img 
+                                                                    key={i} 
+                                                                    src={url} 
+                                                                    alt="shared" 
+                                                                    onClick={() => {
+                                                                        const updated = [...previewListings];
+                                                                        const currentUrls = updated[idx].image_urls || [];
+                                                                        if (isSelected) {
+                                                                            updated[idx].image_urls = currentUrls.filter((u: string) => u !== url);
+                                                                        } else {
+                                                                            updated[idx].image_urls = [...currentUrls, url];
+                                                                        }
+                                                                        setPreviewListings(updated);
+                                                                    }}
+                                                                    className={`w-12 h-12 object-cover rounded cursor-pointer transition-all shrink-0 ${isSelected ? 'ring-2 ring-indigo-500 opacity-100' : 'opacity-40 hover:opacity-100'}`}
+                                                                />
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <ImageUploader 
                                                 images={item.image_urls || []} 
                                                 setImages={(urls) => {
