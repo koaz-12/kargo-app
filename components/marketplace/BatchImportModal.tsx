@@ -17,9 +17,11 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
     const [previewListings, setPreviewListings] = useState<any[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [copiedPrompt, setCopiedPrompt] = useState(false);
+    const [productName, setProductName] = useState('');
 
+    const productPlaceholder = productName.trim() || "[ESCRIBE TU PRODUCTO AQUÍ] (Añade detalles si tienes)";
     const promptText = `Actúa como Copywriter Experto en Ventas para FB Marketplace. 
-Genera 3 variaciones de plantillas de ventas (oferta, beneficios, directa) para este producto: [ESCRIBE TU PRODUCTO AQUÍ] (Añade detalles si tienes).
+Genera 3 variaciones de plantillas de ventas (oferta, beneficios, directa) para este producto: ${productPlaceholder}.
 
 Sigue estas reglas para cada variación:
 1. Título SEO atractivo.
@@ -125,7 +127,14 @@ NO añadas texto adicional fuera del JSON.`;
                             <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">1</span> 
                             Instruye a la Inteligencia Artificial
                         </h4>
-                        <p className="text-xs text-slate-500 mb-3">Copia el siguiente mensaje y pégalo en Gemini o ChatGPT. Recuerda cambiar [ESCRIBE TU PRODUCTO] por lo que vayas a vender.</p>
+                        <p className="text-xs text-slate-500 mb-3">Opcional: Escribe el producto para que el prompt ya lo incluya. Luego cópialo y pégalo en Gemini o ChatGPT.</p>
+                        <input 
+                            type="text" 
+                            placeholder="Ej. iPhone 13 Pro Max 128GB"
+                            value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                            className="w-full border border-slate-300 rounded-lg p-2.5 text-xs mb-3 outline-none focus:border-indigo-500"
+                        />
                         <button 
                             type="button"
                             onClick={handleCopyPrompt}

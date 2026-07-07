@@ -10,7 +10,7 @@ import { Store, Plus, Loader2, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MarketplacePage() {
-    const { data: listings, isLoading, addListing, updateListing, deleteListing } = useMarketplaceListings();
+    const { data: listings, isLoading, addListing, updateListing, deleteListing, addMultipleListings } = useMarketplaceListings();
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
