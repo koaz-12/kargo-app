@@ -93,7 +93,7 @@ ETIQUETAS: tag1, tag2, tag3 (hasta 20)`;
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 <div className="bg-blue-600 p-4 text-white flex justify-between items-center shrink-0">
                     <h3 className="font-black text-lg flex items-center gap-2">

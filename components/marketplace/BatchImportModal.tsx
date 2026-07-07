@@ -69,13 +69,17 @@ No añadas texto adicional fuera del JSON.`;
         
         setIsSaving(true);
         try {
-            // Attach shared images to all listings
-            const finalData = previewListings.map(listing => ({
-                ...listing,
-                image_urls: imageUrls,
-                // Ensure tags are limited to 20
-                tags: listing.tags.slice(0, 20)
-            }));
+            // Attach shared and individual images to all listings
+            const finalData = previewListings.map(listing => {
+                // Combine shared images with individual images, avoiding duplicates
+                const combinedImages = Array.from(new Set([...imageUrls, ...(listing.image_urls || [])]));
+                return {
+                    ...listing,
+                    image_urls: combinedImages,
+                    // Ensure tags are limited to 20
+                    tags: listing.tags.slice(0, 20)
+                };
+            });
 
             await onSave(finalData);
             onClose();
@@ -89,8 +93,8 @@ No añadas texto adicional fuera del JSON.`;
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 <div className="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
                     <div>
                         <h3 className="font-black text-lg flex items-center gap-2">
@@ -162,12 +166,26 @@ No añadas texto adicional fuera del JSON.`;
                             <h4 className="font-bold text-emerald-800 text-sm mb-3 flex items-center gap-2">
                                 <Check size={16} /> ¡Todo listo! Se detectaron {previewListings.length} plantillas:
                             </h4>
-                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1 mb-4">
+                            <div className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
                                 {previewListings.map((item, idx) => (
-                                    <div key={idx} className="bg-white p-2 rounded border border-emerald-100 text-xs">
-                                        <div className="font-bold text-slate-800 truncate">{item.title}</div>
-                                        <div className="text-emerald-600 font-bold">RD$ {item.price.toLocaleString()}</div>
-                                        <div className="text-slate-500 mt-1 truncate">{item.tags.join(', ')}</div>
+                                    <div key={idx} className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm flex flex-col gap-2">
+                                        <div>
+                                            <div className="font-bold text-slate-800 text-sm">{item.title}</div>
+                                            <div className="text-emerald-600 font-bold text-xs">RD$ {item.price.toLocaleString()}</div>
+                                            <div className="text-slate-500 mt-0.5 text-[10px] truncate">{item.tags.join(', ')}</div>
+                                        </div>
+                                        <div className="pt-2 border-t border-slate-100">
+                                            <p className="text-[10px] text-slate-500 font-bold mb-1">Imágenes de esta publicación (Opcional)</p>
+                                            <ImageUploader 
+                                                images={item.image_urls || []} 
+                                                setImages={(urls) => {
+                                                    const updated = [...previewListings];
+                                                    updated[idx].image_urls = urls;
+                                                    setPreviewListings(updated);
+                                                }} 
+                                                productId={`marketplace_batch_item_${idx}`} 
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
