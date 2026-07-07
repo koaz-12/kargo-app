@@ -18,17 +18,24 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
     const [isSaving, setIsSaving] = useState(false);
     const [copiedPrompt, setCopiedPrompt] = useState(false);
 
-    const promptText = `Actúa como experto en ventas para FB Marketplace. Genera 3 variaciones de plantillas de ventas para este producto: [ESCRIBE TU PRODUCTO]. 
+    const promptText = `Actúa como Copywriter Experto en Ventas para FB Marketplace. 
+Genera 3 variaciones de plantillas de ventas (oferta, beneficios, directa) para este producto: [ESCRIBE TU PRODUCTO AQUÍ] (Añade detalles si tienes).
+
+Sigue estas reglas para cada variación:
+1. Título SEO atractivo.
+2. Descripción con viñetas (✅) beneficios y emojis.
+3. Llamado a la acción y estado del producto.
+
 Devuelve el resultado ESTRICTAMENTE en formato JSON, usando esta estructura exacta (un array de objetos):
 [
   {
-    "title": "Smartwatch Serie 8 Negro Deportivo",
+    "title": "Smartwatch Serie 8 [Título Atractivo]",
     "price": 1500,
-    "description": "Reloj inteligente nuevo...",
-    "tags": ["smartwatch", "reloj", "negro"]
+    "description": "🔥 ¡OFERTA!\\n\\n✅ Beneficio 1...\\n\\n💬 ¡Escríbeme!",
+    "tags": ["smartwatch", "reloj", "oferta"]
   }
 ]
-No añadas texto adicional fuera del JSON.`;
+NO añadas texto adicional fuera del JSON.`;
 
     const handleCopyPrompt = async () => {
         await navigator.clipboard.writeText(promptText);

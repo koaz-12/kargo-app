@@ -25,12 +25,18 @@ export default function MarketplaceFormModal({ initialData, onClose, onSave }: M
     const [aiText, setAiText] = useState('');
     const [copiedPrompt, setCopiedPrompt] = useState(false);
 
-    const aiPrompt = `Actúa como un experto en ventas para Facebook Marketplace. Genera los datos para vender este producto: [ESCRIBE EL PRODUCTO AQUÍ]
+    const aiPrompt = `Actúa como un Copywriter Experto en Ventas para Facebook Marketplace. 
+Crea la publicación perfecta para vender este producto: [ESCRIBE EL PRODUCTO AQUÍ] (Añade detalles si los tienes).
 
-Usa EXACTAMENTE este formato estricto:
-TITULO: [Título atractivo]
+Sigue estas reglas de SEO y conversión:
+- Título atractivo con palabras clave reales.
+- Descripción con beneficios claros, estructurada con viñetas (✅) y emojis llamativos.
+- Incluye condiciones de entrega, estado del producto y llamado a la acción.
+
+Usa EXACTAMENTE este formato estricto de respuesta (sin añadir nada más):
+TITULO: [Título SEO]
 PRECIO: [Solo el número]
-DESCRIPCION: [Descripción persuasiva y detalles técnicos]
+DESCRIPCION: [Descripción persuasiva y estructurada]
 ETIQUETAS: tag1, tag2, tag3 (hasta 20)`;
 
     const handleCopyPrompt = async () => {
