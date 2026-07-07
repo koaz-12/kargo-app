@@ -49,7 +49,7 @@ export default function MarketplacePage() {
 
     return (
         <main className="min-h-screen bg-slate-50/50 pb-28 max-w-md mx-auto relative">
-            <header className="sticky top-0 z-20 pt-6 pb-4 px-4 bg-slate-50/80 backdrop-blur-xl mb-2 border-b border-slate-200/50 flex items-center gap-3">
+            <header className="sticky top-0 z-20 pt-6 pb-4 pl-4 pr-16 bg-slate-50/80 backdrop-blur-xl mb-2 border-b border-slate-200/50 flex items-center gap-3">
                 <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-slate-200/50 text-slate-500 transition-colors">
                     <ArrowLeft size={20} />
                 </Link>

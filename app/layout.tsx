@@ -10,6 +10,7 @@ import { Toaster } from 'sonner';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { NetworkStatus } from '../components/ui/NetworkStatus';
 import { ThemeProvider } from './providers/ThemeProvider';
+import { UtilitiesMenu } from '../components/UtilitiesMenu';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -49,6 +50,7 @@ export default function RootLayout({
         <QueryProvider>
           <ErrorBoundary>
             <NetworkStatus />
+            <UtilitiesMenu />
             {/* Main Content */}
             {children}
             <BottomNav />

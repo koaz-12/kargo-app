@@ -27,7 +27,7 @@ export default async function CatalogoPage() {
     return (
         <main className="min-h-screen bg-slate-50 pb-20 max-w-md mx-auto shadow-2xl shadow-slate-200">
             {/* Header */}
-            <header className="bg-white px-4 py-5 sticky top-0 z-20 border-b border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
+            <header className="bg-white pl-4 pr-16 py-5 sticky top-0 z-20 border-b border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
                 <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-3 rotate-3 shadow-inner">
                     <PackageOpen size={24} strokeWidth={2.5} />
                 </div>

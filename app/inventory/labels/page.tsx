@@ -57,7 +57,7 @@ export default function LabelsPage() {
     return (
         <div className="min-h-screen bg-slate-50 print:bg-white print:min-h-0">
             {/* Screen-only Header */}
-            <header className="print:hidden sticky top-0 z-20 pt-6 pb-4 px-4 bg-slate-900 text-white flex items-center gap-3">
+            <header className="print:hidden sticky top-0 z-20 pt-6 pb-4 pl-4 pr-16 bg-slate-900 text-white flex items-center gap-3">
                 <button
                     onClick={() => router.push('/inventory')}
                     className="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 active:scale-95 transition-transform"

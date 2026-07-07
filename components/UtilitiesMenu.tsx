@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Settings, Package, Search, Calculator, Coins } from 'lucide-react';
 import { ShipmentTracker } from './modals/ShipmentTracker';
 import { PointsCalculator } from './modals/PointsCalculator';
@@ -11,6 +12,10 @@ export const UtilitiesMenu = () => {
     const [showShipmentTracker, setShowShipmentTracker] = useState(false);
     const [showPointsCalc, setShowPointsCalc] = useState(false);
     const [showCoinsCalc, setShowCoinsCalc] = useState(false);
+    const pathname = usePathname();
+
+    // Hide on login page
+    if (pathname === '/login') return null;
 
     return (
         <>
