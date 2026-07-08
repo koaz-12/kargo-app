@@ -33,7 +33,12 @@ export default function MarketplacePage() {
     };
 
     const handleDuplicate = (listing: MarketplaceListing) => {
-        setEditingListing({ ...listing, title: listing.title + ' (Copia)' });
+        const targetGroupId = listing.group_id || listing.id;
+        setEditingListing({ 
+            ...listing, 
+            group_id: targetGroupId,
+            title: listing.title + ' (Copia)' 
+        });
         setIsDuplicating(true);
         setIsModalOpen(true);
     };
@@ -91,28 +96,21 @@ export default function MarketplacePage() {
 
     const groupedListings = useMemo(() => {
         const groups: Record<string, MarketplaceListing[]> = {};
-        const standalone: MarketplaceListing[][] = [];
 
         filteredAndSortedListings.forEach(listing => {
-            if (listing.group_id) {
-                if (!groups[listing.group_id]) groups[listing.group_id] = [];
-                groups[listing.group_id].push(listing);
-            } else {
-                standalone.push([listing]);
-            }
+            const key = listing.group_id || listing.id;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(listing);
         });
 
         const result: MarketplaceListing[][] = [];
         const seenGroups = new Set<string>();
 
         filteredAndSortedListings.forEach(listing => {
-            if (listing.group_id) {
-                if (!seenGroups.has(listing.group_id)) {
-                    result.push(groups[listing.group_id]);
-                    seenGroups.add(listing.group_id);
-                }
-            } else {
-                result.push([listing]);
+            const key = listing.group_id || listing.id;
+            if (!seenGroups.has(key)) {
+                result.push(groups[key]);
+                seenGroups.add(key);
             }
         });
 
