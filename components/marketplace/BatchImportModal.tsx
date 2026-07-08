@@ -1,14 +1,12 @@
-'use client';
-
 import { useState } from 'react';
 import { MarketplaceListing } from '../../types';
-import { X, Save, Sparkles, Copy, Check, UploadCloud } from 'lucide-react';
-import ImageUploader from '../products/ImageUploader';
+import { Sparkles, X, Copy, Check, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import ImageUploader from '../products/ImageUploader';
 
 interface BatchImportModalProps {
     onClose: () => void;
-    onSave: (data: Omit<MarketplaceListing, 'id' | 'user_id' | 'created_at'>[]) => Promise<void>;
+    onSave: (listings: Omit<MarketplaceListing, 'id' | 'user_id' | 'created_at'>[]) => Promise<void>;
 }
 
 export default function BatchImportModal({ onClose, onSave }: BatchImportModalProps) {
@@ -17,28 +15,17 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
     const [previewListings, setPreviewListings] = useState<any[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [copiedPrompt, setCopiedPrompt] = useState(false);
+    
+    // New states for the workflow
+    const [batchType, setBatchType] = useState<'variations' | 'different_products'>('variations');
     const [productName, setProductName] = useState('');
+    const [productSku, setProductSku] = useState('');
 
-    const productPlaceholder = productName.trim() || "[ESCRIBE TU PRODUCTO AQUÍ] (Añade detalles si tienes)";
-    const promptText = `Actúa como Copywriter Experto en Ventas para FB Marketplace. 
-Genera 3 variaciones de plantillas de ventas (oferta, beneficios, directa) para este producto: ${productPlaceholder}.
-
-Sigue estas reglas para cada variación:
-1. Título SEO atractivo.
-2. Descripción con viñetas (✅) beneficios y emojis.
-3. Llamado a la acción y estado del producto.
-4. Genera EXACTAMENTE 20 etiquetas (tags) optimizadas para búsqueda.
-
-Devuelve el resultado ESTRICTAMENTE en formato JSON, usando esta estructura exacta (un array de objetos):
-[
-  {
-    "title": "Smartwatch Serie 8 [Título Atractivo]",
-    "price": 1500,
-    "description": "🔥 ¡OFERTA!\\n\\n✅ Beneficio 1...\\n\\n💬 ¡Escríbeme!",
-    "tags": ["smartwatch", "reloj", "oferta", "tecnologia", "barato", ...] // ¡Asegura 20 tags!
-  }
-]
-NO añadas texto adicional fuera del JSON.`;
+    const productPlaceholder = productName.trim() || "[ESCRIBE TU PRODUCTO O LISTA AQUÍ]";
+    
+    const promptText = batchType === 'variations' 
+        ? `Actúa como Copywriter Experto en Ventas para FB Marketplace. \nGenera 3 variaciones de plantillas de ventas (oferta, beneficios, directa) para este producto: ${productPlaceholder}.\n\nSigue estas reglas para cada variación:\n1. Título SEO atractivo.\n2. Descripción con viñetas (✅) beneficios y emojis.\n3. Llamado a la acción y estado del producto.\n4. Genera EXACTAMENTE 20 etiquetas (tags) optimizadas para búsqueda.\n\nDevuelve el resultado ESTRICTAMENTE en formato JSON, usando esta estructura exacta (un array de objetos):\n[\n  {\n    "title": "Smartwatch Serie 8 [Título Atractivo]",\n    "price": 1500,\n    "description": "🔥 ¡OFERTA!\\n\\n✅ Beneficio 1...\\n\\n💬 ¡Escríbeme!",\n    "tags": ["smartwatch", "reloj", "oferta", "tecnologia", "barato", ...] // ¡Asegura 20 tags!\n  }\n]\nNO añadas texto adicional fuera del JSON.`
+        : `Actúa como Copywriter Experto en Ventas para FB Marketplace. \nGenera una plantilla de venta independiente y optimizada para CADA UNO de los siguientes productos:\n${productPlaceholder}\n\nSigue estas reglas para cada producto:\n1. Título SEO atractivo.\n2. Descripción con viñetas (✅) beneficios y emojis.\n3. Llamado a la acción y estado del producto.\n4. Genera EXACTAMENTE 20 etiquetas (tags) optimizadas para búsqueda.\n\nDevuelve el resultado ESTRICTAMENTE en formato JSON, usando esta estructura exacta (un array de objetos, uno por producto):\n[\n  {\n    "title": "Nombre del Producto 1 [Título Atractivo]",\n    "price": 1500,\n    "description": "🔥 ¡OFERTA!\\n\\n✅ Beneficio 1...\\n\\n💬 ¡Escríbeme!",\n    "tags": ["producto1", "oferta", "tecnologia", "barato", ...] // ¡Asegura 20 tags!\n  }\n]\nNO añadas texto adicional fuera del JSON.`;
 
     const handleCopyPrompt = async () => {
         await navigator.clipboard.writeText(promptText);
@@ -51,46 +38,48 @@ NO añadas texto adicional fuera del JSON.`;
         if (!jsonText.trim()) return toast.error("Pega el texto de Gemini primero");
         
         try {
-            // Find JSON array in the text in case there is some markdown wrapping it like ```json ... ```
-            const jsonMatch = jsonText.match(/\[\s*\{[\s\S]*\}\s*\]/);
-            const textToParse = jsonMatch ? jsonMatch[0] : jsonText;
-
+            const textToParse = jsonText.replace(/```json\n?/, '').replace(/```/, '').trim();
             const parsed = JSON.parse(textToParse);
-            if (!Array.isArray(parsed)) throw new Error("Not an array");
+            if (!Array.isArray(parsed)) throw new Error("Debe ser un array");
             
-            // Validate and clean each object
-            const cleaned = parsed.map(item => ({
-                title: item.title || 'Sin Título',
-                price: Number(item.price) || 0,
-                description: item.description || '',
-                tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').toString().split(',').map((t: string) => t.trim())
+            // Add a temporary local state for individual images
+            const listingsWithImages = parsed.map(p => ({
+                ...p,
+                image_urls: [] 
             }));
-
-            setPreviewListings(cleaned);
-            toast.success(`¡Se detectaron ${cleaned.length} plantillas!`);
-        } catch(e) {
-            console.error(e);
-            toast.error("Error al leer el texto. Asegúrate de que es un JSON válido.");
+            setPreviewListings(listingsWithImages);
+            toast.success(`${parsed.length} plantillas encontradas`);
+        } catch (error) {
+            console.error(error);
+            toast.error("El formato de Gemini no es un JSON válido");
         }
     };
 
+    const updateListingImage = (index: number, newUrls: string[]) => {
+        const updated = [...previewListings];
+        updated[index].image_urls = newUrls;
+        setPreviewListings(updated);
+    };
+
     const handleSaveAll = async () => {
-        if (previewListings.length === 0) return toast.error("No hay plantillas para guardar");
-        
+        if (previewListings.length === 0) return;
         setIsSaving(true);
         try {
-            // Attach images to all listings
+            // Generate a shared UUID if it's variations mode
+            const sharedGroupId = batchType === 'variations' ? crypto.randomUUID() : undefined;
+
             const finalData = previewListings.map(listing => {
-                // If they explicitly selected or uploaded individual images, use ONLY those.
-                // If they didn't touch it, fallback to ALL shared imageUrls.
                 const hasIndividualImages = listing.image_urls && listing.image_urls.length > 0;
                 const finalUrls = hasIndividualImages ? listing.image_urls : imageUrls;
 
                 return {
-                    ...listing,
+                    title: listing.title,
+                    description: listing.description,
+                    price: Number(listing.price) || 0,
+                    tags: (listing.tags || []).slice(0, 20),
                     image_urls: finalUrls,
-                    // Ensure tags are limited to 20
-                    tags: listing.tags.slice(0, 20)
+                    group_id: sharedGroupId,
+                    sku: productSku.trim() || undefined
                 };
             });
 
@@ -113,7 +102,7 @@ NO añadas texto adicional fuera del JSON.`;
                         <h3 className="font-black text-lg flex items-center gap-2">
                             <Sparkles size={20} /> Importación Masiva (IA)
                         </h3>
-                        <p className="text-indigo-200 text-xs mt-1">Crea docenas de versiones en segundos</p>
+                        <p className="text-indigo-200 text-xs mt-1">Genera múltiples plantillas a la vez</p>
                     </div>
                     <button onClick={onClose} className="text-indigo-100 hover:text-white transition-colors bg-black/10 p-1.5 rounded-full">
                         <X size={16} />
@@ -121,20 +110,74 @@ NO añadas texto adicional fuera del JSON.`;
                 </div>
                 
                 <div className="p-5 overflow-y-auto flex-1 space-y-5">
+                    {/* Modo de Importación */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <h4 className="font-bold text-slate-800 text-sm mb-3">¿Qué deseas crear?</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setBatchType('variations')}
+                                className={`text-left p-3 rounded-xl border-2 transition-all ${batchType === 'variations' ? 'border-indigo-500 bg-indigo-50' : 'border-transparent bg-white shadow-sm hover:border-slate-200'}`}
+                            >
+                                <p className={`font-bold text-sm ${batchType === 'variations' ? 'text-indigo-700' : 'text-slate-700'}`}>Variantes del Mismo Producto</p>
+                                <p className="text-xs text-slate-500 mt-1">Crea 3 opciones de texto (oferta, directo, beneficios) para 1 solo producto. Se agruparán en pestañas.</p>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBatchType('different_products')}
+                                className={`text-left p-3 rounded-xl border-2 transition-all ${batchType === 'different_products' ? 'border-indigo-500 bg-indigo-50' : 'border-transparent bg-white shadow-sm hover:border-slate-200'}`}
+                            >
+                                <p className={`font-bold text-sm ${batchType === 'different_products' ? 'text-indigo-700' : 'text-slate-700'}`}>Diferentes Productos</p>
+                                <p className="text-xs text-slate-500 mt-1">Crea 1 plantilla individual para cada producto de una lista. Se guardarán como tarjetas separadas.</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Datos del Producto */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    {batchType === 'variations' ? 'Nombre del Producto' : 'Lista de Productos'}
+                                </label>
+                                <input 
+                                    type="text" 
+                                    placeholder={batchType === 'variations' ? "Ej. iPhone 13 Pro Max" : "Ej. Audífonos, Reloj y Cable"}
+                                    value={productName}
+                                    onChange={(e) => setProductName(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-lg p-2.5 text-xs outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="flex items-center gap-1 text-xs font-bold text-slate-700 mb-1">
+                                    Vincular con Inventario (Opcional)
+                                    <div className="group relative">
+                                        <Info size={14} className="text-slate-400 cursor-help" />
+                                        <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-48 bg-slate-800 text-white text-[10px] p-2 rounded-lg shadow-lg z-10 text-center">
+                                            Escribe el SKU o Nombre exacto del producto en Kargo para rastrear el stock.
+                                        </div>
+                                    </div>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    placeholder="SKU en Kargo"
+                                    value={productSku}
+                                    onChange={(e) => setProductSku(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-lg p-2.5 text-xs outline-none focus:border-indigo-500"
+                                    disabled={batchType === 'different_products'}
+                                    title={batchType === 'different_products' ? 'Solo puedes vincular SKU si estás importando variantes de 1 solo producto.' : ''}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Step 1: Prompt */}
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                         <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
                             <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">1</span> 
                             Instruye a la Inteligencia Artificial
                         </h4>
-                        <p className="text-xs text-slate-500 mb-3">Opcional: Escribe el producto para que el prompt ya lo incluya. Luego cópialo y pégalo en Gemini o ChatGPT.</p>
-                        <input 
-                            type="text" 
-                            placeholder="Ej. iPhone 13 Pro Max 128GB"
-                            value={productName}
-                            onChange={(e) => setProductName(e.target.value)}
-                            className="w-full border border-slate-300 rounded-lg p-2.5 text-xs mb-3 outline-none focus:border-indigo-500"
-                        />
+                        <p className="text-xs text-slate-500 mb-3">Copia el siguiente mensaje y pégalo en Gemini o ChatGPT.</p>
                         <button 
                             type="button"
                             onClick={handleCopyPrompt}
@@ -149,103 +192,71 @@ NO añadas texto adicional fuera del JSON.`;
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                         <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
                             <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">2</span> 
-                            Imágenes Compartidas
+                            Sube las Imágenes (Banco Compartido)
                         </h4>
-                        <p className="text-xs text-slate-500 mb-3">Sube las fotos de tu producto. Todas las plantillas importadas usarán estas mismas fotos.</p>
-                        <ImageUploader 
-                            images={imageUrls} 
-                            setImages={setImageUrls} 
-                            productId={'marketplace_batch_temp'} 
+                        <p className="text-xs text-slate-500 mb-3">Sube aquí las imágenes que se usarán en las publicaciones por defecto.</p>
+                        <ImageUploader
+                            images={imageUrls}
+                            onChange={setImageUrls}
+                            maxImages={10}
                         />
                     </div>
 
-                    {/* Step 3: Parse JSON */}
+                    {/* Step 3: Paste JSON */}
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                         <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
                             <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">3</span> 
-                            Pega la Respuesta (JSON)
+                            Pega la respuesta de la IA
                         </h4>
-                        <textarea 
+                        <textarea
                             value={jsonText}
                             onChange={(e) => setJsonText(e.target.value)}
-                            className="w-full border border-slate-300 rounded-lg p-3 text-xs outline-none focus:border-indigo-500 h-28 font-mono bg-white shadow-inner"
-                            placeholder='[&#10;  {&#10;    "title": "...",&#10;    "price": 1500,&#10;    ...&#10;  }&#10;]'
+                            placeholder='[ { "title": "...", "description": "..." } ]'
+                            className="w-full h-32 border border-slate-300 rounded-lg p-3 text-xs font-mono outline-none focus:border-indigo-500 mb-3"
                         />
                         <button 
                             type="button"
                             onClick={handleParseJson}
-                            className="w-full mt-3 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg p-2.5 text-xs font-bold flex justify-center items-center gap-2 hover:bg-indigo-200 transition-colors"
+                            className="w-full bg-indigo-600 text-white rounded-lg p-2.5 text-xs font-bold hover:bg-indigo-700 transition-colors"
                         >
-                            <Sparkles size={14} /> Analizar y Previsualizar
+                            Leer y Generar Plantillas
                         </button>
                     </div>
 
-                    {/* Step 4: Preview & Save */}
+                    {/* Step 4: Preview */}
                     {previewListings.length > 0 && (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 animate-in slide-in-from-bottom-2">
-                            <h4 className="font-bold text-emerald-800 text-sm mb-3 flex items-center gap-2">
-                                <Check size={16} /> ¡Todo listo! Se detectaron {previewListings.length} plantillas:
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                            <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                                <span className="bg-indigo-100 text-indigo-700 w-5 h-5 flex items-center justify-center rounded-full text-xs">4</span> 
+                                Revisa y Guarda
                             </h4>
-                            <div className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
-                                {previewListings.map((item, idx) => (
-                                    <div key={idx} className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm flex flex-col gap-2">
-                                        <div>
-                                            <div className="font-bold text-slate-800 text-sm">{item.title}</div>
-                                            <div className="text-emerald-600 font-bold text-xs">RD$ {item.price.toLocaleString()}</div>
-                                            <div className="text-slate-500 mt-0.5 text-[10px] truncate">{item.tags.join(', ')}</div>
-                                        </div>
-                                        <div className="pt-2 border-t border-slate-100">
-                                            <p className="text-[10px] text-slate-500 font-bold mb-1">Imágenes de esta publicación (Opcional)</p>
-                                            
-                                            {imageUrls.length > 0 && (
-                                                <div className="mb-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                                    <p className="text-[10px] text-slate-500 font-bold mb-1">Elegir del banco compartido:</p>
-                                                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                                                        {imageUrls.map((url, i) => {
-                                                            const isSelected = (item.image_urls || []).includes(url);
-                                                            return (
-                                                                <img 
-                                                                    key={i} 
-                                                                    src={url} 
-                                                                    alt="shared" 
-                                                                    onClick={() => {
-                                                                        const updated = [...previewListings];
-                                                                        const currentUrls = updated[idx].image_urls || [];
-                                                                        if (isSelected) {
-                                                                            updated[idx].image_urls = currentUrls.filter((u: string) => u !== url);
-                                                                        } else {
-                                                                            updated[idx].image_urls = [...currentUrls, url];
-                                                                        }
-                                                                        setPreviewListings(updated);
-                                                                    }}
-                                                                    className={`w-12 h-12 object-cover rounded cursor-pointer transition-all shrink-0 ${isSelected ? 'ring-2 ring-indigo-500 opacity-100' : 'opacity-40 hover:opacity-100'}`}
-                                                                />
-                                                            )
-                                                        })}
-                                                    </div>
-                                                </div>
+                            <div className="space-y-3 max-h-60 overflow-y-auto pr-2 mb-4">
+                                {previewListings.map((listing, i) => (
+                                    <div key={i} className="bg-white border border-slate-200 p-3 rounded-lg flex gap-3 shadow-sm">
+                                        <div className="w-16 h-16 shrink-0 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200 relative group cursor-pointer">
+                                            {listing.image_urls && listing.image_urls.length > 0 ? (
+                                                <img src={listing.image_urls[0]} alt="Miniatura personalizada" className="w-full h-full object-cover" />
+                                            ) : imageUrls.length > 0 ? (
+                                                <img src={imageUrls[0]} alt="Miniatura" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-[10px] text-slate-400">Sin img</span>
                                             )}
-
-                                            <ImageUploader 
-                                                images={item.image_urls || []} 
-                                                setImages={(urls) => {
-                                                    const updated = [...previewListings];
-                                                    updated[idx].image_urls = urls;
-                                                    setPreviewListings(updated);
-                                                }} 
-                                                productId={`marketplace_batch_item_${idx}`} 
-                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-sm text-slate-800 truncate">{listing.title}</p>
+                                            <p className="text-emerald-600 text-xs font-bold mb-1">RD$ {listing.price}</p>
+                                            <p className="text-[10px] text-slate-500 truncate">{listing.tags?.length} etiquetas • {(listing.description || '').substring(0, 30)}...</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                             <button 
+                                type="button"
                                 onClick={handleSaveAll}
                                 disabled={isSaving}
-                                className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-black py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                                className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl shadow hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                <UploadCloud size={18} />
-                                {isSaving ? 'Guardando...' : `Guardar las ${previewListings.length} Plantillas`}
+                                {isSaving ? 'Guardando...' : `Guardar ${previewListings.length} Plantillas`}
                             </button>
                         </div>
                     )}

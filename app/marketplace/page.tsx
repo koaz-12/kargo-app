@@ -89,6 +89,36 @@ export default function MarketplacePage() {
         return filtered;
     }, [listings, searchQuery, sortBy]);
 
+    const groupedListings = useMemo(() => {
+        const groups: Record<string, MarketplaceListing[]> = {};
+        const standalone: MarketplaceListing[][] = [];
+
+        filteredAndSortedListings.forEach(listing => {
+            if (listing.group_id) {
+                if (!groups[listing.group_id]) groups[listing.group_id] = [];
+                groups[listing.group_id].push(listing);
+            } else {
+                standalone.push([listing]);
+            }
+        });
+
+        const result: MarketplaceListing[][] = [];
+        const seenGroups = new Set<string>();
+
+        filteredAndSortedListings.forEach(listing => {
+            if (listing.group_id) {
+                if (!seenGroups.has(listing.group_id)) {
+                    result.push(groups[listing.group_id]);
+                    seenGroups.add(listing.group_id);
+                }
+            } else {
+                result.push([listing]);
+            }
+        });
+
+        return result;
+    }, [filteredAndSortedListings]);
+
     return (
         <main className="min-h-screen bg-slate-50/50 pb-28 max-w-md mx-auto relative">
             <header className="sticky top-0 z-20 pt-6 pb-4 pl-4 pr-16 bg-slate-50/80 backdrop-blur-xl mb-2 border-b border-slate-200/50 flex items-center gap-3">
@@ -176,12 +206,12 @@ export default function MarketplacePage() {
                     <div className="flex justify-center p-12 text-slate-400">
                         <Loader2 className="animate-spin" size={32} />
                     </div>
-                ) : filteredAndSortedListings.length > 0 ? (
+                ) : groupedListings.length > 0 ? (
                     <div className="space-y-2">
-                        {filteredAndSortedListings.map(listing => (
+                        {groupedListings.map(group => (
                             <MarketplaceCard 
-                                key={listing.id}
-                                listing={listing}
+                                key={group[0].id}
+                                listings={group}
                                 onEdit={handleOpenEdit}
                                 onDelete={deleteListing}
                                 onDuplicate={handleDuplicate}

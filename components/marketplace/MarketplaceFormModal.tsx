@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { MarketplaceListing } from '../../types';
-import { X, Save, Tags, Sparkles, Copy, ChevronDown, Check } from 'lucide-react';
+import { X, Save, Tags, Sparkles, Copy, ChevronDown, Check, Info } from 'lucide-react';
 import ImageUploader from '../products/ImageUploader';
 import { toast } from 'sonner';
 
@@ -18,6 +18,7 @@ export default function MarketplaceFormModal({ initialData, onClose, onSave }: M
     const [price, setPrice] = useState<number>(initialData?.price || 0);
     const [tagsInput, setTagsInput] = useState(initialData?.tags?.join(' ') || '');
     const [imageUrls, setImageUrls] = useState<string[]>(initialData?.image_urls || []);
+    const [sku, setSku] = useState(initialData?.sku || '');
     const [isSaving, setIsSaving] = useState(false);
 
     // AI Import State
@@ -88,7 +89,8 @@ ETIQUETAS: tag1, tag2, tag3 (hasta 20)`;
                 description: description.trim(),
                 price,
                 tags,
-                image_urls: imageUrls
+                image_urls: imageUrls,
+                sku: sku.trim() || undefined
             });
             onClose();
             toast.success("Plantilla guardada");
@@ -195,6 +197,26 @@ ETIQUETAS: tag1, tag2, tag3 (hasta 20)`;
                                     required
                                 />
                             </div>
+                        </div>
+
+                        {/* SKU Link */}
+                        <div>
+                            <label className="flex items-center gap-1 text-xs font-bold text-slate-500 uppercase mb-1.5">
+                                Vincular Inventario (Opcional)
+                                <div className="group relative">
+                                    <Info size={14} className="text-slate-400 cursor-help" />
+                                    <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-48 bg-slate-800 text-white text-[10px] p-2 rounded-lg shadow-lg z-10 font-normal normal-case">
+                                        Escribe el SKU o Nombre exacto del producto en Kargo para rastrear el stock.
+                                    </div>
+                                </div>
+                            </label>
+                            <input 
+                                type="text" 
+                                value={sku}
+                                onChange={(e) => setSku(e.target.value)}
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 transition-colors"
+                                placeholder="Ej. SKU-12345"
+                            />
                         </div>
 
                         {/* Description */}
