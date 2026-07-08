@@ -3,7 +3,7 @@ import { MarketplaceListing } from '../../types';
 import { Sparkles, X, Copy, Check, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageUploader from '../products/ImageUploader';
-import { useProducts } from '../../hooks/useProducts';
+import ProductSelector from '../ui/ProductSelector';
 
 interface BatchImportModalProps {
     onClose: () => void;
@@ -21,8 +21,6 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
     const [batchType, setBatchType] = useState<'variations' | 'different_products'>('variations');
     const [productName, setProductName] = useState('');
     const [productSku, setProductSku] = useState('');
-
-    const { data: allProducts } = useProducts();
 
     const productPlaceholder = productName.trim() || "[ESCRIBE TU PRODUCTO O LISTA AQUÍ]";
     
@@ -161,23 +159,11 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
                                         </div>
                                     </div>
                                 </label>
-                                <input 
-                                    type="text" 
-                                    list="inventory-products-batch"
-                                    placeholder="Busca o escribe el producto..."
+                                <ProductSelector
                                     value={productSku}
-                                    onChange={(e) => setProductSku(e.target.value)}
-                                    className="w-full border border-slate-300 rounded-lg p-2.5 text-xs outline-none focus:border-indigo-500"
+                                    onChange={setProductSku}
                                     disabled={batchType === 'different_products'}
-                                    title={batchType === 'different_products' ? 'Solo puedes vincular SKU si estás importando variantes de 1 solo producto.' : ''}
                                 />
-                                <datalist id="inventory-products-batch">
-                                    {allProducts?.map(p => (
-                                        <option key={p.id} value={p.sku || p.name}>
-                                            {p.name} {p.sku ? `(${p.sku})` : ''}
-                                        </option>
-                                    ))}
-                                </datalist>
                             </div>
                         </div>
                     </div>
