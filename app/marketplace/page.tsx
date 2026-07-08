@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMarketplaceListings } from '../../hooks/useMarketplaceListings';
 import MarketplaceCard from '../../components/marketplace/MarketplaceCard';
 import MarketplaceFormModal from '../../components/marketplace/MarketplaceFormModal';
 import BatchImportModal from '../../components/marketplace/BatchImportModal';
 import { MarketplaceListing } from '../../types';
-import { Store, Plus, Loader2, ArrowLeft, Sparkles } from 'lucide-react';
+import { Store, Plus, Loader2, ArrowLeft, Sparkles, Search, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MarketplacePage() {
@@ -16,6 +16,8 @@ export default function MarketplacePage() {
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
     const [editingListing, setEditingListing] = useState<MarketplaceListing | undefined>();
     const [isDuplicating, setIsDuplicating] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc'>('newest');
 
     const handleOpenCreate = () => {
         setEditingListing(undefined);
@@ -46,6 +48,26 @@ export default function MarketplacePage() {
     const handleSaveBatch = async (data: Omit<MarketplaceListing, 'id' | 'user_id' | 'created_at'>[]) => {
         await addMultipleListings(data);
     };
+
+    const filteredAndSortedListings = useMemo(() => {
+        if (!listings) return [];
+        let filtered = listings.filter(l => 
+            l.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (l.tags && l.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+        );
+
+        filtered.sort((a, b) => {
+            switch(sortBy) {
+                case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                case 'price_desc': return b.price - a.price;
+                case 'price_asc': return a.price - b.price;
+                default: return 0;
+            }
+        });
+
+        return filtered;
+    }, [listings, searchQuery, sortBy]);
 
     return (
         <main className="min-h-screen bg-slate-50/50 pb-28 max-w-md mx-auto relative">
@@ -78,13 +100,42 @@ export default function MarketplacePage() {
                     </button>
                 </div>
 
+                {/* Filters and Search */}
+                {listings && listings.length > 0 && (
+                    <div className="flex gap-2 mb-4 animate-in slide-in-from-top-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Buscar por título o etiqueta..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+                            />
+                        </div>
+                        <div className="relative">
+                            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as any)}
+                                className="appearance-none bg-white border border-slate-200 rounded-xl py-2.5 pl-8 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm text-slate-600 font-medium"
+                            >
+                                <option value="newest">Más recientes</option>
+                                <option value="oldest">Más antiguos</option>
+                                <option value="price_desc">Mayor precio</option>
+                                <option value="price_asc">Menor precio</option>
+                            </select>
+                        </div>
+                    </div>
+                )}
+
                 {isLoading ? (
                     <div className="flex justify-center p-12 text-slate-400">
                         <Loader2 className="animate-spin" size={32} />
                     </div>
-                ) : listings && listings.length > 0 ? (
+                ) : filteredAndSortedListings.length > 0 ? (
                     <div className="space-y-2">
-                        {listings.map(listing => (
+                        {filteredAndSortedListings.map(listing => (
                             <MarketplaceCard 
                                 key={listing.id}
                                 listing={listing}
@@ -93,6 +144,11 @@ export default function MarketplacePage() {
                                 onDuplicate={handleDuplicate}
                             />
                         ))}
+                    </div>
+                ) : listings && listings.length > 0 ? (
+                    <div className="text-center py-8 text-slate-500">
+                        <p className="font-medium text-slate-600">No hay resultados</p>
+                        <p className="text-xs mt-1">Intenta buscar otra palabra clave o etiqueta.</p>
                     </div>
                 ) : (
                     <div className="text-center bg-white p-8 rounded-xl border border-dashed border-slate-200">
