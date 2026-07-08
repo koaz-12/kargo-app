@@ -18,6 +18,7 @@ export default function MarketplacePage() {
     const [isDuplicating, setIsDuplicating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc'>('newest');
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
     const handleOpenCreate = () => {
         setEditingListing(undefined);
@@ -49,12 +50,31 @@ export default function MarketplacePage() {
         await addMultipleListings(data);
     };
 
+    const topTags = useMemo(() => {
+        if (!listings) return [];
+        const tagCounts: Record<string, number> = {};
+        listings.forEach(l => {
+            if (l.tags) {
+                l.tags.forEach(tag => {
+                    const t = tag.toLowerCase().replace(/^#/, '');
+                    tagCounts[t] = (tagCounts[t] || 0) + 1;
+                });
+            }
+        });
+        return Object.entries(tagCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(entry => entry[0]);
+    }, [listings]);
+
     const filteredAndSortedListings = useMemo(() => {
         if (!listings) return [];
-        let filtered = listings.filter(l => 
-            l.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            (l.tags && l.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
-        );
+        let filtered = listings.filter(l => {
+            const matchesSearch = l.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                  (l.tags && l.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
+            const matchesTag = selectedTag ? l.tags && l.tags.some(t => t.toLowerCase().replace(/^#/, '') === selectedTag) : true;
+            return matchesSearch && matchesTag;
+        });
 
         filtered.sort((a, b) => {
             switch(sortBy) {
@@ -102,30 +122,53 @@ export default function MarketplacePage() {
 
                 {/* Filters and Search */}
                 {listings && listings.length > 0 && (
-                    <div className="flex gap-2 mb-4 animate-in slide-in-from-top-2">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Buscar por título o etiqueta..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
-                            />
+                    <div className="mb-4 animate-in slide-in-from-top-2">
+                        <div className="flex gap-2 mb-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por título o etiqueta..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+                                />
+                            </div>
+                            <div className="relative">
+                                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    className="appearance-none bg-white border border-slate-200 rounded-xl py-2.5 pl-8 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm text-slate-600 font-medium"
+                                >
+                                    <option value="newest">Más recientes</option>
+                                    <option value="oldest">Más antiguos</option>
+                                    <option value="price_desc">Mayor precio</option>
+                                    <option value="price_asc">Menor precio</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="relative">
-                            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value as any)}
-                                className="appearance-none bg-white border border-slate-200 rounded-xl py-2.5 pl-8 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm text-slate-600 font-medium"
-                            >
-                                <option value="newest">Más recientes</option>
-                                <option value="oldest">Más antiguos</option>
-                                <option value="price_desc">Mayor precio</option>
-                                <option value="price_asc">Menor precio</option>
-                            </select>
-                        </div>
+
+                        {/* Quick Tag Filters */}
+                        {topTags.length > 0 && (
+                            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                <button
+                                    onClick={() => setSelectedTag(null)}
+                                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${selectedTag === null ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-200/70 text-slate-600 hover:bg-slate-300'}`}
+                                >
+                                    Todas
+                                </button>
+                                {topTags.map(tag => (
+                                    <button
+                                        key={tag}
+                                        onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                                        className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${selectedTag === tag ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                    >
+                                        #{tag}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
