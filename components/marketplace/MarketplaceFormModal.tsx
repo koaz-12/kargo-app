@@ -5,6 +5,7 @@ import { MarketplaceListing } from '../../types';
 import { X, Save, Tags, Sparkles, Copy, ChevronDown, Check, Info } from 'lucide-react';
 import ImageUploader from '../products/ImageUploader';
 import { toast } from 'sonner';
+import { useProducts } from '../../hooks/useProducts';
 
 interface MarketplaceFormModalProps {
     initialData?: MarketplaceListing;
@@ -20,6 +21,8 @@ export default function MarketplaceFormModal({ initialData, onClose, onSave }: M
     const [imageUrls, setImageUrls] = useState<string[]>(initialData?.image_urls || []);
     const [sku, setSku] = useState(initialData?.sku || '');
     const [isSaving, setIsSaving] = useState(false);
+
+    const { data: allProducts } = useProducts();
 
     // AI Import State
     const [showAiImport, setShowAiImport] = useState(false);
@@ -212,11 +215,19 @@ ETIQUETAS: tag1, tag2, tag3 (hasta 20)`;
                             </label>
                             <input 
                                 type="text" 
+                                list="inventory-products-single"
                                 value={sku}
                                 onChange={(e) => setSku(e.target.value)}
                                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 transition-colors"
-                                placeholder="Ej. SKU-12345"
+                                placeholder="Busca o escribe el producto..."
                             />
+                            <datalist id="inventory-products-single">
+                                {allProducts?.map(p => (
+                                    <option key={p.id} value={p.sku || p.name}>
+                                        {p.name} {p.sku ? `(${p.sku})` : ''}
+                                    </option>
+                                ))}
+                            </datalist>
                         </div>
 
                         {/* Description */}
