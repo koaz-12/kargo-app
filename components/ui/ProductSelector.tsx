@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Product } from '../../types';
 import { Search, Package, ChevronDown, Check } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
+import { getPublicUrl } from '../../utils/imageUrl';
 
 interface ProductSelectorProps {
     value: string;
@@ -78,10 +79,10 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
                 {selectedGroup ? (
                     <div className="flex items-center gap-2 overflow-hidden">
                         <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-200">
-                            {selectedGroup.product.image_urls && selectedGroup.product.image_urls.length > 0 ? (
-                                <img src={selectedGroup.product.image_urls[0]} alt="" className="w-full h-full object-cover" />
+                            {selectedGroup.product.images && selectedGroup.product.images.length > 0 ? (
+                                <img src={getPublicUrl(selectedGroup.product.images[0].storage_path)} alt="" className="w-full h-full object-cover" />
                             ) : selectedGroup.product.image_url ? (
-                                <img src={selectedGroup.product.image_url} alt="" className="w-full h-full object-cover" />
+                                <img src={getPublicUrl(selectedGroup.product.image_url)} alt="" className="w-full h-full object-cover" />
                             ) : (
                                 <Package size={12} className="text-slate-400" />
                             )}
@@ -123,8 +124,8 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
                             filteredGroups.map(({ product, count }) => {
                                 const key = product.sku || product.name;
                                 const isSelected = value === key;
-                                const hasImage = (product.image_urls && product.image_urls.length > 0) || product.image_url;
-                                const imageSrc = product.image_urls && product.image_urls.length > 0 ? product.image_urls[0] : product.image_url;
+                                const hasImage = (product.images && product.images.length > 0) || product.image_url;
+                                const imageSrc = product.images && product.images.length > 0 ? product.images[0].storage_path : product.image_url;
 
                                 return (
                                     <button
@@ -136,7 +137,7 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
                                         <div className="flex items-center gap-3 overflow-hidden">
                                             <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-200">
                                                 {hasImage ? (
-                                                    <img src={imageSrc} alt="" className="w-full h-full object-cover" />
+                                                    <img src={getPublicUrl(imageSrc)} alt="" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <Package size={14} className="text-slate-400" />
                                                 )}
