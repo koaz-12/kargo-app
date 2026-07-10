@@ -32,16 +32,18 @@ export default function AdjustmentsSection({ formState, setters }: AdjustmentsSe
             <div className="space-y-3">
                 {formState.adjustments.map((adj) => (
                     <div key={adj.id} className="flex gap-1.5 items-center animate-in fade-in slide-in-from-left-2">
-                        <select
-                            className="flex-1 w-0 min-w-[40px] text-xs font-semibold border border-slate-200/60 rounded-xl px-2 py-2 bg-slate-50 text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all truncate"
-                            value={adj.type}
-                            onChange={(e) => setters.updateAdjustment(adj.id, 'type', e.target.value)}
-                        >
-                            {loading && <option>Cargando...</option>}
-                            {types.map(t => (
-                                <option key={t.key} value={t.key}>{t.label}</option>
-                            ))}
-                        </select>
+                        <div className="flex-1 min-w-0">
+                            <select
+                                className="w-full text-xs font-semibold border border-slate-200/60 rounded-xl px-2 py-2 bg-slate-50 text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all truncate"
+                                value={adj.type}
+                                onChange={(e) => setters.updateAdjustment(adj.id, 'type', e.target.value)}
+                            >
+                                {loading && <option>Cargando...</option>}
+                                {types.map(t => (
+                                    <option key={t.key} value={t.key}>{t.label}</option>
+                                ))}
+                            </select>
+                        </div>
                         <div className="w-14 shrink-0 flex items-center border border-slate-200/60 rounded-xl px-1 py-2 bg-slate-50 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                             <input
                                 type="number"
@@ -52,7 +54,7 @@ export default function AdjustmentsSection({ formState, setters }: AdjustmentsSe
                             />
                             <span className="text-[10px] font-bold text-slate-400 pr-1">%</span>
                         </div>
-                        <div className="flex-[1.5] w-0 min-w-[60px] flex items-center border border-slate-200/60 rounded-xl px-2 py-2 bg-slate-50 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                        <div className="flex-[1.2] min-w-0 flex items-center border border-slate-200/60 rounded-xl px-2 py-2 bg-slate-50 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                             <span className="text-xs font-bold text-slate-400 mr-1">$</span>
                             <input
                                 type="number"
@@ -62,7 +64,7 @@ export default function AdjustmentsSection({ formState, setters }: AdjustmentsSe
                                 onChange={(e) => setters.updateAdjustment(adj.id, 'amount', Number(e.target.value))}
                             />
                         </div>
-                        <button onClick={() => setters.removeAdjustment(adj.id)} className="text-slate-400 hover:text-red-500 p-1 shrink-0">
+                        <button onClick={() => setters.removeAdjustment(adj.id)} className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
                             <Trash2 size={14} />
                         </button>
                     </div>
