@@ -2,15 +2,17 @@
 
 import { useState, useMemo } from 'react';
 import { useMarketplaceListings } from '../../hooks/useMarketplaceListings';
-import MarketplaceCard from '../../components/marketplace/MarketplaceCard';
+import { useProducts } from '../../hooks/useProducts';
+import MarketplaceGroupAccordion from '../../components/marketplace/MarketplaceGroupAccordion';
 import MarketplaceFormModal from '../../components/marketplace/MarketplaceFormModal';
 import BatchImportModal from '../../components/marketplace/BatchImportModal';
 import { MarketplaceListing } from '../../types';
-import { Store, Plus, Loader2, ArrowLeft, Sparkles, Search, ArrowUpDown } from 'lucide-react';
+import { Store, Plus, Loader2, ArrowLeft, Sparkles, Search, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MarketplacePage() {
     const { data: listings, isLoading, addListing, updateListing, deleteListing, addMultipleListings } = useMarketplaceListings();
+    const { data: allProducts } = useProducts();
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
@@ -20,8 +22,11 @@ export default function MarketplacePage() {
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc'>('newest');
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-    const handleOpenCreate = () => {
-        setEditingListing(undefined);
+    // Track expanded accordions by SKU (or 'UNLINKED' for others)
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+    const handleOpenCreate = (preselectedSku?: string) => {
+        setEditingListing(preselectedSku ? { sku: preselectedSku } as MarketplaceListing : undefined);
         setIsDuplicating(false);
         setIsModalOpen(true);
     };
@@ -44,7 +49,7 @@ export default function MarketplacePage() {
     };
 
     const handleSave = async (data: Omit<MarketplaceListing, 'id' | 'user_id' | 'created_at'>) => {
-        if (editingListing && !isDuplicating) {
+        if (editingListing && !isDuplicating && editingListing.id) {
             await updateListing({ id: editingListing.id, updates: data });
         } else {
             await addListing(data);
@@ -53,6 +58,13 @@ export default function MarketplacePage() {
 
     const handleSaveBatch = async (data: Omit<MarketplaceListing, 'id' | 'user_id' | 'created_at'>[]) => {
         await addMultipleListings(data);
+    };
+
+    const toggleGroup = (key: string) => {
+        const newSet = new Set(expandedGroups);
+        if (newSet.has(key)) newSet.delete(key);
+        else newSet.add(key);
+        setExpandedGroups(newSet);
     };
 
     const topTags = useMemo(() => {
@@ -94,9 +106,9 @@ export default function MarketplacePage() {
         return filtered;
     }, [listings, searchQuery, sortBy]);
 
-    const groupedListings = useMemo(() => {
+    // 1. Group by group_id into Cards
+    const cards = useMemo(() => {
         const groups: Record<string, MarketplaceListing[]> = {};
-
         filteredAndSortedListings.forEach(listing => {
             const key = listing.group_id || listing.id;
             if (!groups[key]) groups[key] = [];
@@ -105,7 +117,6 @@ export default function MarketplacePage() {
 
         const result: MarketplaceListing[][] = [];
         const seenGroups = new Set<string>();
-
         filteredAndSortedListings.forEach(listing => {
             const key = listing.group_id || listing.id;
             if (!seenGroups.has(key)) {
@@ -113,9 +124,43 @@ export default function MarketplacePage() {
                 seenGroups.add(key);
             }
         });
-
         return result;
     }, [filteredAndSortedListings]);
+
+    // 2. Group Cards by SKU into Macro Groups
+    const macroGroups = useMemo(() => {
+        const linked: Record<string, MarketplaceListing[][]> = {};
+        const unlinked: MarketplaceListing[][] = [];
+
+        cards.forEach(card => {
+            const sku = card[0].sku;
+            if (sku) {
+                if (!linked[sku]) linked[sku] = [];
+                linked[sku].push(card);
+            } else {
+                unlinked.push(card);
+            }
+        });
+
+        return { linked, unlinked };
+    }, [cards]);
+
+    const allGroupKeys = useMemo(() => [...Object.keys(macroGroups.linked), ...(macroGroups.unlinked.length > 0 ? ['UNLINKED'] : [])], [macroGroups]);
+    const isAllExpanded = expandedGroups.size > 0 && expandedGroups.size === allGroupKeys.length;
+
+    const toggleAll = () => {
+        if (isAllExpanded) {
+            setExpandedGroups(new Set());
+        } else {
+            setExpandedGroups(new Set(allGroupKeys));
+        }
+    };
+
+    // Calculate real-time stock
+    const getStockCount = (sku: string) => {
+        if (!allProducts) return 0;
+        return allProducts.filter(p => (p.sku === sku || p.name === sku) && p.status === 'RECEIVED').length;
+    };
 
     return (
         <main className="min-h-screen bg-slate-50/50 pb-28 max-w-md mx-auto relative">
@@ -135,7 +180,7 @@ export default function MarketplacePage() {
             <div className="p-4">
                 <div className="flex gap-3 mb-6">
                     <button 
-                        onClick={handleOpenCreate}
+                        onClick={() => handleOpenCreate()}
                         className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 px-2 rounded-2xl shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-200/50 transition-all active:scale-95 text-xs sm:text-sm border border-blue-500/20"
                     >
                         <Plus size={16} strokeWidth={2.5} /> Crear Plantilla
@@ -204,17 +249,52 @@ export default function MarketplacePage() {
                     <div className="flex justify-center p-12 text-slate-400">
                         <Loader2 className="animate-spin" size={32} />
                     </div>
-                ) : groupedListings.length > 0 ? (
-                    <div className="space-y-2">
-                        {groupedListings.map(group => (
-                            <MarketplaceCard 
-                                key={group[0].id}
-                                listings={group}
+                ) : allGroupKeys.length > 0 ? (
+                    <div>
+                        <div className="flex justify-end mb-2">
+                            <button 
+                                onClick={toggleAll}
+                                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-indigo-600 uppercase tracking-wider transition-colors"
+                            >
+                                {isAllExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                {isAllExpanded ? 'Contraer Todos' : 'Expandir Todos'}
+                            </button>
+                        </div>
+
+                        {/* Linked Groups */}
+                        {Object.entries(macroGroups.linked).map(([sku, skuCards]) => {
+                            const product = allProducts?.find(p => p.sku === sku || p.name === sku);
+                            return (
+                                <MarketplaceGroupAccordion
+                                    key={sku}
+                                    sku={sku}
+                                    cards={skuCards}
+                                    product={product}
+                                    stockCount={getStockCount(sku)}
+                                    isExpanded={expandedGroups.has(sku)}
+                                    onToggle={() => toggleGroup(sku)}
+                                    onQuickCreate={handleOpenCreate}
+                                    onEdit={handleOpenEdit}
+                                    onDelete={deleteListing}
+                                    onDuplicate={handleDuplicate}
+                                />
+                            );
+                        })}
+
+                        {/* Unlinked Group */}
+                        {macroGroups.unlinked.length > 0 && (
+                            <MarketplaceGroupAccordion
+                                sku={null}
+                                cards={macroGroups.unlinked}
+                                stockCount={0}
+                                isExpanded={expandedGroups.has('UNLINKED')}
+                                onToggle={() => toggleGroup('UNLINKED')}
+                                onQuickCreate={handleOpenCreate}
                                 onEdit={handleOpenEdit}
                                 onDelete={deleteListing}
                                 onDuplicate={handleDuplicate}
                             />
-                        ))}
+                        )}
                     </div>
                 ) : listings && listings.length > 0 ? (
                     <div className="text-center py-8 text-slate-500">
