@@ -92,9 +92,16 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
                         </span>
                     </div>
                 ) : (
-                    <span className="text-slate-400">
-                        {value ? value : "Buscar producto en inventario..."}
-                    </span>
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        {value && (
+                            <div className="w-6 h-6 rounded bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center shrink-0">
+                                <Package size={12} className="text-slate-400" />
+                            </div>
+                        )}
+                        <span className={value ? "font-bold text-slate-700 truncate" : "text-slate-400"}>
+                            {value ? value : "Buscar producto en inventario..."}
+                        </span>
+                    </div>
                 )}
                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -118,46 +125,70 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
                     <div className="max-h-60 overflow-y-auto p-1">
                         {isLoading ? (
                             <p className="text-center text-xs text-slate-400 py-4">Cargando inventario...</p>
-                        ) : filteredGroups.length === 0 ? (
-                            <p className="text-center text-xs text-slate-400 py-4">No se encontraron productos</p>
                         ) : (
-                            filteredGroups.map(({ product, count }) => {
-                                const key = product.sku || product.name;
-                                const isSelected = value === key;
-                                const hasImage = (product.images && product.images.length > 0) || product.image_url;
-                                const imageSrc = product.images && product.images.length > 0 ? product.images[0].storage_path : product.image_url;
-
-                                return (
+                            <>
+                                {searchTerm.trim() !== '' && (
                                     <button
-                                        key={key}
                                         type="button"
-                                        onClick={() => handleSelect(key)}
-                                        className={`w-full text-left p-2 rounded-lg flex items-center justify-between gap-3 transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
+                                        onClick={() => handleSelect(searchTerm.trim())}
+                                        className="w-full text-left p-2 mb-1 rounded-lg flex items-center gap-3 transition-colors hover:bg-slate-50 border border-dashed border-slate-200"
                                     >
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-200">
-                                                {hasImage ? (
-                                                    <img src={getPublicUrl(imageSrc)} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <Package size={14} className="text-slate-400" />
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className={`text-xs font-bold truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
-                                                    {product.name}
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    {product.sku && <span className="text-[10px] text-slate-400 font-mono">{product.sku}</span>}
-                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                                        {count} en Stock
-                                                    </span>
-                                                </div>
-                                            </div>
+                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 border border-slate-200">
+                                            <Package size={14} className="text-slate-400" />
                                         </div>
-                                        {isSelected && <Check size={16} className="text-indigo-600 shrink-0" />}
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-700">
+                                                Usar "{searchTerm.trim()}"
+                                            </p>
+                                            <p className="text-[10px] text-slate-500">
+                                                Texto libre (sin vincular)
+                                            </p>
+                                        </div>
                                     </button>
-                                );
-                            })
+                                )}
+
+                                {filteredGroups.length === 0 ? (
+                                    searchTerm.trim() === '' && <p className="text-center text-xs text-slate-400 py-4">No se encontraron productos</p>
+                                ) : (
+                                    filteredGroups.map(({ product, count }) => {
+                                        const key = product.sku || product.name;
+                                        const isSelected = value === key;
+                                        const hasImage = (product.images && product.images.length > 0) || product.image_url;
+                                        const imageSrc = product.images && product.images.length > 0 ? product.images[0].storage_path : product.image_url;
+
+                                        return (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                onClick={() => handleSelect(key)}
+                                                className={`w-full text-left p-2 rounded-lg flex items-center justify-between gap-3 transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
+                                            >
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-200">
+                                                        {hasImage ? (
+                                                            <img src={getPublicUrl(imageSrc)} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <Package size={14} className="text-slate-400" />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className={`text-xs font-bold truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                                                            {product.name}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            {product.sku && <span className="text-[10px] text-slate-400 font-mono">{product.sku}</span>}
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                                {count} en Stock
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {isSelected && <Check size={16} className="text-indigo-600 shrink-0" />}
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
