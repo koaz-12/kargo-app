@@ -87,7 +87,7 @@ export default function InventoryFilterBar({
                     <input
                         key="inventory-search-input"
                         id="inventory-search-input"
-                        type="search"
+                        type="text"
                         autoComplete="off"
                         spellCheck="false"
                         placeholder="Buscar por nombre, SKU, tracking..."
