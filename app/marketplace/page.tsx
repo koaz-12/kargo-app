@@ -6,6 +6,7 @@ import { useProducts } from '../../hooks/useProducts';
 import MarketplaceGroupAccordion from '../../components/marketplace/MarketplaceGroupAccordion';
 import MarketplaceFormModal from '../../components/marketplace/MarketplaceFormModal';
 import BatchImportModal from '../../components/marketplace/BatchImportModal';
+import PosModal from '../../components/marketplace/PosModal';
 import { MarketplaceListing } from '../../types';
 import { Store, Plus, Loader2, ArrowLeft, Sparkles, Search, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +22,10 @@ export default function MarketplacePage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc'>('newest');
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+    // POS State
+    const [isPosOpen, setIsPosOpen] = useState(false);
+    const [posData, setPosData] = useState<{skus: string[], title: string}>({ skus: [], title: '' });
 
     // Track expanded accordions by SKU (or 'UNLINKED' for others)
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -60,11 +65,22 @@ export default function MarketplacePage() {
         await addMultipleListings(data);
     };
 
-    const toggleGroup = (key: string) => {
-        const newSet = new Set(expandedGroups);
-        if (newSet.has(key)) newSet.delete(key);
-        else newSet.add(key);
-        setExpandedGroups(newSet);
+    const toggleGroup = (groupKey: string) => {
+        const newExpanded = new Set(expandedGroups);
+        if (newExpanded.has(groupKey)) {
+            newExpanded.delete(groupKey);
+        } else {
+            newExpanded.add(groupKey);
+        }
+        setExpandedGroups(newExpanded);
+    };
+
+    const handleQuickSale = (skuGroupKey: string, title: string) => {
+        setPosData({ 
+            skus: skuGroupKey ? skuGroupKey.split(' + ') : [], 
+            title 
+        });
+        setIsPosOpen(true);
     };
 
     const topTags = useMemo(() => {
@@ -291,6 +307,7 @@ export default function MarketplacePage() {
                                     onEdit={handleOpenEdit}
                                     onDelete={deleteListing}
                                     onDuplicate={handleDuplicate}
+                                    onQuickSale={handleQuickSale}
                                 />
                             );
                         })}
@@ -307,6 +324,7 @@ export default function MarketplacePage() {
                                 onEdit={handleOpenEdit}
                                 onDelete={deleteListing}
                                 onDuplicate={handleDuplicate}
+                                onQuickSale={handleQuickSale}
                             />
                         )}
                     </div>
@@ -338,6 +356,14 @@ export default function MarketplacePage() {
                 <BatchImportModal 
                     onClose={() => setIsBatchModalOpen(false)}
                     onSave={handleSaveBatch}
+                />
+            )}
+            {isPosOpen && (
+                <PosModal 
+                    isOpen={isPosOpen}
+                    onClose={() => setIsPosOpen(false)}
+                    skus={posData.skus}
+                    title={posData.title}
                 />
             )}
         </main>

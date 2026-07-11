@@ -15,6 +15,7 @@ interface MarketplaceGroupAccordionProps {
     onEdit: (listing: MarketplaceListing) => void;
     onDelete: (id: string) => void;
     onDuplicate: (listing: MarketplaceListing) => void;
+    onQuickSale: (skuGroupKey: string, title: string) => void;
 }
 
 export default function MarketplaceGroupAccordion({
@@ -27,7 +28,8 @@ export default function MarketplaceGroupAccordion({
     onQuickCreate,
     onEdit,
     onDelete,
-    onDuplicate
+    onDuplicate,
+    onQuickSale
 }: MarketplaceGroupAccordionProps) {
     
     // Calculate metrics
@@ -88,16 +90,28 @@ export default function MarketplaceGroupAccordion({
 
                 <div className="flex items-center gap-2 shrink-0">
                     {!isUnlinked && (
-                        <button 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onQuickCreate(sku);
-                            }}
-                            className="w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
-                            title="Crear nueva plantilla para este producto"
-                        >
-                            <Plus size={16} strokeWidth={2.5} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onQuickSale(sku, title);
+                                }}
+                                className="w-8 h-8 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
+                                title="Registrar venta rápida de este producto/combo"
+                            >
+                                <DollarSign size={16} strokeWidth={2.5} />
+                            </button>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onQuickCreate(sku);
+                                }}
+                                className="w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+                                title="Crear nueva plantilla para este producto"
+                            >
+                                <Plus size={16} strokeWidth={2.5} />
+                            </button>
+                        </div>
                     )}
                     <div className={`p-1.5 rounded-lg text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
                         <ChevronDown size={18} />
