@@ -92,7 +92,7 @@ export interface MarketplaceListing {
   id: string;
   user_id: string;
   group_id?: string;
-  sku?: string;
+  skus?: string[];
   title: string;
   description: string;
   price: number;

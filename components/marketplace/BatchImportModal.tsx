@@ -20,7 +20,7 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
     // New states for the workflow
     const [batchType, setBatchType] = useState<'variations' | 'different_products'>('variations');
     const [productName, setProductName] = useState('');
-    const [productSku, setProductSku] = useState('');
+    const [productSkus, setProductSkus] = useState<string[]>([]);
 
     const productPlaceholder = productName.trim() || "[ESCRIBE TU PRODUCTO O LISTA AQUÍ]";
     
@@ -80,7 +80,7 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
                     tags: (listing.tags || []).slice(0, 20),
                     image_urls: finalUrls,
                     group_id: sharedGroupId,
-                    sku: productSku.trim() || undefined
+                    skus: productSkus.length > 0 ? productSkus : undefined
                 };
             });
 
@@ -160,8 +160,8 @@ export default function BatchImportModal({ onClose, onSave }: BatchImportModalPr
                                     </div>
                                 </label>
                                 <ProductSelector
-                                    value={productSku}
-                                    onChange={setProductSku}
+                                    values={productSkus}
+                                    onChange={setProductSkus}
                                     disabled={batchType === 'different_products'}
                                 />
                             </div>

@@ -19,7 +19,7 @@ export default function MarketplaceFormModal({ initialData, onClose, onSave }: M
     const [price, setPrice] = useState<number>(initialData?.price || 0);
     const [tagsInput, setTagsInput] = useState(initialData?.tags?.join(' ') || '');
     const [imageUrls, setImageUrls] = useState<string[]>(initialData?.image_urls || []);
-    const [sku, setSku] = useState(initialData?.sku || '');
+    const [skus, setSkus] = useState<string[]>(initialData?.skus || []);
     const [isSaving, setIsSaving] = useState(false);
 
     // AI Import State
@@ -91,7 +91,7 @@ ETIQUETAS: tag1, tag2, tag3 (hasta 20)`;
                 price,
                 tags,
                 image_urls: imageUrls,
-                sku: sku.trim() || undefined
+                skus: skus.length > 0 ? skus : undefined
             });
             onClose();
             toast.success("Plantilla guardada");
@@ -212,8 +212,9 @@ ETIQUETAS: tag1, tag2, tag3 (hasta 20)`;
                                 </div>
                             </label>
                             <ProductSelector 
-                                value={sku}
-                                onChange={setSku}
+                                values={skus} 
+                                onChange={setSkus} 
+                                disabled={isSaving}
                             />
                         </div>
 

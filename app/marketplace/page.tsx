@@ -133,10 +133,12 @@ export default function MarketplacePage() {
         const unlinked: MarketplaceListing[][] = [];
 
         cards.forEach(card => {
-            const sku = card[0].sku;
-            if (sku) {
-                if (!linked[sku]) linked[sku] = [];
-                linked[sku].push(card);
+            const skus = card[0].skus || [];
+            if (skus.length > 0) {
+                // Group by a sorted, comma-separated string to treat combos identically
+                const groupKey = [...skus].sort().join(' + ');
+                if (!linked[groupKey]) linked[groupKey] = [];
+                linked[groupKey].push(card);
             } else {
                 unlinked.push(card);
             }
@@ -157,9 +159,20 @@ export default function MarketplacePage() {
     };
 
     // Calculate real-time stock
-    const getStockCount = (sku: string) => {
+    const getStockCount = (skuGroupKey: string) => {
         if (!allProducts) return 0;
-        return allProducts.filter(p => (p.sku === sku || p.name === sku) && p.status === 'RECEIVED').length;
+        const skus = skuGroupKey.split(' + ');
+        
+        let minStock = Infinity;
+        
+        for (const sku of skus) {
+            const count = allProducts.filter(p => (p.sku === sku || p.name === sku) && p.status === 'RECEIVED').length;
+            if (count < minStock) {
+                minStock = count;
+            }
+        }
+        
+        return minStock === Infinity ? 0 : minStock;
     };
 
     return (
@@ -262,17 +275,18 @@ export default function MarketplacePage() {
                         </div>
 
                         {/* Linked Groups */}
-                        {Object.entries(macroGroups.linked).map(([sku, skuCards]) => {
-                            const product = allProducts?.find(p => p.sku === sku || p.name === sku);
+                        {Object.entries(macroGroups.linked).map(([skuGroupKey, skuCards]) => {
+                            const firstSku = skuGroupKey.split(' + ')[0];
+                            const product = allProducts?.find(p => p.sku === firstSku || p.name === firstSku);
                             return (
                                 <MarketplaceGroupAccordion
-                                    key={sku}
-                                    sku={sku}
+                                    key={skuGroupKey}
+                                    sku={skuGroupKey} // the accordion will display the full group key (e.g. "A + B")
                                     cards={skuCards}
-                                    product={product}
-                                    stockCount={getStockCount(sku)}
-                                    isExpanded={expandedGroups.has(sku)}
-                                    onToggle={() => toggleGroup(sku)}
+                                    product={product} // We pass the first product so it has an image
+                                    stockCount={getStockCount(skuGroupKey)}
+                                    isExpanded={expandedGroups.has(skuGroupKey)}
+                                    onToggle={() => toggleGroup(skuGroupKey)}
                                     onQuickCreate={handleOpenCreate}
                                     onEdit={handleOpenEdit}
                                     onDelete={deleteListing}

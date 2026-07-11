@@ -1,31 +1,25 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Product } from '../../types';
-import { Search, Package, ChevronDown, Check } from 'lucide-react';
+import { Search, Package, ChevronDown, Check, X } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
 import { getPublicUrl } from '../../utils/imageUrl';
 
 interface ProductSelectorProps {
-    value: string;
-    onChange: (skuOrName: string) => void;
+    values: string[];
+    onChange: (skusOrNames: string[]) => void;
     disabled?: boolean;
 }
 
-export default function ProductSelector({ value, onChange, disabled }: ProductSelectorProps) {
+export default function ProductSelector({ values = [], onChange, disabled }: ProductSelectorProps) {
     const { data: allProducts, isLoading } = useProducts();
     const [isOpen, setIsOpen] = useState(false);
-    const [localValue, setLocalValue] = useState(value || '');
+    const [searchTerm, setSearchTerm] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
-
-    // Sync localValue with prop value
-    useEffect(() => {
-        setLocalValue(value || '');
-    }, [value]);
 
     // Group products by SKU (or name if no SKU)
     const groupedProducts = useMemo(() => {
         if (!allProducts) return [];
         
-        // Only group products that are in stock (RECEIVED) or have a valid SKU to track
         const groups: Record<string, { product: Product, count: number }> = {};
         
         allProducts.forEach(p => {
@@ -42,88 +36,111 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
     }, [allProducts]);
 
     const filteredGroups = useMemo(() => {
-        if (!localValue.trim()) return groupedProducts;
-        const lowerSearch = localValue.toLowerCase();
+        if (!searchTerm.trim()) return groupedProducts;
+        const lowerSearch = searchTerm.toLowerCase();
         return groupedProducts.filter(({ product }) => 
             product.name.toLowerCase().includes(lowerSearch) || 
             (product.sku && product.sku.toLowerCase().includes(lowerSearch))
         );
-    }, [groupedProducts, localValue]);
+    }, [groupedProducts, searchTerm]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
-                // When clicking outside, we just keep whatever they typed
-                if (localValue !== value) {
-                    onChange(localValue);
+                if (searchTerm.trim() !== '') {
+                    // Si dejó algo escrito y hace clic afuera, añadirlo si no está
+                    const term = searchTerm.trim();
+                    if (!values.includes(term)) {
+                        onChange([...values, term]);
+                    }
+                    setSearchTerm('');
                 }
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [localValue, value, onChange]);
+    }, [searchTerm, values, onChange]);
 
     const handleSelect = (key: string) => {
-        setLocalValue(key);
-        onChange(key);
-        setIsOpen(false);
+        if (values.includes(key)) {
+            onChange(values.filter(v => v !== key));
+        } else {
+            onChange([...values, key]);
+        }
+        setSearchTerm('');
+        // No cerramos el menú para que pueda elegir varios
+        const input = containerRef.current?.querySelector('input');
+        input?.focus();
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setLocalValue(e.target.value);
-        onChange(e.target.value); // Report to parent immediately so it acts as free text
-        setIsOpen(true);
+    const handleRemove = (e: React.MouseEvent, key: string) => {
+        e.stopPropagation();
+        onChange(values.filter(v => v !== key));
     };
-
-    // Find if current localValue exactly matches a product to show its thumbnail inside the input
-    const exactMatchGroup = useMemo(() => {
-        if (!localValue) return null;
-        return groupedProducts.find(g => (g.product.sku || g.product.name) === localValue);
-    }, [localValue, groupedProducts]);
 
     return (
         <div className="relative w-full" ref={containerRef}>
-            <div className={`relative flex items-center w-full bg-white border ${isOpen ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'} rounded-lg transition-all ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:border-slate-300'}`}>
-                {exactMatchGroup ? (
-                    <div className="absolute left-2.5 w-6 h-6 rounded bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-200 pointer-events-none">
-                        {exactMatchGroup.product.images && exactMatchGroup.product.images.length > 0 ? (
-                            <img src={getPublicUrl(exactMatchGroup.product.images[0].storage_path)} alt="" className="w-full h-full object-cover" />
-                        ) : exactMatchGroup.product.image_url ? (
-                            <img src={getPublicUrl(exactMatchGroup.product.image_url)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                            <Package size={12} className="text-slate-400" />
-                        )}
-                    </div>
-                ) : (
-                    <Search className="absolute left-3 text-slate-400 pointer-events-none" size={14} />
-                )}
+            <div 
+                className={`relative flex flex-wrap gap-1.5 items-center w-full bg-white border ${isOpen ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'} rounded-lg transition-all p-1.5 min-h-[44px] ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:border-slate-300'}`}
+                onClick={() => {
+                    if (!disabled) {
+                        setIsOpen(true);
+                        const input = containerRef.current?.querySelector('input');
+                        input?.focus();
+                    }
+                }}
+            >
+                {/* Selected Pills */}
+                {values.map(val => {
+                    const group = groupedProducts.find(g => (g.product.sku || g.product.name) === val);
+                    const label = group ? group.product.name : val;
+                    const skuLabel = group?.product.sku ? ` (${group.product.sku})` : '';
+
+                    return (
+                        <span key={val} className="flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200/60 px-2 py-1 rounded-md text-[10px] font-bold max-w-[150px]">
+                            <span className="truncate">{label}{skuLabel}</span>
+                            <button 
+                                type="button"
+                                onClick={(e) => handleRemove(e, val)}
+                                className="text-indigo-400 hover:text-indigo-800 focus:outline-none"
+                            >
+                                <X size={12} strokeWidth={3} />
+                            </button>
+                        </span>
+                    );
+                })}
                 
                 <input
                     type="text"
-                    value={localValue}
-                    onChange={handleInputChange}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => !disabled && setIsOpen(true)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && searchTerm.trim() !== '') {
+                            e.preventDefault();
+                            if (!values.includes(searchTerm.trim())) {
+                                onChange([...values, searchTerm.trim()]);
+                            }
+                            setSearchTerm('');
+                        } else if (e.key === 'Backspace' && searchTerm === '' && values.length > 0) {
+                            onChange(values.slice(0, -1));
+                        }
+                    }}
                     disabled={disabled}
-                    placeholder="Escribe un nombre o elige de la lista..."
-                    className="w-full py-2.5 pl-10 pr-8 bg-transparent text-xs text-slate-700 font-medium outline-none"
+                    placeholder={values.length === 0 ? "Escribe o elige productos..." : ""}
+                    className="flex-1 min-w-[120px] py-1 px-2 bg-transparent text-xs text-slate-700 font-medium outline-none"
                     autoComplete="off"
                 />
 
                 <button 
                     type="button"
-                    onClick={() => {
-                        if (!disabled) {
-                            setIsOpen(!isOpen);
-                            // Focus the input if opening
-                            if (!isOpen) {
-                                const input = containerRef.current?.querySelector('input');
-                                input?.focus();
-                            }
-                        }
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!disabled) setIsOpen(!isOpen);
                     }}
-                    className="absolute right-2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
                     tabIndex={-1}
                 >
                     <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -137,15 +154,32 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
                             <p className="text-center text-xs text-slate-400 py-4">Cargando inventario...</p>
                         ) : (
                             <>
+                                {searchTerm.trim() !== '' && !filteredGroups.some(g => (g.product.sku || g.product.name) === searchTerm.trim()) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSelect(searchTerm.trim())}
+                                        className="w-full text-left p-2 mb-1 rounded-lg flex items-center gap-3 transition-colors hover:bg-slate-50 border border-dashed border-slate-200"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 border border-slate-200">
+                                            <Package size={14} className="text-slate-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-700">
+                                                Añadir "{searchTerm.trim()}"
+                                            </p>
+                                            <p className="text-[10px] text-slate-500">
+                                                Texto libre (sin vincular)
+                                            </p>
+                                        </div>
+                                    </button>
+                                )}
+
                                 {filteredGroups.length === 0 ? (
-                                    <div className="p-3 text-center">
-                                        <p className="text-xs text-slate-500 font-medium mb-1">No hay productos que coincidan</p>
-                                        <p className="text-[10px] text-slate-400">Se guardará como: <strong className="text-indigo-600">"{localValue}"</strong></p>
-                                    </div>
+                                    searchTerm.trim() === '' && <p className="text-center text-xs text-slate-400 py-4">No se encontraron productos</p>
                                 ) : (
                                     filteredGroups.map(({ product, count }) => {
                                         const key = product.sku || product.name;
-                                        const isSelected = value === key;
+                                        const isSelected = values.includes(key);
                                         const hasImage = (product.images && product.images.length > 0) || product.image_url;
                                         const imageSrc = product.images && product.images.length > 0 ? product.images[0].storage_path : product.image_url;
 
@@ -176,7 +210,15 @@ export default function ProductSelector({ value, onChange, disabled }: ProductSe
                                                         </div>
                                                     </div>
                                                 </div>
-                                                {isSelected && <Check size={16} className="text-indigo-600 shrink-0" />}
+                                                <div className="w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors">
+                                                    {isSelected ? (
+                                                        <div className="bg-indigo-600 w-full h-full rounded border-transparent flex items-center justify-center text-white">
+                                                            <Check size={12} strokeWidth={3} />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="border-slate-300 w-full h-full rounded" />
+                                                    )}
+                                                </div>
                                             </button>
                                         );
                                     })
