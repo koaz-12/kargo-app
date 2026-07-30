@@ -14,8 +14,8 @@ export const UtilitiesMenu = () => {
     const [showCoinsCalc, setShowCoinsCalc] = useState(false);
     const pathname = usePathname();
 
-    // Hide on login page
-    if (pathname === '/login') return null;
+    // Hide on specific pages
+    if (pathname === '/login' || pathname === '/calculator') return null;
 
     return (
         <>
