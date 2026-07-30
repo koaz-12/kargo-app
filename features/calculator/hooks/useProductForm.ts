@@ -171,7 +171,7 @@ export const useProductForm = (editingId: string | null) => {
 
             // NEW: If cloneMode, just push to Queue and return
             if (cloneMode) {
-                setQueue(prev => [...prev, { ...formState, sku: '' }]);
+                setQueue(prev => [...prev, { ...formState }]);
                 toast.success('Clon agregado a la cola');
                 setStatusMsg('¡Clonado a la cola! 🛒');
                 setSaving(false);

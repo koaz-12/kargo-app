@@ -100,7 +100,7 @@ export default function ProductForm({ editingId = null }: ProductFormProps) {
             </div>
 
             {/* 7. Footer (Actions) - Fixed Floating */}
-            <div className="fixed left-0 right-0 z-[90] pointer-events-none px-2 sm:px-4" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 70px)' }}>
+            <div className="fixed left-0 right-0 z-[90] pointer-events-none px-2 sm:px-4" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
                 {/* Wrapper allows click-through, inner container captures clicks */}
                 <div className="max-w-md mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800 rounded-xl p-2 shadow-lg pointer-events-auto flex flex-wrap items-center justify-between gap-2">
 

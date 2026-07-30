@@ -14,8 +14,8 @@ export const productSchema = z.object({
     exchange_rate: z.number().min(0, 'La tasa debe ser positiva').default(58),
     status: z.enum(['DRAFT', 'ORDERED', 'RECEIVED', 'SOLD']).default('ORDERED'),
     sku: z.string().optional(),
-    product_url: z.string().url('URL inválida').optional().or(z.literal('')),
-    image_url: z.string().url('URL de imagen inválida').optional().or(z.literal('')),
+    product_url: z.string().optional().or(z.literal('')),
+    image_url: z.string().optional().or(z.literal('')),
     tracking_number: z.string().optional(),
     courier_tracking: z.string().optional(),
 });
