@@ -183,9 +183,19 @@ export default function ProductList() {
                         {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-50 rounded-xl animate-pulse"></div>)}
                     </div>
                 ) : products.length === 0 ? (
-                    <p className="text-sm text-slate-400 py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                        {searchTerm ? 'Sin resultados para tu búsqueda.' : 'No tienes productos aquí todavía.'}
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                        <div className="w-24 h-24 mb-6 bg-slate-100 rounded-full flex items-center justify-center">
+                            <Package size={48} className="text-slate-300" strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-700 mb-2">
+                            {searchTerm ? 'No se encontraron resultados' : 'Tu inventario está vacío'}
+                        </h3>
+                        <p className="text-sm text-slate-500 text-center max-w-[250px]">
+                            {searchTerm 
+                                ? 'Prueba buscando con otros términos o limpia los filtros actuales.' 
+                                : 'Aún no tienes productos registrados. Ve a la calculadora para agregar tu primer producto.'}
+                        </p>
+                    </div>
                 ) : (
                     products.map(product => (
                         <InventoryCard

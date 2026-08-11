@@ -19,7 +19,7 @@ export function useProductList() {
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 10;
+    const ITEMS_PER_PAGE = 50;
 
     // Use React Query hooks
     const { data: paginatedData, isLoading, isFetching } = usePaginatedProducts({

@@ -11,6 +11,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { NetworkStatus } from '../components/ui/NetworkStatus';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { UtilitiesMenu } from '../components/UtilitiesMenu';
+import { GlobalHotkeys } from '../components/ui/GlobalHotkeys';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -48,6 +49,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-[100dvh] w-full transition-colors`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <QueryProvider>
+          <GlobalHotkeys />
           <ErrorBoundary>
             <NetworkStatus />
             <UtilitiesMenu />

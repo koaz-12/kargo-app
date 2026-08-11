@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPublicUrl, getThumbnailUrl } from '../../../utils/imageUrl';
 import { BarcodeScanner } from '../../../components/ui/BarcodeScanner';
@@ -36,7 +36,7 @@ function StatusBadge({ status }: { status: string }) {
     return <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${styles[status as keyof typeof styles] || 'bg-slate-100'}`}>{labels[status as keyof typeof labels] || status}</span>;
 }
 
-export default function InventoryCard({ product: initialProduct, refreshList, onDelete, isSelected, onSelect }: InventoryCardProps) {
+const InventoryCard = ({ product: initialProduct, refreshList, onDelete, isSelected, onSelect }: InventoryCardProps) => {
     const [p, setProduct] = useState(initialProduct);
     const queryClient = useQueryClient();
 
@@ -686,3 +686,12 @@ export default function InventoryCard({ product: initialProduct, refreshList, on
         </div>
     );
 }
+
+export default memo(InventoryCard, (prevProps, nextProps) => {
+    return (
+        prevProps.isSelected === nextProps.isSelected &&
+        prevProps.product.id === nextProps.product.id &&
+        prevProps.product.status === nextProps.product.status &&
+        prevProps.product.updated_at === nextProps.product.updated_at
+    );
+});

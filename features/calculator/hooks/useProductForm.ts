@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProfitCalculator } from '../../../hooks/useProfitCalculator';
-import { FormState, FormSetters, ProductStatus } from '../../../types';
+import { FormState, FormSetters, ProductStatus, Platform, PurchaseAccount } from '../../../types';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import { createProductAction, updateProductAction } from '../../../app/actions/products';
@@ -12,8 +12,8 @@ export const useProductForm = (editingId: string | null) => {
     const queryClient = useQueryClient();
     const { formState, setters, results, courierDiscount } = useProfitCalculator();
 
-    const [platforms, setPlatforms] = useState<any[]>([]);
-    const [accounts, setAccounts] = useState<any[]>([]);
+    const [platforms, setPlatforms] = useState<Platform[]>([]);
+    const [accounts, setAccounts] = useState<PurchaseAccount[]>([]);
     const [saving, setSaving] = useState(false);
     const [statusMsg, setStatusMsg] = useState('');
     const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
@@ -60,7 +60,7 @@ export const useProductForm = (editingId: string | null) => {
                             ...data,
                             adjustments: data.financial_adjustments || [],
                             images: data.product_images && data.product_images.length > 0
-                                ? data.product_images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)).map((img: any) => img.storage_path)
+                                ? data.product_images.sort((a: {display_order?: number}, b: {display_order?: number}) => (a.display_order || 0) - (b.display_order || 0)).map((img: {storage_path: string}) => img.storage_path)
                                 : (data.image_url ? [data.image_url] : [])
                         };
                         setters.loadProduct(productData);
@@ -221,7 +221,7 @@ export const useProductForm = (editingId: string | null) => {
                     await supabase.from('product_images').delete().eq('product_id', editingId);
                 }
 
-                const imgs = formState.images.map((img: any, idx: number) => ({
+                const imgs = formState.images.map((img: string, idx: number) => ({
                     product_id: targetId,
                     storage_path: typeof img === 'string' ? img : img.storage_path,
                     display_order: idx
@@ -323,7 +323,7 @@ export const useProductForm = (editingId: string | null) => {
                     
                     // Images
                     if (item.images && item.images.length > 0) {
-                        const imgs = item.images.map((img: any, idx: number) => ({
+                        const imgs = item.images.map((img: string, idx: number) => ({
                             product_id: targetId,
                             storage_path: typeof img === 'string' ? img : img.storage_path,
                             display_order: idx
