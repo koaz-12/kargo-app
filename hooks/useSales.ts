@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from './useAuth';
+import { supabase } from '../lib/supabaseClient';
 import { Product } from '../types';
 
 interface CreateSaleParams {
@@ -11,7 +10,6 @@ interface CreateSaleParams {
 }
 
 export function useSales() {
-    const { user } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
 
     const calculateDopCost = (p: Product) => {
@@ -21,6 +19,7 @@ export function useSales() {
     };
 
     const createSale = async (params: CreateSaleParams) => {
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("No autenticado");
         setIsProcessing(true);
 

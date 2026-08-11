@@ -176,56 +176,26 @@ export function useProductList() {
 
     const handleMassGenerateSKU = async (productIds: string[]) => {
         if (!productIds.length) return;
+        
+        const skuToApply = window.prompt('Pega o escribe el SKU que deseas asignar a los artículos seleccionados:');
+        if (!skuToApply || !skuToApply.trim()) return; // Canceló o dejó vacío
+        
         setIsMassActing(true);
         let updatedCount = 0;
 
         try {
-            // Only generate SKU for products that don't have one
-            const productsToUpdate = products.filter(p => productIds.includes(p.id) && !p.sku);
+            // Actualizar todos los productos seleccionados con este SKU
+            const productsToUpdate = products.filter(p => productIds.includes(p.id));
 
             if (productsToUpdate.length === 0) {
-                toast.info('ℹ️ Todos los productos seleccionados ya tienen SKU.');
                 setIsMassActing(false);
                 return;
             }
 
-            // We must do this sequentially or in a Promise.all mapped to ensure unique random digits 
-            // and avoid duplicate constraints where possible.
-            const updates = productsToUpdate.map(p => {
-                let finalSku = '';
-                if (p.name) {
-                    const ignoreWords = ['DE', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'A', 'CON', 'EN', 'POR', 'PARA'];
-                    const words = p.name.trim().split(/\s+/).filter(w => w.length > 0 && !ignoreWords.includes(w.toUpperCase()));
-
-                    if (words.length >= 3) {
-                        const marca = words[0].substring(0, 4).toUpperCase();
-                        const variante = words[words.length - 1].substring(0, 4).toUpperCase();
-                        const middleWords = words.slice(1, words.length - 1);
-                        let modelo = '';
-                        if (middleWords.length === 1) {
-                            modelo = middleWords[0].substring(0, 5).toUpperCase();
-                        } else {
-                            modelo = middleWords.map(w => w[0]).join('').substring(0, 4).toUpperCase();
-                        }
-                        finalSku = `${marca}-${modelo}-${variante}`;
-                    } else if (words.length === 2) {
-                        const marca = words[0].substring(0, 4).toUpperCase();
-                        const modelo = words[1].substring(0, 5).toUpperCase();
-                        const randomNum = Math.random().toString(36).substring(2, 5).toUpperCase();
-                        finalSku = `${marca}-${modelo}-${randomNum}`;
-                    } else if (words.length === 1) {
-                        const marca = words[0].substring(0, 5).toUpperCase();
-                        const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
-                        finalSku = `${marca}-${randomNum}`;
-                    }
-                }
-                if (!finalSku) {
-                    const randomNum = Math.random().toString(36).substring(2, 6).toUpperCase();
-                    finalSku = `PRD-${randomNum}`;
-                }
-
-                return { id: p.id, sku: finalSku };
-            });
+            const updates = productsToUpdate.map(p => ({
+                id: p.id,
+                sku: skuToApply.trim()
+            }));
 
             // Update in DB
             for (const update of updates) {
