@@ -241,6 +241,7 @@ export default function FinancialDefaults({ platforms }: FinancialDefaultsProps)
                         <option value="AMAZON">Amazon</option>
                         <option value="ALIEXPRESS">AliExpress</option>
                         <option value="SHEIN">Shein</option>
+                        <option value="EBAY">Ebay</option>
                         <option value="OTHER">Otro</option>
                     </select>
                 </div>

@@ -1,4 +1,4 @@
-export type PlatformType = 'TEMU' | 'AMAZON' | 'ALIEXPRESS' | 'SHEIN' | 'OTHER';
+export type PlatformType = 'TEMU' | 'AMAZON' | 'ALIEXPRESS' | 'SHEIN' | 'EBAY' | 'OTHER';
 
 export type AdjustmentType = 'CREDIT_CLAIM' | 'REWARD_BACK' | 'PRICE_ADJUSTMENT' | 'COUPON' | 'PRICE_PROTECTION' | 'OTHER';
 

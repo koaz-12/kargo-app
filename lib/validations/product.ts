@@ -35,7 +35,7 @@ export type FinancialAdjustmentInput = z.infer<typeof financialAdjustmentSchema>
 
 export const platformSchema = z.object({
     name: z.string().min(1, 'El nombre es requerido'),
-    type: z.enum(['TEMU', 'AMAZON', 'ALIEXPRESS', 'SHEIN', 'OTHER']),
+    type: z.enum(['TEMU', 'AMAZON', 'ALIEXPRESS', 'SHEIN', 'EBAY', 'OTHER']),
     fee_structure_type: z.string().default('STANDARD'),
 });
 
